@@ -3,6 +3,13 @@
 > **For agentic workers:** Execute inline in this session (author already holds full
 > context from spec discussion; no subagent handoff). Steps use checkbox (`- [ ]`)
 > syntax for tracking.
+>
+> **Historical note:** Task 6 as written below describes an Express-middleware
+> approach (`spa.middleware.ts`). That was superseded during implementation by a
+> real Nest controller (`spa.controller.ts`, commit `0817e0a`) — Nest's own
+> catch-all 404 handler runs ahead of anything mounted via `app.use()` after
+> `app.init()`, so the middleware approach never actually ran. This doc was not
+> retrofitted; treat the git history as ground truth.
 
 **Goal:** A cold-clone-to-`docker compose up` skeleton monorepo (NestJS API + Vite/React
 SPA + shared Zod package + Postgres/Drizzle) with a rooms table, one migration, an
