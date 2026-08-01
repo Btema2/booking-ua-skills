@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { relative, resolve, sep } from 'node:path';
 import { All, Controller, Inject, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
 export const PUBLIC_DIR = Symbol('PUBLIC_DIR');
 
-// Rejects requestPath segments that would resolve outside publicDir (e.g. `/../../etc/passwd`).
+// req.path is never percent-decoded here, so encoded traversal (e.g. %2e%2e%2f) is
+// just an inert literal segment to resolve() — this only guards literal `..` segments.
 function resolveWithinPublicDir(publicDir: string, requestPath: string): string | null {
   const resolved = resolve(publicDir, `.${requestPath}`);
   if (resolved !== publicDir && !resolved.startsWith(publicDir + sep)) {
@@ -27,10 +28,10 @@ export class SpaController {
 
     const requestedAsset = resolveWithinPublicDir(this.publicDir, req.path);
     if (requestedAsset && req.path !== '/' && existsSync(requestedAsset)) {
-      res.sendFile(requestedAsset);
+      res.sendFile(relative(this.publicDir, requestedAsset), { root: this.publicDir });
       return;
     }
 
-    res.sendFile(join(this.publicDir, 'index.html'));
+    res.sendFile('index.html', { root: this.publicDir });
   }
 }

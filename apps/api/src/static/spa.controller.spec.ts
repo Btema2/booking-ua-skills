@@ -38,13 +38,13 @@ describe('SpaController', () => {
   it('serves a real static asset by path', () => {
     const res = fakeResponse();
     controller.handle(fakeRequest('/app.js'), res);
-    expect(res.sendFile).toHaveBeenCalledWith(join(publicDir, 'app.js'));
+    expect(res.sendFile).toHaveBeenCalledWith('app.js', { root: publicDir });
   });
 
   it('falls back to index.html for an unmatched non-api deep link', () => {
     const res = fakeResponse();
     controller.handle(fakeRequest('/rooms/1'), res);
-    expect(res.sendFile).toHaveBeenCalledWith(join(publicDir, 'index.html'));
+    expect(res.sendFile).toHaveBeenCalledWith('index.html', { root: publicDir });
   });
 
   it('returns JSON 404 for an unmatched /api/* path', () => {
@@ -61,6 +61,6 @@ describe('SpaController', () => {
   it('refuses to serve a path that traverses outside publicDir', () => {
     const res = fakeResponse();
     controller.handle(fakeRequest('/../../../../etc/passwd'), res);
-    expect(res.sendFile).toHaveBeenCalledWith(join(publicDir, 'index.html'));
+    expect(res.sendFile).toHaveBeenCalledWith('index.html', { root: publicDir });
   });
 });
