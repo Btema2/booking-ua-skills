@@ -1,0 +1,1 @@
+ALTER TABLE "rooms" ADD CONSTRAINT "rooms_capacity_positive" CHECK ("rooms"."capacity" > 0);
