@@ -12,7 +12,6 @@ async function bootstrap() {
   await seedRooms();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.setGlobalPrefix('api');
   await app.listen(env.PORT);
 }
 
