@@ -1,0 +1,22 @@
+{
+  "name": "booking-ua-skills-task",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w packages/core && npm run build -w apps/web && npm run build -w apps/api && node scripts/copy-web-dist.js",
+    "test": "npm test --workspaces --if-present",
+    "db:generate": "npm run db:generate -w apps/api"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
