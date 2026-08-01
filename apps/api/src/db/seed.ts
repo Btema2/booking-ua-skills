@@ -1,4 +1,4 @@
-import { db, pool } from './connection';
+import { getConnection } from './connection';
 import { rooms } from './schema';
 
 const ROOM_SEED = [
@@ -11,12 +11,13 @@ const ROOM_SEED = [
 ];
 
 export async function seedRooms(): Promise<void> {
+  const { db } = getConnection();
   await db.insert(rooms).values(ROOM_SEED).onConflictDoNothing({ target: rooms.name });
 }
 
 if (require.main === module) {
   seedRooms()
-    .then(() => pool.end())
+    .then(() => getConnection().pool.end())
     .catch((error: unknown) => {
       console.error('Seed failed', error);
       process.exitCode = 1;

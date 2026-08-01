@@ -35,4 +35,16 @@ describe('loadEnv', () => {
     expect(env.PORT).toBe(3000);
     expect(env.NODE_ENV).toBe('development');
   });
+
+  it('rejects a non-numeric POSTGRES_PORT instead of silently coercing it', () => {
+    expect(() => loadEnv({ ...validSource, POSTGRES_PORT: 'abc' })).toThrow(/POSTGRES_PORT/);
+  });
+
+  it('rejects an empty-string POSTGRES_PORT instead of silently defaulting to 0', () => {
+    expect(() => loadEnv({ ...validSource, POSTGRES_PORT: '' })).toThrow(/POSTGRES_PORT/);
+  });
+
+  it('rejects a PORT above the valid TCP port range', () => {
+    expect(() => loadEnv({ ...validSource, PORT: '99999999' })).toThrow(/PORT/);
+  });
 });
