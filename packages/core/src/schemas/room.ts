@@ -8,3 +8,7 @@ export const RoomSchema = z.object({
 });
 
 export type Room = z.infer<typeof RoomSchema>;
+
+export const NewRoomSchema = RoomSchema.omit({ id: true });
+
+export type NewRoom = z.infer<typeof NewRoomSchema>;

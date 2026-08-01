@@ -12,9 +12,10 @@ land on top of it.
   for everything else (see `src/static/spa.controller.ts`).
 - `apps/web` — Vite + React SPA. Builds to static assets only; ships no
   runtime Node dependencies.
-- `packages/core` — Shared Zod schemas and pure domain logic (`Room`,
-  office timezone/hours constants). Consumed by `apps/api` via the
-  `@booking/core` workspace package; not yet consumed by `apps/web`.
+- `packages/core` — Shared Zod schemas (`RoomSchema`, `NewRoomSchema`).
+  Consumed by `apps/api` via the `@booking/core` workspace package —
+  `db/seed.ts` validates seed rows through `NewRoomSchema` before insert;
+  not yet consumed by `apps/web`.
 
 ## Pinned versions and why
 
