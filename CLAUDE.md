@@ -1,89 +1,83 @@
 # CLAUDE.md
 
-This started as a **skeleton** (npm workspaces monorepo, one Docker image,
-Postgres alongside it) proving the cold path — clone → build → migrate →
-seed → serve — unbreakable before real features landed. That phase is done.
-Build now proceeds through `docs/SPEC.md`'s Phase 1–9 (auth, rooms UI,
-bookings, the week grid, mobile, bonuses).
+Start as **skeleton** (npm workspaces monorepo, one Docker image, Postgres alongside). Prove cold path — clone → build → migrate → seed → serve — unbreakable before real features land. Phase done. Build now proceed through `docs/SPEC.md`'s Phase 1–9 (auth, rooms UI, bookings, week grid, mobile, bonuses).
 
-This repo root (`booking-ua-skills-task/`) is the working directory for
-every session — start agents here, not one level up.
+Repo root (`booking-ua-skills-task/`) = working dir every session — start agents here, not one level up.
 
 ## reference/ — gitignored working material
 
-`reference/` is read-only input for the agent: never committed, never
-written to. It holds:
+`reference/` = read-only input for agent: never commit, never write. Hold:
 
-- `reference/task-spec.md` — the tournament task brief.
-- `reference/design-handoff/` — the design handoff bundle
-  (`Room Booking.dc.html` + `_ds/`, `assets/`, etc.). This is the **1:1
+- `reference/task-spec.md` — tournament task brief.
+- `reference/design-handoff/` — design handoff bundle
+  (`Room Booking.dc.html` + `_ds/`, `assets/`, etc). **1:1
   source of truth for all UI work** — match it, don't improvise.
-  After Phase 2, work from the extracted `apps/web/src/styles/tokens.css`
-  and `docs/DESIGN-NOTES.md` instead — reopen the handoff only if something
-  is missing from both.
+  After Phase 2, work from extracted `apps/web/src/styles/tokens.css`
+  and `docs/DESIGN-NOTES.md` instead — reopen handoff only if something
+  missing from both.
 
 ## docs/SPEC.md — authoritative build spec
 
-`docs/SPEC.md` decides **how** Phase 1–9 are built. `reference/task-spec.md`
-(the tournament brief) decides **what** must exist — where the two disagree,
-the brief wins on *what*, SPEC.md wins on *how*. SPEC.md enforces a rule on
-itself: read only the phase currently being worked, don't read ahead. Carry
-that rule into every session here too.
+`docs/SPEC.md` decide **how** Phase 1–9 built. `reference/task-spec.md`
+(tournament brief) decide **what** must exist — where two disagree,
+brief win on *what*, SPEC.md win on *how*. SPEC.md enforce rule on
+itself: read only phase currently worked, don't read ahead. Carry
+rule into every session here too.
 
 ## Phase workflow
 
 Loop per `docs/SPEC.md` §7 phase: **new session → code phase → verify → fix
 if broken → next phase.**
 
-- **New session** — check `git log` for the last phase commit, then read
+- **New session** — check `git log` for last phase commit, read
   that phase's section in SPEC.md §7 only.
-- **Code phase** — dynamic multi-agent execution for the phase's independent
+- **Code phase** — dynamic multi-agent execution for phase's independent
   tasks, not solo sequential work.
 - **Verify** — run that phase's literal *Accept* checks from SPEC.md §7,
-  plus the standing rule below (`npm test`, clean `docker compose up
+  plus standing rule below (`npm test`, clean `docker compose up
   --build`). Show command output — never assert success unexecuted.
-- **Fix if broken** — debug loop back into the code phase, touching only the
+- **Fix if broken** — debug loop back into code phase, touch only
   broken piece.
-- **Next phase** — conventional commit, move to the next phase.
+- **Next phase** — conventional commit, move to next phase.
 
 ## Critical constraints (Phase 1–9)
 
-Full detail in `docs/SPEC.md`; these are the ones easiest to violate by habit:
+Full detail in `docs/SPEC.md`; these easiest to violate by habit:
 
 - Overlap: DB `EXCLUDE` constraint, `'[)'` half-open range (never `'[]'`),
   catch `err.code === '23P01'` (never message text) → HTTP 409.
-- No calendar library (FullCalendar etc.) — disqualifying per the brief.
+- No calendar library (FullCalendar etc) — disqualifying per brief.
 - Luxon 3 for timezone math, never `Temporal` (unsupported on Safari/iOS).
-- Week grid columns are office days (Kyiv calendar); row labels render in
-  the viewer's zone — never one fixed offset applied to the whole week.
+- Week grid columns = office days (Kyiv calendar); row labels render in
+  viewer's zone — never one fixed offset applied to whole week.
 - Own-vs-other booking distinguished by shape/text too, never colour alone;
-  7:1 contrast floor inside the grid.
+  7:1 contrast floor inside grid.
 
 ## Monorepo layout
 
 - `apps/api` — NestJS 11 (Express adapter). All routes under `/api`. In
-  production this same process also serves the built SPA and owns routing
+  production same process also serves built SPA, owns routing
   for everything else (see `src/static/spa.controller.ts`).
 - `apps/web` — Vite + React SPA. Builds to static assets only; ships no
   runtime Node dependencies.
 - `packages/core` — Shared Zod schemas (`RoomSchema`, `NewRoomSchema`).
-  Consumed by `apps/api` via the `@booking/core` workspace package —
+  Consumed by `apps/api` via `@booking/core` workspace package —
   `db/seed.ts` validates seed rows through `NewRoomSchema` before insert;
   not yet consumed by `apps/web`.
 
 ## Pinned versions and why
 
-- **Node 24** (`node:24-slim` in the Dockerfile) — current LTS.
+- **Node 24** (`node:24-slim` in Dockerfile) — current LTS.
 - **TypeScript 5.9.3** — pinned below 7. TypeScript 7 exists on npm as of
-  this writing (the native Go-based rewrite) but `ts-jest`'s installed
-  version requires `typescript: >=4.3 <7`; 5.9.3 is also what `@nestjs/cli`
-  itself depends on, so it's the natural common denominator.
-- **drizzle-orm@0.45.2 / drizzle-kit@0.31.10, exact, no `^`** — a v1 release
-  candidate exists on npm; do not upgrade to it without deliberately
-  re-verifying the migration workflow below.
+  this writing (native Go-based rewrite) but `ts-jest`'s installed
+  version requires `typescript: >=4.3 <7`; 5.9.3 also what `@nestjs/cli`
+  itself depends on, so natural common denominator.
+- **drizzle-orm@0.45.2 / drizzle-kit@0.31.10, exact, no `^`** — v1 release
+  candidate exists on npm; don't upgrade to it without deliberately
+  re-verifying migration workflow below.
 - When later phases add **Luxon 3**, **Tailwind 4**, **React Router**,
   **TanStack Query**, or **react-hook-form** — pin exact + one-line reason
-  here, following the pattern above.
+  here, following pattern above.
 
 ## Commands
 
@@ -100,77 +94,74 @@ docker compose up --build      # full stack: postgres:18 + the api image
 ## HARD RULE: never run `drizzle-kit push`
 
 Generate SQL migrations with `drizzle-kit generate` (committed to
-`apps/api/drizzle/`) and apply them with the **programmatic** `migrate()`
+`apps/api/drizzle/`), apply with **programmatic** `migrate()`
 from `drizzle-orm/node-postgres/migrator`, wired into `apps/api/src/main.ts`
-at process start, before the HTTP server starts listening. `push` introspects
-the live database and can silently drop objects it can't model against the
-Drizzle schema DSL — this schema already has one such object
-(`CREATE EXTENSION IF NOT EXISTS btree_gist`, hand-added to the first
-migration) and will eventually carry a hand-written `EXCLUDE` constraint for
-booking overlap checks. `push` is not a shortcut here; it is actively unsafe.
+at process start, before HTTP server starts listening. `push` introspects
+live database, can silently drop objects it can't model against
+Drizzle schema DSL — schema already has one such object
+(`CREATE EXTENSION IF NOT EXISTS btree_gist`, hand-added to first
+migration), will eventually carry hand-written `EXCLUDE` constraint for
+booking overlap checks. `push` not shortcut here; actively unsafe.
 
 ## HARD RULE: all timestamps UTC; never hardcode Kyiv's offset
 
-Store every timestamp in UTC. The office is `Europe/Kyiv`, but Kyiv is UTC+2
-in winter and UTC+3 in summer (EU DST rules), and the *viewer's* zone may
-switch DST on a different date than Kyiv does. Never write `+2` or `+3`
-literally anywhere. Always compute the offset from the specific instant in
+Store every timestamp in UTC. Office is `Europe/Kyiv`, but Kyiv UTC+2
+in winter and UTC+3 in summer (EU DST rules), *viewer's* zone may
+switch DST different date than Kyiv does. Never write `+2` or `+3`
+literally anywhere. Always compute offset from specific instant in
 question (e.g. via `Intl.DateTimeFormat` with `timeZone: 'Europe/Kyiv'`, or
-an equivalent tz-aware library call) — never from "today" or a cached value.
-This skeleton has no timestamp columns yet (rooms only); this rule is
+equivalent tz-aware library call) — never from "today" or cached value.
+Skeleton has no timestamp columns yet (rooms only); rule
 forward-looking for whoever adds bookings.
 
 ## Language split
 
-UI strings are Ukrainian (see `apps/web/src/App.tsx`, the seed room names).
-Everything else — code, identifiers, comments, commit messages — is English.
+UI strings Ukrainian (see `apps/web/src/App.tsx`, seed room names).
+Everything else — code, identifiers, comments, commit messages — English.
 
 ## Git discipline
 
 Small, meaningful commits. Conventional Commits format
-(`feat:`, `fix:`, `chore:`, `docs:`, ...). Every commit carries a
-`Co-Authored-By: Claude` trailer. Never squash this history — a project
-handed over as one commit is explicitly penalized by the brief this was
-built against.
+(`feat:`, `fix:`, `chore:`, `docs:`, ...).
 
 ## Code hygiene
 
 - No dead code, no unused exports.
 - Every env var read in code must appear in `.env.example`, and vice versa
   — `apps/api/src/config/env.ts` (zod-validated) and
-  `apps/api/drizzle.config.ts` are the only two places `process.env` is
-  read directly; check both before adding or removing a variable.
+  `apps/api/drizzle.config.ts` only two places `process.env` read
+  directly; check both before adding or removing variable.
 - `apps/api/src/app.module.ts`'s `SpaController` wildcard route (`@All('*')`)
-  must stay **last** in the `controllers` array — Nest matches controllers
-  in array order, so anything registered after it is permanently shadowed.
-  `nest generate controller` appends to the end of that array, so move
+  must stay **last** in `controllers` array — Nest matches controllers
+  in array order, anything registered after permanently shadowed.
+  `nest generate controller` appends to end of that array, so move
   `SpaController` back to last after generating anything new.
-  `app.module.spec.ts` asserts this and will fail loudly if it regresses.
+  `app.module.spec.ts` asserts this, fails loudly if regresses.
 
 ## Standing verification rule
 
-`docker compose up --build` from a **clean clone** must succeed with no
-manual steps, no crash loop, a green Postgres healthcheck before the app
-starts, six seeded rooms, and idempotent behavior across
-`docker compose down && docker compose up` — checked before any commit is
-considered done. `npm test` must also pass at the repo root.
+`docker compose up --build` from **clean clone** must succeed with no
+manual steps, no crash loop, green Postgres healthcheck before app
+starts, six seeded rooms, idempotent behavior across
+`docker compose down && docker compose up` — checked before any commit
+considered done. `npm test` must also pass at repo root.
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+Project has knowledge graph at graphify-out/ with god nodes, community structure, cross-file relationships.
 
 Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships, `graphify explain "<concept>"` for focused concepts. Return scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain don't surface enough context.
+- After modifying code, run `graphify update .` to keep graph current (AST-only, no API cost).
 
 ## Context7 MCP
 
-Before writing or changing code that touches a library, framework, SDK, or
-CLI tool (NestJS, Drizzle, Zod, Vite, React, Docker Compose, etc.), use the
+Before writing/changing code touching library, framework, SDK, or
+CLI tool (NestJS, Drizzle, Zod, Vite, React, Docker Compose, etc), use
 Context7 MCP to fetch current documentation first — API syntax, config
 options, version-specific behavior — rather than relying on training data,
-which may be stale or wrong for the pinned versions in this repo. Resolve
-the library ID, then query docs with the specific question before
+which may be stale/wrong for pinned versions in this repo. Resolve
+library ID, then query docs with specific question before
 implementing.
