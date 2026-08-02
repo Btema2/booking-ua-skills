@@ -120,3 +120,13 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Context7 MCP
+
+Before writing or changing code that touches a library, framework, SDK, or
+CLI tool (NestJS, Drizzle, Zod, Vite, React, Docker Compose, etc.), use the
+Context7 MCP to fetch current documentation first — API syntax, config
+options, version-specific behavior — rather than relying on training data,
+which may be stale or wrong for the pinned versions in this repo. Resolve
+the library ID, then query docs with the specific question before
+implementing.
