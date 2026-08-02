@@ -1,9 +1,10 @@
 # CLAUDE.md
 
-This is a **skeleton**: npm workspaces monorepo, one Docker image, Postgres
-alongside it. No auth, no bookings — only enough to prove the cold path
-(clone → build → migrate → seed → serve) is unbreakable before real features
-land on top of it.
+This started as a **skeleton** (npm workspaces monorepo, one Docker image,
+Postgres alongside it) proving the cold path — clone → build → migrate →
+seed → serve — unbreakable before real features landed. That phase is done.
+Build now proceeds through `docs/SPEC.md`'s Phase 1–9 (auth, rooms UI,
+bookings, the week grid, mobile, bonuses).
 
 This repo root (`booking-ua-skills-task/`) is the working directory for
 every session — start agents here, not one level up.
@@ -17,6 +18,46 @@ written to. It holds:
 - `reference/design-handoff/` — the design handoff bundle
   (`Room Booking.dc.html` + `_ds/`, `assets/`, etc.). This is the **1:1
   source of truth for all UI work** — match it, don't improvise.
+  After Phase 2, work from the extracted `apps/web/src/styles/tokens.css`
+  and `docs/DESIGN-NOTES.md` instead — reopen the handoff only if something
+  is missing from both.
+
+## docs/SPEC.md — authoritative build spec
+
+`docs/SPEC.md` decides **how** Phase 1–9 are built. `reference/task-spec.md`
+(the tournament brief) decides **what** must exist — where the two disagree,
+the brief wins on *what*, SPEC.md wins on *how*. SPEC.md enforces a rule on
+itself: read only the phase currently being worked, don't read ahead. Carry
+that rule into every session here too.
+
+## Phase workflow
+
+Loop per `docs/SPEC.md` §7 phase: **new session → code phase → verify → fix
+if broken → next phase.**
+
+- **New session** — check `git log` for the last phase commit, then read
+  that phase's section in SPEC.md §7 only.
+- **Code phase** — dynamic multi-agent execution for the phase's independent
+  tasks, not solo sequential work.
+- **Verify** — run that phase's literal *Accept* checks from SPEC.md §7,
+  plus the standing rule below (`npm test`, clean `docker compose up
+  --build`). Show command output — never assert success unexecuted.
+- **Fix if broken** — debug loop back into the code phase, touching only the
+  broken piece.
+- **Next phase** — conventional commit, move to the next phase.
+
+## Critical constraints (Phase 1–9)
+
+Full detail in `docs/SPEC.md`; these are the ones easiest to violate by habit:
+
+- Overlap: DB `EXCLUDE` constraint, `'[)'` half-open range (never `'[]'`),
+  catch `err.code === '23P01'` (never message text) → HTTP 409.
+- No calendar library (FullCalendar etc.) — disqualifying per the brief.
+- Luxon 3 for timezone math, never `Temporal` (unsupported on Safari/iOS).
+- Week grid columns are office days (Kyiv calendar); row labels render in
+  the viewer's zone — never one fixed offset applied to the whole week.
+- Own-vs-other booking distinguished by shape/text too, never colour alone;
+  7:1 contrast floor inside the grid.
 
 ## Monorepo layout
 
@@ -40,6 +81,9 @@ written to. It holds:
 - **drizzle-orm@0.45.2 / drizzle-kit@0.31.10, exact, no `^`** — a v1 release
   candidate exists on npm; do not upgrade to it without deliberately
   re-verifying the migration workflow below.
+- When later phases add **Luxon 3**, **Tailwind 4**, **React Router**,
+  **TanStack Query**, or **react-hook-form** — pin exact + one-line reason
+  here, following the pattern above.
 
 ## Commands
 
