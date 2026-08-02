@@ -5,6 +5,19 @@ alongside it. No auth, no bookings — only enough to prove the cold path
 (clone → build → migrate → seed → serve) is unbreakable before real features
 land on top of it.
 
+This repo root (`booking-ua-skills-task/`) is the working directory for
+every session — start agents here, not one level up.
+
+## reference/ — gitignored working material
+
+`reference/` is read-only input for the agent: never committed, never
+written to. It holds:
+
+- `reference/task-spec.md` — the tournament task brief.
+- `reference/design-handoff/` — the design handoff bundle
+  (`Room Booking.dc.html` + `_ds/`, `assets/`, etc.). This is the **1:1
+  source of truth for all UI work** — match it, don't improvise.
+
 ## Monorepo layout
 
 - `apps/api` — NestJS 11 (Express adapter). All routes under `/api`. In
