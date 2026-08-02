@@ -23,6 +23,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT}
+      # `:-false` so an older .env without this key still boots over plain http.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER}

@@ -8,6 +8,7 @@ const validSource = {
   POSTGRES_USER: 'booking',
   POSTGRES_PASSWORD: 'booking',
   POSTGRES_DB: 'booking',
+  COOKIE_SECURE: 'false',
 };
 
 describe('loadEnv', () => {
@@ -21,7 +22,35 @@ describe('loadEnv', () => {
       POSTGRES_USER: 'booking',
       POSTGRES_PASSWORD: 'booking',
       POSTGRES_DB: 'booking',
+      COOKIE_SECURE: false,
     });
+  });
+
+  it('parses COOKIE_SECURE=false as false rather than a truthy non-empty string', () => {
+    expect(loadEnv({ ...validSource, COOKIE_SECURE: 'false' }).COOKIE_SECURE).toBe(false);
+  });
+
+  it('parses COOKIE_SECURE=true as true', () => {
+    expect(loadEnv({ ...validSource, COOKIE_SECURE: 'true' }).COOKIE_SECURE).toBe(true);
+  });
+
+  it('defaults COOKIE_SECURE to false when omitted, so plain-http local runs can log in', () => {
+    const { COOKIE_SECURE, ...rest } = validSource;
+    expect(loadEnv(rest).COOKIE_SECURE).toBe(false);
+  });
+
+  it('treats a blank value as unset, because Compose substitutes an unset ${VAR} that way', () => {
+    const blanked = { ...validSource, COOKIE_SECURE: '', NODE_ENV: '', PORT: '' };
+
+    expect(loadEnv(blanked)).toMatchObject({ COOKIE_SECURE: false, NODE_ENV: 'development', PORT: 3000 });
+  });
+
+  it('still rejects a blank value for a variable that has no default', () => {
+    expect(() => loadEnv({ ...validSource, POSTGRES_HOST: '' })).toThrow(/POSTGRES_HOST/);
+  });
+
+  it('rejects a COOKIE_SECURE value that is neither true nor false', () => {
+    expect(() => loadEnv({ ...validSource, COOKIE_SECURE: 'yes' })).toThrow(/COOKIE_SECURE/);
   });
 
   it('throws naming the missing key when POSTGRES_PASSWORD is absent', () => {
@@ -40,8 +69,10 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...validSource, POSTGRES_PORT: 'abc' })).toThrow(/POSTGRES_PORT/);
   });
 
-  it('rejects an empty-string POSTGRES_PORT instead of silently defaulting to 0', () => {
-    expect(() => loadEnv({ ...validSource, POSTGRES_PORT: '' })).toThrow(/POSTGRES_PORT/);
+  it('falls back to the declared POSTGRES_PORT default when the value is blank, never to 0', () => {
+    // z.coerce.number() would read '' as 0; treating blank as unset keeps the
+    // documented default instead, which is what Compose's ${VAR} substitution needs.
+    expect(loadEnv({ ...validSource, POSTGRES_PORT: '' }).POSTGRES_PORT).toBe(5432);
   });
 
   it('rejects a PORT above the valid TCP port range', () => {

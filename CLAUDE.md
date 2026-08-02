@@ -45,7 +45,14 @@ if broken → next phase.**
 Full detail in `docs/SPEC.md`; these easiest to violate by habit:
 
 - Overlap: DB `EXCLUDE` constraint, `'[)'` half-open range (never `'[]'`),
-  catch `err.code === '23P01'` (never message text) → HTTP 409.
+  catch SQLSTATE `23P01` (never message text) → HTTP 409. **`err.code` on
+  thrown error is `undefined`** — drizzle wrap driver error in
+  `DrizzleQueryError`, SQLSTATE sit one level down on `cause`. Use
+  `runQuery()` from `src/db/driver-errors.ts`, match `QueryFailedError.code`.
+  Phase 1 hit exact bug: naive check made duplicate email 500, not 409.
+- **Never let `DrizzleQueryError` escape repository.** Its `message` and
+  `params` carry bound query values — on `users` insert that mean bcrypt
+  hash straight to stdout. `runQuery()` redact it. Wrap every query.
 - No calendar library (FullCalendar etc) — disqualifying per brief.
 - Luxon 3 for timezone math, never `Temporal` (unsupported on Safari/iOS).
 - Week grid columns = office days (Kyiv calendar); row labels render in
@@ -60,10 +67,14 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
   for everything else (see `src/static/spa.controller.ts`).
 - `apps/web` — Vite + React SPA. Builds to static assets only; ships no
   runtime Node dependencies.
-- `packages/core` — Shared Zod schemas (`RoomSchema`, `NewRoomSchema`).
-  Consumed by `apps/api` via `@booking/core` workspace package —
-  `db/seed.ts` validates seed rows through `NewRoomSchema` before insert;
-  not yet consumed by `apps/web`.
+- `packages/core` — Shared Zod schemas (rooms + auth). Consumed by both apps
+  via `@booking/core`. `apps/api` import built CJS (`dist/`); `apps/web`
+  alias to TS **source** (`vite.config.ts` + `tsconfig.json` `paths`) — skip
+  CJS interop, kill core-must-build-first ordering in dev. Same schema feed
+  server validation and `zodResolver` on client, so rule live one place.
+- `apps/web/vite.config.ts` is single config for dev, build **and** vitest
+  (`defineConfig` from `vitest/config`). No separate `vitest.config.ts`.
+  Dev server proxy `/api` → `localhost:3000`.
 
 ## Pinned versions and why
 
@@ -75,9 +86,18 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
 - **drizzle-orm@0.45.2 / drizzle-kit@0.31.10, exact, no `^`** — v1 release
   candidate exists on npm; don't upgrade to it without deliberately
   re-verifying migration workflow below.
-- When later phases add **Luxon 3**, **Tailwind 4**, **React Router**,
-  **TanStack Query**, or **react-hook-form** — pin exact + one-line reason
-  here, following pattern above.
+- **bcrypt@6.0.0** — native, but ships prebuilds via `node-gyp-build`, so
+  `npm ci` in `node:24-slim` need no compiler. Cost factor 12 per SPEC.
+- **cookie-parser@1.4.7** — session cookie opaque token, no JWT.
+- **react-router@8.3.0** — declarative mode (`BrowserRouter`/`Routes`/`Route`),
+  no framework mode, no `react-router-dom` package. Peer need react >=19.2.7;
+  repo has 19.2.8.
+- **@tanstack/react-query@5.101.4** — server state only (`['auth','me']`).
+  Never mirror server state into client store.
+- **react-hook-form@7.84.0 + @hookform/resolvers@5.7.1** — `zodResolver` feed
+  from `@booking/core`, so validation rule live one place, shared with API.
+- When later phases add **Luxon 3** — pin exact + one-line reason here,
+  following pattern above.
 
 ## Commands
 

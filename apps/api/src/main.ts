@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
 import { runMigrations } from './db/migrate';
@@ -12,6 +13,8 @@ async function bootstrap() {
   await seedRooms();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // AuthGuard reads the session cookie off request.cookies, which cookie-parser fills.
+  app.use(cookieParser());
   await app.listen(env.PORT);
 }
 

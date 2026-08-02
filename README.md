@@ -90,16 +90,33 @@ that isn't listed:
 |---|---|---|
 | `NODE_ENV` | `development` | Standard Node environment flag |
 | `PORT` | `3000` | Port the Nest server listens on |
+| `COOKIE_SECURE` | `false` | Adds the `Secure` flag to the session cookie. Set to `true` when serving over HTTPS; leaving it `false` is what lets the plain-http compose run log in |
 | `POSTGRES_HOST` | `localhost` | Postgres host (docker-compose overrides this to `db` for the api container) |
 | `POSTGRES_PORT` | `5432` | Postgres port |
 | `POSTGRES_USER` | `booking` | Postgres user |
 | `POSTGRES_PASSWORD` | `booking` | Postgres password |
 | `POSTGRES_DB` | `booking` | Postgres database name |
 
+## Authentication
+
+Registration, login, logout and session restore are in place. Passwords are
+hashed with bcrypt at cost 12. A session is an opaque 32-byte random token —
+not a JWT — stored in the `sessions` table and handed to the browser in an
+httpOnly, SameSite=Lax cookie that lives for 30 days, so a reload keeps you
+signed in. Emails are lowercased and trimmed before they are stored, so
+`IVAN@x.com` and ` ivan@x.com ` are the same account.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create an account and start a session |
+| `POST` | `/api/auth/login` | Start a session |
+| `POST` | `/api/auth/logout` | End the session (idempotent) |
+| `GET` | `/api/auth/me` | Current user, or `401` |
+
 ## What's explicitly out of scope here
 
-No authentication, no bookings table, no room-schedule UI. This skeleton's
-job is limited to: the monorepo builds, the Docker image runs non-root with
-no dev dependencies, migrations + seed are idempotent, and routing correctly
-splits between the API (JSON, including 404s) and the SPA (HTML fallback for
-deep links).
+No bookings table and no room-schedule UI yet — those arrive in later phases.
+Beyond authentication, the groundwork this repo covers is: the monorepo
+builds, the Docker image runs non-root with no dev dependencies, migrations +
+seed are idempotent, and routing correctly splits between the API (JSON,
+including 404s) and the SPA (HTML fallback for deep links).

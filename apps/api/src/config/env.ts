@@ -8,12 +8,23 @@ const EnvSchema = z.object({
   POSTGRES_USER: z.string().min(1),
   POSTGRES_PASSWORD: z.string().min(1),
   POSTGRES_DB: z.string().min(1),
+  // Adds the Secure flag to the session cookie; must be true when served over HTTPS.
+  // Parsed as an explicit 'true' | 'false' literal because z.coerce.boolean() would
+  // turn the string 'false' into true.
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = EnvSchema.safeParse(source);
+  // Docker Compose substitutes an unset ${VAR} with an empty string rather than
+  // leaving it out, and an empty string is not `undefined`, so every .default()
+  // above would be skipped and the container would crash-loop on a clean clone.
+  const provided = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''));
+  const result = EnvSchema.safeParse(provided);
   if (!result.success) {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(result.error)}`);
   }

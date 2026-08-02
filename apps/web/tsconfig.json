@@ -8,7 +8,11 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "isolatedModules": true,
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@booking/core": ["../../packages/core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

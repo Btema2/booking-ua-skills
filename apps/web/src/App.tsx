@@ -1,10 +1,30 @@
+import { useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { createQueryClient } from './lib/queryClient';
+import { RedirectIfAuthenticated } from './features/auth/RedirectIfAuthenticated';
+import { RequireAuth } from './features/auth/RequireAuth';
+import { LoginPage } from './features/auth/LoginPage';
+import { RegisterPage } from './features/auth/RegisterPage';
+import { HomePage } from './features/home/HomePage';
+
 export function App() {
+  const [queryClient] = useState(createQueryClient);
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="rounded-xl border border-slate-200 bg-white px-10 py-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">Бронювання переговорних</h1>
-        <p className="mt-2 text-slate-500">Незабаром тут з&apos;явиться розклад кімнат.</p>
-      </div>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<RedirectIfAuthenticated />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+          <Route element={<RequireAuth />}>
+            <Route path="/" element={<HomePage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
