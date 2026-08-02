@@ -1,0 +1,503 @@
+# Meeting room booking — build specification
+
+This is the authoritative spec. Where this document and the task brief
+disagree, the task brief wins on *what* must exist; this document decides
+*how* it is built.
+
+Read the phase you are working on. Do not read ahead and do not implement
+future phases early.
+
+---
+
+## 0. Ground rules
+
+**Verification before "done".** A phase is complete only when `docker compose
+up --build` from a clean clone still works, `npm test` passes, and the
+acceptance checks for that phase have been run and their output shown. Never
+report success on something that has not been executed.
+
+**Follow the brief literally on graded items.** If you believe a requirement
+is wrong, implement it as specified and note the alternative in the README.
+Silent deviation reads as not having read the requirements.
+
+**No scope creep.** Do not add features that are not in this document. Extra
+screens, admin panels, settings pages and dashboards cost points under "code
+quality: absence of junk and dead code".
+
+**Timestamps.** Every timestamp is stored as `timestamptz` in UTC. The office
+timezone is `Europe/Kyiv`. Never write a literal `+2` or `+3` anywhere: Kyiv
+is UTC+2 in winter and UTC+3 in summer, and the viewer's zone may change DST
+on a different date. Every offset is computed from the specific instant.
+
+**Language.** UI strings Ukrainian. Code, identifiers, comments, commits,
+README (primary) English. A Ukrainian README translation is added in the
+final phase.
+
+---
+
+## 1. Data model
+
+All tables use `id uuid primary key default gen_random_uuid()` unless stated.
+
+### users
+| column | type | notes |
+|---|---|---|
+| id | uuid | |
+| name | text not null | 1–100 chars, non-empty after trim |
+| email | text not null unique | stored **lowercased and trimmed** |
+| password_hash | text not null | bcrypt, cost 12 |
+| email_verified_at | timestamptz null | see phase 8 |
+| created_at | timestamptz not null default now() | |
+
+Email uniqueness is case-insensitive because the value is normalised before
+insert. Add `create unique index users_email_key on users (email)`.
+`Ivan@x.com` and ` ivan@x.com ` must collide.
+
+### sessions
+| column | type | notes |
+|---|---|---|
+| id | text primary key | 32 random bytes, base64url |
+| user_id | uuid not null references users(id) on delete cascade | |
+| expires_at | timestamptz not null | 30 days |
+| created_at | timestamptz not null default now() | |
+
+Opaque token in an httpOnly cookie. No JWT.
+
+### rooms
+| column | type | notes |
+|---|---|---|
+| id | uuid | |
+| name | text not null unique | |
+| floor | int not null | |
+| capacity | int not null check (capacity > 0) | |
+| amenities | text null | short free text, seeded only |
+
+Already exists from the skeleton. Add `amenities` if missing.
+
+### bookings
+| column | type | notes |
+|---|---|---|
+| id | uuid | |
+| room_id | uuid not null references rooms(id) | |
+| user_id | uuid not null references users(id) | |
+| title | text not null check (char_length(title) between 1 and 100) | |
+| starts_at | timestamptz not null | |
+| ends_at | timestamptz not null | |
+| canceled_at | timestamptz null | soft delete |
+| series_id | uuid null references booking_series(id) on delete set null | |
+| created_at | timestamptz not null default now() | |
+
+Constraints:
+```sql
+alter table bookings add constraint bookings_positive_duration
+  check (ends_at > starts_at);
+```
+
+### booking_series
+| column | type | notes |
+|---|---|---|
+| id | uuid | |
+| user_id | uuid not null references users(id) | |
+| created_at | timestamptz not null default now() | |
+
+Deliberately thin. The recurrence rule is not stored — the series is just a
+grouping handle so "cancel the whole series" can be expressed. Individual
+occurrences are ordinary rows in `bookings`.
+
+### notifications
+| column | type | notes |
+|---|---|---|
+| id | uuid | |
+| user_id | uuid not null references users(id) on delete cascade | |
+| booking_id | uuid not null references bookings(id) on delete cascade | |
+| kind | text not null | only `'ending_soon'` for now |
+| created_at | timestamptz not null default now() | |
+| read_at | timestamptz null | |
+
+```sql
+alter table notifications add constraint notifications_once
+  unique (booking_id, kind);
+```
+That unique constraint is what makes "arrives exactly once" true at the
+database level rather than by hoping the scheduler behaves.
+
+### email_verification_tokens
+| column | type | notes |
+|---|---|---|
+| token | text primary key | random |
+| user_id | uuid not null references users(id) on delete cascade | |
+| expires_at | timestamptz not null | 24h |
+
+---
+
+## 2. The overlap constraint — the heart of the project
+
+Booking overlap is prevented **by the database**, not by application code.
+This is what makes the race-condition bonus true rather than aspirational.
+
+Write this as a custom migration (`drizzle-kit generate --custom`):
+
+```sql
+create extension if not exists btree_gist;
+
+alter table bookings add constraint bookings_no_overlap
+  exclude using gist (
+    room_id with =,
+    tstzrange(starts_at, ends_at, '[)') with &&
+  ) where (canceled_at is null);
+```
+
+Three things make this correct:
+
+- **`'[)'` half-open bounds.** The end instant is excluded from the range, so
+  10:00–11:00 and 11:00–12:00 do not overlap. Using `'[]'` would wrongly
+  reject back-to-back bookings, which the brief explicitly requires to work.
+- **`where (canceled_at is null)`** so cancelled bookings free their slot.
+- **`btree_gist`** so scalar equality on `room_id` can sit in the same GiST
+  index as the range overlap.
+
+**Error mapping.** A violation raises SQLSTATE `23P01`. Catch it on `err.code`
+— never on the message text — and return HTTP **409** with a Ukrainian
+message. Everything else about a failed insert is a 400.
+
+Two concurrent requests for the same slot therefore result in exactly one row,
+with no application-level locking. Describe this in the README.
+
+---
+
+## 3. Time handling
+
+### Storage
+UTC `timestamptz`, always.
+
+### Office hours
+09:00–19:00 **in `Europe/Kyiv`**, every day of the week including weekends.
+Validation of working hours happens on the server against Kyiv wall-clock
+time, derived from the UTC instant.
+
+### Display
+Every time shown in the UI is rendered in the **viewer's** IANA zone, detected
+via `Intl.DateTimeFormat().resolvedOptions().timeZone`.
+
+### The DST rule
+Compute each slot label from its own UTC instant:
+
+```ts
+DateTime.fromJSDate(instant, { zone: 'utc' }).setZone(viewerZone)
+```
+
+Never compute one offset for the week and add it to every slot. Kyiv and the
+viewer may cross DST on different dates, and in the two transition weeks a
+fixed offset silently produces wrong labels.
+
+### Grid geometry
+Grid **columns are office days** (Kyiv calendar days). Row labels are rendered
+in the viewer's zone. This is the only arrangement that survives a viewer far
+from Kyiv, where an office day spills past local midnight.
+
+### Timezone banner
+When the viewer's zone differs from `Europe/Kyiv`, show a caption above the
+grid stating the difference in plain language, e.g.
+«Час показано у вашому поясі — Europe/Warsaw, це −1 год до Києва».
+The offset text is computed, never hardcoded. When the zones match, show
+«Київ» plus the current offset, also computed.
+
+Use **Luxon 3**. Do not use `Temporal` — Safari still does not ship it, so it
+is unavailable on every iOS browser.
+
+---
+
+## 4. API
+
+All routes under `/api`. All request bodies validated with Zod schemas from
+`packages/core`, shared with the frontend forms so validation rules exist in
+exactly one place.
+
+Validation errors return:
+```json
+{ "statusCode": 400, "errors": { "email": ["..."], "title": ["..."] } }
+```
+so the frontend can render messages under the right field.
+
+| method | path | notes |
+|---|---|---|
+| POST | /api/auth/register | name, email, password (8–72). Creates session. |
+| POST | /api/auth/login | email, password. Creates session. |
+| POST | /api/auth/logout | Destroys session. |
+| GET | /api/auth/me | Current user, or 401. |
+| POST | /api/auth/verify/:token | Marks email verified. |
+| GET | /api/rooms | List. Optional `?minCapacity=`. |
+| GET | /api/rooms/:id | Single room. |
+| GET | /api/rooms/:id/bookings?from=&to= | ISO instants. Returns bookings with author name. |
+| POST | /api/bookings | Create. See rules below. |
+| DELETE | /api/bookings/:id | Cancel own only. `?scope=series` cancels the series. |
+| GET | /api/bookings/mine?status=upcoming\|past&page= | Paginated. |
+| GET | /api/notifications | Unread + recent. |
+| POST | /api/notifications/:id/read | Mark read. |
+
+### Booking creation rules (all enforced server-side)
+1. Title 1–100 characters after trim.
+2. Start and end aligned to 30-minute boundaries.
+3. Duration 30 minutes to 4 hours inclusive.
+4. Entirely inside 09:00–19:00 Kyiv time.
+5. Start strictly in the future.
+6. No overlap with a live booking in the same room.
+7. Back-to-back is allowed and must not be rejected.
+8. Email verified (once phase 8 lands).
+
+Each rule returns a distinct, human-readable Ukrainian message. "Слот
+зайнятий", "Поза робочими годинами" and "Час у минулому" must be
+distinguishable by the user.
+
+### Authorization
+Cancelling someone else's booking returns **403** — from the API directly, not
+only by hiding the button. Write a test that proves this.
+
+---
+
+## 5. Domain logic and tests
+
+`packages/core` holds pure functions with no database and no framework:
+
+- `overlaps(a, b): boolean`
+- `isAligned(instant): boolean`
+- `durationMinutes(a, b): number`
+- `isWithinOfficeHours(start, end): boolean`
+- `slotsForWeek(weekStart, zone): Slot[]`
+
+`npm test` at the root runs **only** pure unit tests — no database, no Docker.
+A judge on a clean machine must never get a red run because Postgres was not
+up. DB-backed integration tests live behind `npm run test:integration`.
+
+Required unit tests for overlap, per the brief:
+- back-to-back (10:00–11:00 vs 11:00–12:00) → no conflict
+- partial overlap → conflict
+- exact same interval → conflict
+- one fully containing the other → conflict
+- adjacent days at the day boundary → no conflict
+- same time, different room → no conflict
+
+---
+
+## 6. Frontend
+
+Vite + React + Tailwind 4 (CSS-first `@theme`, no config file), React Router,
+TanStack Query, react-hook-form + Zod resolver.
+
+### Design: the handoff is the source of truth
+
+The finished design lives in
+`reference/design-handoff/`. The build must match
+it 1:1. Do not invent visual decisions and do not treat any description in
+this document as authoritative over the handoff.
+
+Files that matter:
+- `Room Booking.dc.html` — the working prototype. Every screen, every state,
+  and the literal CSS values actually used.
+- `_ds/organic-*/styles.css` — the underlying design-system stylesheet.
+- `_ds/organic-*/readme.md` — how the design system is meant to be used.
+
+Ignore `Deck.dc.html`, `deck-stage.js`, `_template/` and `uploads/`. Those are
+presentation scaffolding, not product.
+
+The task brief itself is at `reference/task-spec.md`. `reference/` is
+gitignored working material — never commit anything from it, and never write
+into it.
+
+**Read the handoff once, in Phase 2, and extract rather than re-read.** It is
+a large file and rereading it every phase wastes context. In Phase 2 produce
+two artifacts and work from those afterwards:
+
+1. `apps/web/src/styles/tokens.css` — a Tailwind 4 `@theme` block holding
+   every colour, radius, spacing, type, shadow, blur and motion token, copied
+   verbatim from the handoff.
+2. `docs/DESIGN-NOTES.md` — a short reference (~1 page) recording the exact
+   measurements the grid needs: slot height desktop and mobile, gutter width,
+   header height, block padding, border widths, line-clamp counts. Pull these
+   from the redline section of the prototype.
+
+After Phase 2, build from `tokens.css` and `DESIGN-NOTES.md`. Open the
+handoff again only when something is genuinely missing from both.
+
+Orientation summary, so you know what you are looking at before you open it —
+this is context, **not** a substitute for the file:
+
+- Warm light theme. Ceramic off-white surfaces, oak/terracotta primary, sage
+  secondary, walnut tertiary. Material 3 role names (`--m-surface`,
+  `--m-primary-container`, `--m-on-surface-variant`, and so on). No dark mode.
+- Headings `Rubik 800`, body `Onest`. This substitution is deliberate: the
+  original Organic font pair is Latin-only and would fall through to a system
+  font on every Cyrillic glyph. Load Cyrillic subsets only.
+- The login and register screens are the only place with a wood background
+  and the only place using the ceramic tile treatment. Those values are
+  documented separately in the handoff and must not be reused on product
+  screens.
+- Booking states carry a non-colour signal as well as a fill: your own
+  bookings have a solid border, a filled dot and the literal word **Ви**;
+  other people's have a left bar, an outline person glyph and the owner's
+  name. Never distinguish them by colour alone.
+- Glass and blur appear only on chrome floating above scrolling content —
+  sticky app bar, sticky grid header, dialogs, toasts — always over a solid
+  fallback colour.
+- The handoff sets a contrast floor of 7:1 for every text colour inside the
+  grid. Hold that line.
+
+### The week grid
+
+Take all geometry from the handoff's redline section. The rules below are
+architecture, not styling, and are not negotiable regardless of what the
+prototype's own markup does:
+
+Hand-built CSS Grid. No calendar library — that is an explicit disqualifying
+rule in the brief.
+
+```css
+.day-column { display: grid; grid-template-rows: repeat(20, var(--slot-h)); }
+```
+
+Bookings are ordinary grid items with `grid-row: span n`. No absolute
+positioning and no overlap-resolution algorithm — overlaps cannot exist,
+because the database forbids them.
+
+- 20 rows = 09:00–19:00 in 30-minute steps.
+- Text must never cross a block border. Titles line-clamp, the owner line is
+  one line with ellipsis.
+- The prototype is a static mock: its grid is hand-placed HTML. Your version
+  is driven by data. Match the appearance, not the markup.
+
+**Accessibility** (not covered by the handoff, add it): `role="grid"`,
+`role="row"`, `role="columnheader"`, `role="rowheader"`, `role="gridcell"`.
+Roving tabindex — exactly one cell has `tabindex="0"`, arrows move focus,
+Enter/Space selects.
+
+**Mobile at 390px.** The handoff compares two candidates side by side and
+recommends **Candidate A, the single-day pager**. Build A. Do not build the
+scrolling-week variant.
+
+### Screens
+1. Login / register
+2. Room list, with capacity filter
+3. Week schedule for one room
+4. Create-booking form
+5. Cancel-confirmation dialog
+6. My bookings — upcoming / past tabs
+7. Notification bell + toast
+
+Every screen has designed **empty**, **loading** and **error** states.
+Loading keeps the layout with skeletons on `surface-container` — never a
+centred spinner. Empty states name the next action. Error states never
+discard typed input.
+
+Forms: errors under the field, submit button disabled during the request.
+
+There must be a persistent nav bar. Every screen reachable without typing a
+URL, and a visible logout.
+
+---
+
+## 7. Phases
+
+Commit continuously. Each phase ends with its acceptance checks run and shown.
+
+**Phase 1 — Auth**
+Users and sessions tables, bcrypt hashing, register/login/logout/me, guard,
+cookie handling, login and register screens, nav bar with logout.
+*Accept:* register, reload the page, still logged in. `IVAN@x.com` and
+`ivan@x.com` collide. Password of 7 chars rejected server-side.
+
+**Phase 2 — Design extraction, shell and room list**
+Read the handoff prototype once. Produce `apps/web/src/styles/tokens.css` and
+`docs/DESIGN-NOTES.md`. Then build the app shell, nav bar, and room list with
+the capacity filter and its empty/loading/error states.
+*Accept:* every token in `tokens.css` traces to a literal value in the
+handoff — no invented colours. Room list screenshot matches the handoff.
+Filter with no matches shows the designed empty state.
+
+**Phase 3 — Booking core**
+Bookings table, the EXCLUDE migration, pure domain functions, unit tests,
+POST/DELETE/GET endpoints, 409 mapping, 403 on someone else's booking.
+*Accept:* `npm test` green with no database running. Two parallel identical
+POSTs produce exactly one row — prove it with a script.
+
+**Phase 4 — The week grid**
+Desktop grid, sticky headers, week navigation, now-line, today's column, past
+hatching, own-vs-other distinction, timezone banner.
+*Accept:* screenshot at 1440px placed beside the handoff prototype — they
+must match. Set the browser to `Asia/Tokyo` and confirm labels shift
+correctly and the banner text updates.
+
+**Phase 5 — Create and cancel**
+Click a free slot → form; validation messages; cancel dialog; optimistic
+update.
+*Accept:* each of the six rejection reasons shows a distinct message.
+Cancelling frees the slot immediately.
+
+**Phase 6 — My bookings**
+Upcoming and past tabs, cancel on upcoming, pagination on past, row click
+navigates to that room's week.
+*Accept:* row click lands on the correct week, including across a year
+boundary.
+
+**Phase 7 — Mobile**
+Single-day pager, bottom bar, all screens at 390px.
+*Accept:* screenshots at 390px against Candidate A in the handoff. No
+horizontal scroll anywhere.
+
+**Phase 8 — Bonuses**
+In this order, cutting from the end if time runs short:
+1. Email verification in dev — link printed to the server log, booking blocked
+   until verified.
+2. End-of-booking notification — only when the next slot in that room is
+   taken; `NOTIFY_BEFORE_MINUTES` from env, default 10, interpolated into the
+   string, never hardcoded; unique `(booking_id, kind)` guarantees once;
+   suppressed if either booking is cancelled.
+3. API integration tests — create, cancel, and each validation rejection.
+4. Weekly recurring bookings — "every Tuesday, 8 occurrences", cancel one or
+   the whole series.
+
+*Race protection and the capacity filter are already done* — the EXCLUDE
+constraint and phase 2. Say so in the README rather than building anything
+extra.
+
+**Phase 9 — Finish**
+README (English + Ukrainian), `.env.example` audited against the code in both
+directions, dead code removed, console clean, tab title and favicon set, final
+clean-clone verification.
+
+---
+
+## 8. README requirements
+
+The brief grades this at 15 points together with commit history. It must let
+someone run the project on a clean machine **without reading the source**.
+
+- How to run — `docker compose up --build`, primary path
+- How to run in dev
+- How to apply seeds
+- Test user credentials
+- Which bonus items are implemented
+- **Two short paragraphs in your own words**: how overlap checking works, and
+  how time is stored. Explicitly required by the brief.
+- A note that AI assistance was used, matching the `Co-Authored-By` trailers
+- Ukrainian translation below or in `README.uk.md`
+
+---
+
+## 9. Final checklist
+
+Run on a machine with only Docker, git and Node:
+
+- [ ] clean `git clone` → `docker compose up --build`, no manual steps
+- [ ] second `up` works — migrations and seed idempotent
+- [ ] `npm test` green with no database running
+- [ ] overlapping booking → 409; back-to-back → both succeed
+- [ ] cancelling another user's booking via `curl` → 403
+- [ ] deep link refresh serves the app; `/api/unknown` returns JSON 404
+- [ ] browser console clean on every screen
+- [ ] 390px: no horizontal scroll, no clipped text
+- [ ] DST week renders correct labels in a non-Kyiv timezone
+- [ ] every env var in code appears in `.env.example`, and the reverse
+- [ ] no dead code, no unused exports, no placeholder text
+- [ ] tab title and favicon set
+- [ ] `git log` shows many meaningful commits
+- [ ] no file contains a marker or keyword copied from the task brief
