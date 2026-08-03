@@ -8,6 +8,8 @@ export const rooms = pgTable(
     name: text('name').notNull().unique(),
     floor: integer('floor').notNull(),
     capacity: integer('capacity').notNull(),
+    // Short free text, populated by the seed only — never edited through the API.
+    amenities: text('amenities'),
   },
   (table) => [check('rooms_capacity_positive', sql`${table.capacity} > 0`)],
 );

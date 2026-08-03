@@ -1,4 +1,11 @@
-export { RoomSchema, NewRoomSchema, type Room, type NewRoom } from './schemas/room';
+export {
+  RoomSchema,
+  NewRoomSchema,
+  RoomListQuerySchema,
+  type Room,
+  type NewRoom,
+  type RoomListQuery,
+} from './schemas/room';
 export {
   EmailSchema,
   PasswordSchema,
