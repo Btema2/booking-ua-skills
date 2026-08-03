@@ -13,6 +13,10 @@
 
 export const UNIQUE_VIOLATION = '23505';
 
+// Raised when an INSERT/UPDATE would violate a GiST EXCLUDE constraint (the
+// `bookings_no_overlap` check) — matched on `code`, never on message text.
+export const EXCLUSION_VIOLATION = '23P01';
+
 interface DriverErrorFields {
   code?: unknown;
   constraint?: unknown;

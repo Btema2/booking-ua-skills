@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, integer, pgTable, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const rooms = pgTable(
   'rooms',
@@ -38,3 +38,30 @@ export const sessions = pgTable('sessions', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Overlap prevention lives in the hand-written `bookings_no_overlap` EXCLUDE
+// constraint (drizzle's schema DSL cannot express GiST exclusion constraints),
+// applied by a follow-up custom migration, not by anything below.
+export const bookings = pgTable(
+  'bookings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    roomId: integer('room_id')
+      .notNull()
+      .references(() => rooms.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    title: text('title').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    // Soft delete: cancelling frees the room's slot without losing history.
+    canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check('bookings_positive_duration', sql`${table.endsAt} > ${table.startsAt}`),
+    check('bookings_title_length', sql`char_length(${table.title}) between 1 and 100`),
+    index('bookings_room_starts_at_idx').on(table.roomId, table.startsAt),
+  ],
+);
