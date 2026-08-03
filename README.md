@@ -1,10 +1,12 @@
-# Бронювання переговорних — skeleton
+# Бронювання переговорних
 
-Cold-start skeleton for a meeting-room booking app: npm workspaces monorepo,
-one Docker image, Postgres alongside it. **No product features yet** — no
-auth, no bookings. This exists only to prove the whole path (build, migrate,
-seed, serve) works cleanly from a fresh clone before anything is built on top
-of it.
+A meeting-room booking app: npm workspaces monorepo, one Docker image,
+Postgres alongside it. The cold-start path (build, migrate, seed, serve) is
+proven from a fresh clone, and on top of it: authentication (register, login,
+logout, session restore), a rooms API, and a bookings API with a
+database-enforced no-overlap guarantee. **There is no booking UI yet** — the
+week grid and the create/cancel screens arrive in a later phase; everything
+below is exercised via the API and the `scripts/prove-*` scripts.
 
 ## Stack
 
@@ -68,17 +70,21 @@ Never run `drizzle-kit push` — see `CLAUDE.md` for why.
 
 ## Seed data
 
-Six rooms, inserted idempotently (`onConflictDoNothing` on the unique
-`name` column):
+Six rooms, inserted idempotently (`onConflictDoUpdate` on the unique `name`
+column). Upsert rather than insert-or-ignore: both are idempotent, but
+ignoring the conflict would leave an existing database on whatever values it
+was first seeded with, so a later change to the table below would only ever
+reach a fresh database. Updating on conflict makes every run converge on the
+declared state.
 
 | Room | Floor | Capacity |
 |---|---|---|
-| Дуб | 1 | 4 |
-| Ясен | 1 | 6 |
-| Липа | 2 | 8 |
-| Верба | 2 | 4 |
-| Сосна | 3 | 10 |
-| Клен | 3 | 2 |
+| Дуб | 2 | 12 |
+| Ясен | 2 | 8 |
+| Липа | 3 | 4 |
+| Верба | 3 | 6 |
+| Сосна | 4 | 16 |
+| Клен | 4 | 4 |
 
 ## Environment variables
 
@@ -111,9 +117,15 @@ signed in. Emails are lowercased and trimmed before they are stored, so
 | `POST` | `/api/auth/register` | Create an account and start a session |
 | `POST` | `/api/auth/login` | Start a session |
 | `POST` | `/api/auth/logout` | End the session (idempotent) |
-| `GET` | `/api/auth/me` | Current user, or `401` |
+| `GET` | `/api/auth/me` | Current user: `{ "user": PublicUser \| null }`, always `200` — never `401`, so the SPA can call it unconditionally on load |
 
 ## Bookings and the overlap guarantee
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/bookings` | Create a booking |
+| `DELETE` | `/api/bookings/:id` | Cancel your own booking (soft delete) |
+| `GET` | `/api/rooms/:id/bookings?from=&to=` | Live bookings for a room intersecting `[from, to)` |
 
 Two people must never end up with the same room at the same time — and the
 thing that guarantees it is a database constraint, not a check in the Nest

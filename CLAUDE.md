@@ -100,8 +100,9 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
   Never mirror server state into client store.
 - **react-hook-form@7.84.0 + @hookform/resolvers@5.7.1** — `zodResolver` feed
   from `@booking/core`, so validation rule live one place, shared with API.
-- When later phases add **Luxon 3** — pin exact + one-line reason here,
-  following pattern above.
+- **luxon@3.7.2 / @types/luxon@3.7.3, exact, in `packages/core`** — the
+  timezone-math library for office-hours/DST logic. Not `Temporal`: Safari
+  still doesn't ship it, so it's absent on every iOS browser.
 
 ## Commands
 
