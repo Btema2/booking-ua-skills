@@ -1,19 +1,12 @@
 import type { LoginInput, PublicUser, RegisterInput } from '@booking/core';
-import { ApiError, HTTP_UNAUTHORIZED, apiRequest, postJson } from '../../lib/api';
+import { apiRequest, postJson } from '../../lib/api';
 
 type AuthResponse = { user: PublicUser };
 
-/** Resolves to `null` for an anonymous visitor; only real faults reject. */
+/** The server answers 200 with `user: null` for an anonymous visitor; only real faults reject. */
 export async function fetchCurrentUser(): Promise<PublicUser | null> {
-  try {
-    const { user } = await apiRequest<AuthResponse>('/auth/me');
-    return user;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === HTTP_UNAUTHORIZED) {
-      return null;
-    }
-    throw error;
-  }
+  const { user } = await apiRequest<{ user: PublicUser | null }>('/auth/me');
+  return user;
 }
 
 export async function registerUser(input: RegisterInput): Promise<PublicUser> {

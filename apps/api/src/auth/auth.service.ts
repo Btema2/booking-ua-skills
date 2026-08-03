@@ -59,13 +59,22 @@ export class AuthService {
   }
 
   async resolveSession(sessionId: string): Promise<PublicUser> {
+    const user = await this.resolveSessionOrNull(sessionId);
+    if (!user) {
+      throw authenticationRequired();
+    }
+    return user;
+  }
+
+  /** Same lookup as resolveSession, but for callers where an anonymous visitor is not an error. */
+  async resolveSessionOrNull(sessionId: string): Promise<PublicUser | null> {
     const session = await this.repository.findSessionWithUser(sessionId);
     if (!session) {
-      throw authenticationRequired();
+      return null;
     }
     if (session.expiresAt.getTime() <= Date.now()) {
       await this.repository.deleteSession(sessionId);
-      throw authenticationRequired();
+      return null;
     }
     return toPublicUser(session.user);
   }

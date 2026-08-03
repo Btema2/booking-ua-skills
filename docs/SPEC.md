@@ -224,7 +224,7 @@ so the frontend can render messages under the right field.
 | POST | /api/auth/register | name, email, password (8–72). Creates session. |
 | POST | /api/auth/login | email, password. Creates session. |
 | POST | /api/auth/logout | Destroys session. |
-| GET | /api/auth/me | Current user, or 401. |
+| GET | /api/auth/me | Always 200: `{ "user": PublicUser \| null }`. Not a protected route — anonymous is a valid answer, not an error. |
 | POST | /api/auth/verify/:token | Marks email verified. |
 | GET | /api/rooms | List. Optional `?minCapacity=`. |
 | GET | /api/rooms/:id | Single room. |

@@ -10,7 +10,7 @@ export function RequireAuth() {
   if (isPending) {
     return <AppSkeleton />;
   }
-  // A failed /auth/me leaves `data` undefined; treat that as "not signed in".
+  // An anonymous visitor is `user: null`; a still-loading query is `undefined`. Either way, not signed in.
   if (!user) {
     return <Navigate to="/login" replace />;
   }

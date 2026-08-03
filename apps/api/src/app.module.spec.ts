@@ -57,10 +57,11 @@ describe('AppModule routing', () => {
     expect(Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, AppModule)).not.toContain(AuthController);
   });
 
-  it('answers GET /api/auth/me with a JSON 401 from AuthController', async () => {
+  it('answers GET /api/auth/me with a JSON response from AuthController, not the SPA fallback', async () => {
     const response = await request(app.getHttpServer()).get('/api/auth/me');
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
     expect(response.type).toBe('application/json');
+    expect(response.body).toEqual({ user: null });
   });
 
   it('answers an unknown /api route with a JSON 404 rather than index.html', async () => {

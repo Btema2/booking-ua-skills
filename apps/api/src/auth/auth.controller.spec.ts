@@ -213,15 +213,19 @@ describe('AuthController', () => {
   });
 
   describe('GET /api/auth/me', () => {
-    it('returns 401 without a cookie', async () => {
-      await request(app.getHttpServer()).get('/api/auth/me').expect(401);
+    it('returns 200 with { user: null } without a cookie', async () => {
+      const response = await request(app.getHttpServer()).get('/api/auth/me').expect(200);
+
+      expect(response.body).toEqual({ user: null });
     });
 
-    it('returns 401 for an unknown session id', async () => {
-      await request(app.getHttpServer())
+    it('returns 200 with { user: null } for an unknown session id', async () => {
+      const response = await request(app.getHttpServer())
         .get('/api/auth/me')
         .set('Cookie', `${SESSION_COOKIE_NAME}=made-up`)
-        .expect(401);
+        .expect(200);
+
+      expect(response.body).toEqual({ user: null });
     });
 
     it('returns the current user for a live session', async () => {
@@ -235,11 +239,16 @@ describe('AuthController', () => {
       expect(response.body).toEqual(registered.body);
     });
 
-    it('returns 401 once the session has expired', async () => {
+    it('returns 200 with { user: null } once the session has expired', async () => {
       const registered = await request(app.getHttpServer()).post('/api/auth/register').send(VALID_BODY).expect(201);
       repository.expireEverySession();
 
-      await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookiePair(registered)).expect(401);
+      const response = await request(app.getHttpServer())
+        .get('/api/auth/me')
+        .set('Cookie', cookiePair(registered))
+        .expect(200);
+
+      expect(response.body).toEqual({ user: null });
     });
   });
 
@@ -250,12 +259,14 @@ describe('AuthController', () => {
       expect(setCookieHeader(response)).toContain('Expires=Thu, 01 Jan 1970');
     });
 
-    it('invalidates the session so /me stops authenticating', async () => {
+    it('invalidates the session so /me reports { user: null }', async () => {
       const registered = await request(app.getHttpServer()).post('/api/auth/register').send(VALID_BODY).expect(201);
       const cookie = cookiePair(registered);
 
       await request(app.getHttpServer()).post('/api/auth/logout').set('Cookie', cookie).expect(204);
-      await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookie).expect(401);
+      const response = await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookie).expect(200);
+
+      expect(response.body).toEqual({ user: null });
     });
   });
 

@@ -189,6 +189,40 @@ describe('AuthService', () => {
     });
   });
 
+  describe('resolveSessionOrNull', () => {
+    const validSession: SessionRow = {
+      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+      user: { id: USER_ID, name: 'Іван', email: 'ivan@x.com', emailVerifiedAt: new Date('2026-01-02T03:04:05Z') },
+    };
+
+    it('returns the public user for a live session', async () => {
+      const repository = createRepository();
+      repository.findSessionWithUser.mockResolvedValue(validSession);
+
+      await expect(createService(repository).resolveSessionOrNull('abc')).resolves.toEqual({
+        id: USER_ID,
+        name: 'Іван',
+        email: 'ivan@x.com',
+        emailVerifiedAt: '2026-01-02T03:04:05.000Z',
+      });
+    });
+
+    it('resolves to null for an unknown session id, without throwing', async () => {
+      const repository = createRepository();
+
+      await expect(createService(repository).resolveSessionOrNull('abc')).resolves.toBeNull();
+      expect(repository.deleteSession).not.toHaveBeenCalled();
+    });
+
+    it('resolves to null for an expired session and deletes the row', async () => {
+      const repository = createRepository();
+      repository.findSessionWithUser.mockResolvedValue({ ...validSession, expiresAt: new Date(Date.now() - 1) });
+
+      await expect(createService(repository).resolveSessionOrNull('abc')).resolves.toBeNull();
+      expect(repository.deleteSession).toHaveBeenCalledWith('abc');
+    });
+  });
+
   describe('logout', () => {
     it('deletes the session when a cookie was sent', async () => {
       const repository = createRepository();
