@@ -1,10 +1,8 @@
 import { LoginSchema, type PublicUser, RegisterSchema } from '@booking/core';
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { parseOrThrow } from '../common/parse-or-throw';
-import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
-import { CurrentUser } from './current-user.decorator';
 import {
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
@@ -45,9 +43,11 @@ export class AuthController {
     response.clearCookie(SESSION_COOKIE_NAME, clearedSessionCookieOptions(this.cookieSecure));
   }
 
+  /** 200 with `user: null` for an anonymous visitor — this is the app's "am I signed in?" check, not a protected route. */
   @Get('me')
-  @UseGuards(AuthGuard)
-  me(@CurrentUser() user: PublicUser): { user: PublicUser } {
+  async me(@Req() request: Request): Promise<{ user: PublicUser | null }> {
+    const sessionId = readSessionCookie(request);
+    const user = sessionId ? await this.authService.resolveSessionOrNull(sessionId) : null;
     return { user };
   }
 }

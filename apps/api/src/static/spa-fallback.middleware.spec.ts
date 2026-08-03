@@ -1,66 +1,61 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Request, Response } from 'express';
-import { SpaController } from './spa.controller';
+import type { NextFunction, Request, Response } from 'express';
+import { SpaFallbackMiddleware } from './spa-fallback.middleware';
 
 function fakeRequest(path: string): Request {
   return { path } as Request;
 }
 
 function fakeResponse() {
-  return {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-    sendFile: jest.fn(),
-  } as unknown as Response & {
-    status: jest.Mock;
-    json: jest.Mock;
-    sendFile: jest.Mock;
-  };
+  return { sendFile: jest.fn() } as unknown as Response & { sendFile: jest.Mock };
 }
 
-describe('SpaController', () => {
+describe('SpaFallbackMiddleware', () => {
   let publicDir: string;
-  let controller: SpaController;
+  let middleware: SpaFallbackMiddleware;
+  let next: jest.MockedFunction<NextFunction>;
 
   beforeAll(() => {
-    publicDir = mkdtempSync(join(tmpdir(), 'spa-controller-test-'));
+    publicDir = mkdtempSync(join(tmpdir(), 'spa-fallback-test-'));
     writeFileSync(join(publicDir, 'index.html'), '<!doctype html><title>App</title>');
     writeFileSync(join(publicDir, 'app.js'), 'console.log("asset")');
-    controller = new SpaController(publicDir);
+    middleware = new SpaFallbackMiddleware(publicDir);
   });
 
   afterAll(() => {
     rmSync(publicDir, { recursive: true, force: true });
   });
 
+  beforeEach(() => {
+    next = jest.fn();
+  });
+
   it('serves a real static asset by path', () => {
     const res = fakeResponse();
-    controller.handle(fakeRequest('/app.js'), res);
+    middleware.use(fakeRequest('/app.js'), res, next);
     expect(res.sendFile).toHaveBeenCalledWith('app.js', { root: publicDir });
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('falls back to index.html for an unmatched non-api deep link', () => {
     const res = fakeResponse();
-    controller.handle(fakeRequest('/rooms/1'), res);
+    middleware.use(fakeRequest('/rooms/1'), res, next);
     expect(res.sendFile).toHaveBeenCalledWith('index.html', { root: publicDir });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns JSON 404 for an unmatched /api/* path', () => {
+  it('hands every /api path back to the router instead of answering it', () => {
     const res = fakeResponse();
-    controller.handle(fakeRequest('/api/does-not-exist'), res);
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({
-      statusCode: 404,
-      message: 'Not Found',
-      path: '/api/does-not-exist',
-    });
+    middleware.use(fakeRequest('/api/does-not-exist'), res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.sendFile).not.toHaveBeenCalled();
   });
 
   it('refuses to serve a path that traverses outside publicDir', () => {
     const res = fakeResponse();
-    controller.handle(fakeRequest('/../../../../etc/passwd'), res);
+    middleware.use(fakeRequest('/../../../../etc/passwd'), res, next);
     expect(res.sendFile).toHaveBeenCalledWith('index.html', { root: publicDir });
   });
 });

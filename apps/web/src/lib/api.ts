@@ -3,8 +3,6 @@
 
 const API_BASE = '/api';
 
-export const HTTP_UNAUTHORIZED = 401;
-
 const NETWORK_ERROR_MESSAGE = 'Не вдалося зʼєднатися із сервером. Перевірте підключення.';
 const UNEXPECTED_ERROR_MESSAGE = 'Сталася непередбачена помилка. Спробуйте ще раз.';
 

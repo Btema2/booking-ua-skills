@@ -1,14 +1,19 @@
 import { join } from 'node:path';
-import { Module } from '@nestjs/common';
-import { AuthController } from './auth/auth.controller';
+import { type MiddlewareConsumer, Module, type NestModule, RequestMethod } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
-import { PUBLIC_DIR, SpaController } from './static/spa.controller';
+import { PUBLIC_DIR } from './static/public-dir';
+import { SpaFallbackMiddleware } from './static/spa-fallback.middleware';
 
-// SpaController's wildcard route must stay LAST (Nest matches controllers in array order); see app.module.spec.ts.
 @Module({
   imports: [AuthModule],
-  controllers: [HealthController, AuthController, SpaController],
+  controllers: [HealthController],
   providers: [{ provide: PUBLIC_DIR, useValue: join(__dirname, 'public') }],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // The SPA fallback runs as middleware, so it holds no route and controller order is
+  // irrelevant — see the rationale on SpaFallbackMiddleware and app.module.spec.ts.
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SpaFallbackMiddleware).forRoutes({ path: '{*splat}', method: RequestMethod.ALL });
+  }
+}

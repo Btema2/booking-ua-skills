@@ -62,9 +62,13 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
 
 ## Monorepo layout
 
-- `apps/api` — NestJS 11 (Express adapter). All routes under `/api`. In
-  production same process also serves built SPA, owns routing
-  for everything else (see `src/static/spa.controller.ts`).
+- `apps/api` — NestJS 11 (Express adapter). All routes under `/api`, each in
+  own feature module (`AuthModule`, later rooms/bookings/notifications).
+  In production same process also serves built SPA — as **middleware**
+  (`src/static/spa-fallback.middleware.ts`, wired in `AppModule.configure`),
+  never controller. Middleware hold no route, so cannot shadow feature module
+  whatever import order; `/api` handed to `next()` → Nest's own not-found
+  handler answer JSON 404.
 - `apps/web` — Vite + React SPA. Builds to static assets only; ships no
   runtime Node dependencies.
 - `packages/core` — Shared Zod schemas (rooms + auth). Consumed by both apps
@@ -151,12 +155,12 @@ Small, meaningful commits. Conventional Commits format
   — `apps/api/src/config/env.ts` (zod-validated) and
   `apps/api/drizzle.config.ts` only two places `process.env` read
   directly; check both before adding or removing variable.
-- `apps/api/src/app.module.ts`'s `SpaController` wildcard route (`@All('*')`)
-  must stay **last** in `controllers` array — Nest matches controllers
-  in array order, anything registered after permanently shadowed.
-  `nest generate controller` appends to end of that array, so move
-  `SpaController` back to last after generating anything new.
-  `app.module.spec.ts` asserts this, fails loudly if regresses.
+- New API surface go in own feature module (`controllers` + `providers`
+  inside module, module listed in `AppModule.imports`) — never root
+  `controllers` array. SPA fallback is middleware, so no ordering trap
+  anymore; `app.module.spec.ts` prove it by importing feature module
+  *after* `AppModule` and asserting its `/api` route still win.
+  Wildcard route syntax under Express 5 is `{*splat}`, not `*`.
 
 ## Standing verification rule
 
