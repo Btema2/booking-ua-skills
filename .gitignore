@@ -9,3 +9,4 @@ graphify-out/
 coverage/
 .vscode/
 .idea/
+.gstack/
