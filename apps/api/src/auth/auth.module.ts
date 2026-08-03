@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 import { loadEnv } from '../config/env';
+import { AuthController } from './auth.controller';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 import { DrizzleAuthRepository } from './drizzle-auth.repository';
 import { SESSION_COOKIE_SECURE } from './session-cookie';
 
-// AuthController is registered in AppModule rather than here on purpose: Nest matches
-// routes in module registration order and the root module is scanned first, so
-// SpaController's wildcard would shadow every /api/auth route declared downstream.
 @Module({
+  controllers: [AuthController],
   providers: [
     AuthService,
     { provide: AuthRepository, useClass: DrizzleAuthRepository },

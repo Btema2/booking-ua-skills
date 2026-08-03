@@ -5,7 +5,9 @@ import { Test } from '@nestjs/testing';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { PUBLIC_DIR } from '../src/static/spa.controller';
+import { AuthRepository } from '../src/auth/auth.repository';
+import { SESSION_COOKIE_SECURE } from '../src/auth/session-cookie';
+import { PUBLIC_DIR } from '../src/static/public-dir';
 
 describe('Health and routing (e2e)', () => {
   let app: NestExpressApplication;
@@ -15,9 +17,15 @@ describe('Health and routing (e2e)', () => {
     publicDir = mkdtempSync(join(tmpdir(), 'spa-e2e-'));
     writeFileSync(join(publicDir, 'index.html'), '<!doctype html><title>App</title>');
 
+    // Both overrides keep this suite off Postgres and off loadEnv(), which AuthModule's
+    // SESSION_COOKIE_SECURE factory would otherwise read from an unset environment.
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(AuthRepository)
+      .useValue({})
+      .overrideProvider(SESSION_COOKIE_SECURE)
+      .useValue(false)
       .overrideProvider(PUBLIC_DIR)
       .useValue(publicDir)
       .compile();
