@@ -1,0 +1,424 @@
+/* ============================================================================
+   Design tokens — extracted from reference/design-handoff/Room Booking.dc.html
+   (its §4 "Copy-paste token set" plus the literal values used in its markup)
+   and the Organic design-system stylesheet in reference/design-handoff/_ds/.
+
+   EVERY value here is copied verbatim from the handoff. Nothing is rounded,
+   converted, interpolated or invented. If a value you need is not here, it was
+   not in the handoff — do not guess a plausible sibling.
+
+   Handoff names the roles in Material 3 (--m-surface, --m-primary-container,
+   --m-on-surface-variant, ...). The role meaning is preserved; only the prefix
+   is adapted to Tailwind 4's namespaces so utilities generate.
+
+   Light theme only. There is no dark mode in the handoff.
+   Imported by apps/web/src/styles.css — do NOT @import "tailwindcss" here.
+   ========================================================================= */
+
+@theme {
+  /* ── 1 · Colour roles — surfaces ──────────────────────────────────────── */
+  --color-surface: #f5ead8; /* --m-surface · page ground */
+  --color-surface-dim: #e6d8bf; /* --m-surface-dim · recessed areas */
+  --color-surface-bright: #fdf8ef; /* --m-surface-bright · lifted areas */
+  --color-surface-container-lowest: #fffcf6; /* --m-sc-lowest · free slot, card face */
+  --color-surface-container-low: #f9f1e2; /* --m-sc-low · app bar, sheet, rows */
+  --color-surface-container: #f2e7d2; /* --m-sc · grid header, off-days */
+  --color-surface-container-high: #ebddc5; /* --m-sc-high · chips, inline notes */
+  --color-surface-container-highest: #e2d2b5; /* --m-sc-highest · toast, active nav */
+
+  /* ── 1 · Colour roles — ink and edges ─────────────────────────────────── */
+  --color-on-surface: #201e1d; /* --m-on-surface · body ink · 15.2:1 */
+  --color-on-surface-variant: #5a5147; /* --m-on-surface-variant · secondary ink · 7.4:1 */
+  --color-outline: #8a8073; /* --m-outline · placeholder, marks */
+  --color-outline-variant: #cfc3ad; /* --m-outline-variant · all 1px rules */
+  --color-scrim: rgba(46,43,37,.44); /* --m-scrim · dialog backdrop */
+
+  /* ── 1 · Colour roles — primary (oak / terracotta) ────────────────────── */
+  --color-primary: #b2622d; /* actions, my booking */
+  --color-on-primary: #fffcf6; /* 4.5:1 on primary */
+  --color-primary-container: #ffe1d0; /* my-booking fill */
+  --color-on-primary-container: #643312; /* 8.4:1 */
+  --color-primary-fixed-dim: #f6a06b;
+
+  /* ── 1 · Colour roles — secondary (sage) ──────────────────────────────── */
+  --color-secondary: #56633f; /* others' bookings */
+  --color-on-secondary: #fffcf6; /* 6.6:1 on secondary */
+  --color-secondary-container: #e1eecc; /* other-booking fill */
+  --color-on-secondary-container: #3d472b; /* 8.9:1 */
+
+  /* ── 1 · Colour roles — tertiary (walnut) ─────────────────────────────── */
+  --color-tertiary: #645c50; /* floor / room chips */
+  --color-on-tertiary: #fffcf6; /* 6.7:1 on tertiary */
+  --color-tertiary-container: #eee7db; /* metadata chip fill */
+  --color-on-tertiary-container: #2e2b25; /* 12.6:1 */
+
+  /* ── 1 · Colour roles — error (brick) ─────────────────────────────────── */
+  --color-error: #8f2f22; /* errors, now-line */
+  --color-on-error: #fffcf6; /* 8.1:1 on error */
+  --color-error-container: #fadfd8; /* error banner fill */
+  --color-on-error-container: #5c1a12; /* 10.1:1 */
+
+  /* ── 1 · Colour roles — grid state tints (literals, not roles) ────────── */
+  --color-today-column: rgba(255,225,208,.34); /* today's column, top to bottom */
+  --color-today-head: #ffd0b4; /* today's header, mixed 78% (desktop) / 65% (pager) */
+  --color-past-day: rgba(226,210,181,.30); /* dim under the past hatch */
+  --color-hatch: rgba(138,128,115,.13); /* 135deg hatch stripe */
+  --color-hatch-gap: rgba(138,128,115,0); /* 135deg hatch gap */
+  --color-rule-half-hour: rgba(207,195,173,.45); /* half-hour line = outline-variant @45% */
+
+  /* ── 2 · Font families ────────────────────────────────────────────────── */
+  /* Organic ships Caprasimo + Figtree, both Latin-only (no U+0400–04FF), so a
+     Ukrainian UI would fall through to the OS sans on every glyph. Substituted
+     for Cyrillic-covering faces in the same register. Load Cyrillic subsets.
+     Only the 800 cut of Rubik is loaded; any declared heading weight resolves
+     to it. Google Fonts: family=Rubik:wght@800&family=Onest:wght@400;500;600;700 */
+  --font-heading: "Rubik",system-ui,sans-serif;
+  --font-body: "Onest",system-ui,sans-serif;
+
+  /* ── 2 · Font weights ─────────────────────────────────────────────────── */
+  --font-weight-display: 800; /* --font-heading-weight · every Rubik level */
+  --font-weight-strong: 700; /* labels, slot meta, kickers */
+  --font-weight-medium: 600; /* titles, chips, buttons */
+  --font-weight-regular: 400; /* body */
+
+  /* ── 3 · Type scale (handoff §4) ──────────────────────────────────────── */
+  --text-display-large: 52px; /* Rubik · login headline */
+  --text-display-large--line-height: 56px;
+  --text-display-large--font-weight: 800;
+  --text-display-large--letter-spacing: -0.02em;
+
+  --text-display-medium: 44px; /* Rubik · screen H1 */
+  --text-display-medium--line-height: 48px;
+  --text-display-medium--font-weight: 800;
+  --text-display-medium--letter-spacing: -0.02em;
+
+  --text-headline-large: 30px; /* Rubik · sheet title */
+  --text-headline-large--line-height: 34px;
+  --text-headline-large--font-weight: 800;
+  --text-headline-large--letter-spacing: -0.015em;
+
+  --text-headline-medium: 26px; /* Rubik · dialog title, empty-state title */
+  --text-headline-medium--line-height: 30px;
+  --text-headline-medium--font-weight: 800;
+  --text-headline-medium--letter-spacing: -0.015em;
+
+  --text-title-large: 20px; /* Rubik · room name on mobile */
+  --text-title-large--line-height: 24px;
+  --text-title-large--font-weight: 800;
+  --text-title-large--letter-spacing: 0;
+
+  --text-title-medium: 16px; /* Onest · booking row title */
+  --text-title-medium--line-height: 24px;
+  --text-title-medium--font-weight: 600;
+  --text-title-medium--letter-spacing: 0;
+
+  --text-title-small: 14px; /* Onest · nav items, legend */
+  --text-title-small--line-height: 20px;
+  --text-title-small--font-weight: 600;
+  --text-title-small--letter-spacing: 0;
+
+  --text-body-large: 16px; /* Onest · screen intro copy */
+  --text-body-large--line-height: 24px;
+  --text-body-large--font-weight: 400;
+  --text-body-large--letter-spacing: 0;
+
+  --text-body-medium: 14px; /* Onest · dialog body, hints */
+  --text-body-medium--line-height: 20px;
+  --text-body-medium--font-weight: 400;
+  --text-body-medium--letter-spacing: 0;
+
+  --text-body-small: 13px; /* Onest · card meta, captions */
+  --text-body-small--line-height: 18px;
+  --text-body-small--font-weight: 400;
+  --text-body-small--letter-spacing: 0;
+
+  --text-label-large: 13.5px; /* Onest · chips, secondary buttons */
+  --text-label-large--line-height: 18px;
+  --text-label-large--font-weight: 600;
+  --text-label-large--letter-spacing: 0;
+
+  --text-label-medium: 12px; /* Onest · field labels */
+  --text-label-medium--line-height: 16px;
+  --text-label-medium--font-weight: 700;
+  --text-label-medium--letter-spacing: 0.02em;
+
+  --text-label-small: 11px; /* Onest · column heads, kickers · uppercase */
+  --text-label-small--line-height: 16px;
+  --text-label-small--font-weight: 700;
+  --text-label-small--letter-spacing: 0.08em;
+
+  --text-slot-title: 13px; /* Onest · booking title in grid, >=2 rows */
+  --text-slot-title--line-height: 1.25;
+  --text-slot-title--font-weight: 600;
+  --text-slot-title--letter-spacing: 0;
+
+  --text-slot-title-compact: 12px; /* Onest · booking title in grid, 1 row */
+  --text-slot-title-compact--line-height: 1.25;
+  --text-slot-title-compact--font-weight: 600;
+  --text-slot-title-compact--letter-spacing: 0;
+
+  --text-slot-meta: 11px; /* Onest · owner + time line in grid */
+  --text-slot-meta--line-height: 14px;
+  --text-slot-meta--font-weight: 700;
+  --text-slot-meta--letter-spacing: 0.04em;
+
+  /* Fluid page headings as written in the prototype markup */
+  --text-h1-fluid: clamp(30px,7vw,44px); /* room list, my bookings */
+  --text-h1-fluid--line-height: 1.08;
+  --text-h1-fluid--letter-spacing: -.02em;
+
+  --text-h1-fluid-room: clamp(28px,7vw,44px); /* week schedule */
+  --text-h1-fluid-room--line-height: 1.08;
+  --text-h1-fluid-room--letter-spacing: -.02em;
+
+  --text-h1-auth: clamp(30px,7vw,44px); /* login / register headline */
+  --text-h1-auth--line-height: 1.06;
+  --text-h1-auth--letter-spacing: -.02em;
+
+  /* Mobile slot title sizes (single-day pager) */
+  --text-slot-title-mobile: 14px; /* >=2 rows */
+  --text-slot-title-mobile-compact: 13px; /* 1 row */
+
+  /* ── 4 · Radius ───────────────────────────────────────────────────────── */
+  --radius-xs: 8px; /* --r-xs · slot blocks (drawn at 9px), swatches */
+  --radius-sm: 12px; /* --r-sm · day-pager chips, small tiles */
+  --radius-md: 16px; /* --r-md · inline banners, textarea, notes */
+  --radius-lg: 28px; /* --r-lg · cards, dialogs, grid frame, rows */
+  --radius-xl: 40px; /* --r-xl · phone frame, hero panels */
+  --radius-full: 999px; /* --r-full · buttons, inputs, chips, avatars */
+
+  /* ── 5 · Spacing scale (--s-1 … --s-8) ───────────────────────────────── */
+  /* Named s1–s8 so they do not silently redefine Tailwind's own numeric
+     spacing scale, which diverges from this one from step 5 upward. */
+  --spacing-s1: 4px; /* icon-to-label, dot gaps */
+  --spacing-s2: 8px; /* chip rows, button gaps */
+  --spacing-s3: 12px; /* slot padding, list gaps */
+  --spacing-s4: 16px; /* card gap, field gap */
+  --spacing-s5: 24px; /* card padding, dialog padding */
+  --spacing-s6: 32px; /* page gutter, section inner */
+  --spacing-s7: 48px; /* block separation */
+  --spacing-s8: 64px; /* section separation */
+
+  /* ── 6 · Elevation — the handoff defines exactly three ────────────────── */
+  --shadow-el-1: 0 1px 2px rgba(46,43,37,.10); /* swatches, resting chips */
+  --shadow-el-2: 0 3px 10px rgba(46,43,37,.12); /* card hover, phone frame */
+  --shadow-el-3: 0 12px 32px rgba(46,43,37,.18); /* sheet, dialog, toast */
+
+  /* ── 7 · Blur — glass only on chrome above scrolling content ──────────── */
+  /* Each pairs with a solid fallback colour and a saturate() step; see the
+     glass block in :root below. */
+  --blur-appbar: 14px; /* sticky app bar */
+  --blur-gridhead: 12px; /* sticky schedule header */
+  --blur-toast: 16px; /* toast */
+  --blur-menu: 18px; /* bell menu */
+  --blur-scrim: 2px; /* side-sheet backdrop */
+  --blur-scrim-dialog: 3px; /* alert-dialog backdrop */
+
+  /* ── 8 · Motion easing ────────────────────────────────────────────────── */
+  --ease-spring: cubic-bezier(.2,.9,.25,1.05); /* every entrance — one slight overshoot, no bounce */
+
+  /* ── 9 · Breakpoints ──────────────────────────────────────────────────── */
+  /* The handoff's own media queries are max-width based: 760px collapses the
+     auth tile / header, 420px drops the brand text. Its JS switches the week
+     grid to the single-day pager at `vw < 761`, i.e. desktop starts one pixel
+     above --breakpoint-desktop. Use the JS boundary for the grid swap. */
+  --breakpoint-desktop: 760px;
+  --breakpoint-narrow: 420px;
+}
+
+/* ============================================================================
+   No Tailwind namespace — plain custom properties. Grid geometry, layout,
+   borders, durations, glass recipes and patterns.
+   ========================================================================= */
+:root {
+  /* ── Week grid geometry ───────────────────────────────────────────────── */
+  --slot-h: 44px; /* one row = 30 minutes; prototype prop range 34–64, step 2 */
+  --slot-h-min: 34px;
+  --slot-h-max: 64px;
+  --slot-h-mobile: 56px; /* single-day pager (mobileSlotH) */
+  --grid-rows: 20; /* 09:00–19:00 in 30-minute steps */
+  --grid-day-start: 540; /* minutes — 09:00 */
+  --grid-day-end: 1140; /* minutes — 19:00 */
+  --grid-step: 30; /* minutes per row */
+  --time-gutter-w: 76px; /* desktop time gutter */
+  --time-gutter-w-mobile: 52px; /* single-day pager gutter */
+  --grid-head-h: 66px; /* sticky day-header row */
+  --grid-head-sticky-top: 65px; /* pins under the app bar */
+  --grid-columns: 76px repeat(7,minmax(0,1fr));
+  --grid-columns-mobile: 52px minmax(0,1fr);
+  --grid-max-h-mobile: min(68vh,640px);
+
+  /* ── Booking block ────────────────────────────────────────────────────── */
+  --cell-pad: 1.5px 3px; /* desktop cell gutter — gives touching blocks a 3px channel */
+  --cell-pad-mobile: 3px 8px;
+  --block-radius: 9px; /* desktop */
+  --block-radius-mobile: 10px;
+  --block-pad-tall: 7px 9px; /* desktop, span >= 2 */
+  --block-pad-short: 4px 8px; /* desktop, span 1 */
+  --block-pad-tall-mobile: 9px 12px;
+  --block-pad-short-mobile: 7px 11px;
+  --block-gap: 2px; /* meta line to title */
+  --block-dot: 7px; /* filled dot on my booking (desktop) */
+  --block-dot-mobile: 8px;
+  --block-glyph: 10px; /* outline person glyph (desktop) */
+  --block-glyph-mobile: 11px;
+  --block-clamp-1row: 1;
+  --block-clamp-2row: 2;
+  --block-clamp-4row: 4;
+  --free-slot-radius: 7px; /* desktop hover target */
+
+  /* ── Borders and rules ────────────────────────────────────────────────── */
+  --border-hairline: 1px; /* every outline-variant rule */
+  --border-own: 2px; /* my booking, selected slot, error input */
+  --border-owner-bar: 4px; /* left bar on someone else's booking */
+  --border-free-mobile: 1.5px; /* dashed pill on the mobile pager */
+  --now-line-h: 2px;
+  --now-dot: 10px;
+
+  /* ── App bar and nav ──────────────────────────────────────────────────── */
+  --appbar-h: 65px; /* measured: the grid header pins at top:65px */
+  --appbar-pad: 12px 32px;
+  --appbar-pad-mobile: 10px 14px; /* <=760px */
+  --appbar-gap: 28px;
+  --appbar-gap-mobile: 12px;
+  --appbar-gap-narrow: 8px; /* <=420px */
+  --nav-tab-pad: 8px 16px;
+  --nav-tab-pad-mobile: 8px 10px;
+  --nav-icon-btn: 40px;
+  --nav-avatar: 30px;
+  --bottom-bar-pad: 12px 16px 16px; /* mobile candidate A */
+  --bottom-bar-item-w: 60px;
+  --bottom-bar-cta-h: 48px;
+
+  /* ── Page layout ──────────────────────────────────────────────────────── */
+  --page-max: 1440px;
+  --page-max-narrow: 1000px; /* my bookings */
+  --page-pad-x: clamp(16px,5vw,32px);
+  --page-pad-top: clamp(24px,6vw,44px);
+  --page-pad-top-schedule: clamp(18px,5vw,28px);
+  --page-pad-bottom: 56px;
+
+  /* ── Room list / room card ────────────────────────────────────────────── */
+  --room-grid-columns: repeat(auto-fill,minmax(min(300px,100%),1fr));
+  --room-grid-gap: 16px;
+  --room-card-pad: 22px 24px;
+  --room-card-gap: 14px;
+  --room-cap-badge: 44px;
+  --cap-chip-pad: 8px 15px;
+  --cap-chip-gap: 6px;
+  --room-tag-pad: 4px 11px;
+
+  /* ── Mobile single-day pager (candidate A) ───────────────────────────── */
+  --pager-gap: 5px;
+  --pager-chip-radius: 14px;
+  --pager-chip-pad: 8px 2px 7px;
+  --pager-chip-min-h: 48px;
+  --pager-gutter-pad: 3px 8px 0 0;
+  --phone-frame-w: 390px;
+  --phone-frame-h: 760px;
+
+  /* ── Time gutter labels ───────────────────────────────────────────────── */
+  --gutter-label-pad: 2px 10px 0 0;
+  --gutter-label-size: 11.5px;
+  --gutter-label-size-mobile: 11px;
+
+  /* ── Motion durations (ease with --ease-spring) ──────────────────────── */
+  /* Handoff §8: dur-fast 140–180ms, dur-base 280ms, dur-slow 340–420ms. */
+  --dur-fast: .14s; /* slot hover tint */
+  --dur-chip: .15s; /* capacity chip, pager chip */
+  --dur-block: .16s; /* booking block shadow */
+  --dur-lift: .18s; /* card hover lift, backdrop fade */
+  --dur-menu: .28s; /* bell menu */
+  --dur-dialog: .3s; /* cancel dialog */
+  --dur-sheet: .34s; /* create side sheet */
+  --dur-toast: .36s; /* toast */
+  --dur-screen: .46s; /* screen entry */
+  --dur-shimmer: 1.35s; /* skeletons only, linear infinite */
+  --dur-spin: .7s; /* button spinner, linear infinite */
+  --dur-reduced: .001ms; /* everything, under prefers-reduced-motion: reduce */
+
+  /* ── Glass recipes (blur token + saturate + solid fallback) ───────────── */
+  --glass-appbar: color-mix(in srgb,#f9f1e2 80%,transparent);
+  --glass-appbar-fallback: #f9f1e2;
+  --glass-appbar-saturate: 1.25;
+  --glass-gridhead: color-mix(in srgb,#f2e7d2 88%,transparent);
+  --glass-gridhead-fallback: #f2e7d2;
+  --glass-gridhead-saturate: 1.2;
+  --glass-toast: color-mix(in srgb,#e2d2b5 92%,transparent);
+  --glass-toast-fallback: #e2d2b5;
+  --glass-toast-saturate: 1.2;
+  --glass-menu: color-mix(in srgb,#f2e7d2 92%,transparent);
+  --glass-menu-fallback: #f2e7d2;
+  --glass-today-head: color-mix(in srgb,#ffd0b4 78%,transparent);
+  --glass-today-head-pager: color-mix(in srgb,#ffd0b4 65%,transparent);
+  --glass-selected-slot: color-mix(in srgb,#ffe1d0 55%,transparent);
+
+  /* ── Patterns ─────────────────────────────────────────────────────────── */
+  --pattern-past: repeating-linear-gradient(135deg,rgba(138,128,115,.13) 0 4px,rgba(138,128,115,0) 4px 9px);
+  --pattern-past-legend: repeating-linear-gradient(135deg,#e2d2b5 0 4px,#ebddc5 4px 8px);
+  /* handoff writes this with role refs too:
+     linear-gradient(100deg,var(--m-sc) 30%,var(--m-sc-high) 50%,var(--m-sc) 70%) */
+  --pattern-skeleton: linear-gradient(100deg,var(--color-surface-container) 30%,var(--color-surface-container-high) 50%,var(--color-surface-container) 70%);
+  --pattern-skeleton-size: 320px 100%;
+
+  /* ── Overlay stacking (z-index used by the prototype) ────────────────── */
+  --z-gridhead: 25;
+  --z-appbar: 40;
+  --z-menu: 45;
+  --z-scrim: 60;
+  --z-sheet: 61;
+  --z-dialog: 70;
+  --z-toast: 80;
+
+  /* ══════════════════════════════════════════════════════════════════════
+     AUTH SCREENS ONLY — never use on product screens.
+
+     The login / register screen is the one wood ground and the one ceramic
+     treatment in the whole app. These values live nowhere else. They are kept
+     out of @theme deliberately, so no Tailwind utility can carry them onto a
+     product screen by accident.
+
+     Text on ceramic uses the standard roles: --color-on-surface 14.6:1,
+     --color-on-surface-variant 7.1:1, mode-switch link
+     --color-on-primary-container 8.0:1 — never --color-primary, which drops
+     to 3.6:1 on the tile's lower stop.
+     ══════════════════════════════════════════════════════════════════════ */
+  --auth-wood-desk: linear-gradient(158deg,#a85f2e 0%,#8c491a 44%,#5d300f 100%);
+  --auth-wood-grain-a: repeating-linear-gradient(92deg,rgba(64,35,16,.22) 0 2px,rgba(255,255,255,.04) 2px 4px,transparent 4px 12px);
+  --auth-wood-grain-b: repeating-linear-gradient(88deg,rgba(255,226,196,.06) 0 1px,transparent 1px 19px);
+  --auth-wood-grain-blend: overlay; /* mix-blend-mode */
+  --auth-wood-vignette: radial-gradient(120% 90% at 50% 40%,transparent 42%,rgba(48,24,8,.42) 100%);
+  --auth-wood-glow: radial-gradient(circle at 42% 42%,rgba(255,232,204,.22),rgba(255,232,204,0) 66%);
+  --auth-wood-glow-size: 1100px;
+
+  --auth-ceramic-face: linear-gradient(168deg,#fffdf8 0%,#f8f0e0 58%,#f0e5d0 100%);
+  --auth-ceramic-radius: 52px; /* tile as drawn; token table calls it 44px */
+  --auth-ceramic-radius-mobile: 32px; /* <=760px */
+  --auth-ceramic-pad: 58px 60px 52px;
+  --auth-ceramic-pad-mobile: 36px 22px 30px;
+  --auth-ceramic-columns: minmax(0,1fr) 1px minmax(0,380px);
+  --auth-ceramic-gap: 0 56px;
+  --auth-ceramic-rim: 0 2px 0 rgba(255,255,255,.85) inset, 0 -2px 0 rgba(120,78,40,.10) inset;
+  --auth-ceramic-lift: 0 1px 3px rgba(48,24,8,.22), 0 28px 56px rgba(40,20,6,.42), 0 60px 110px rgba(40,20,6,.30);
+  --auth-ceramic-glaze: linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
+  --auth-ceramic-glaze-h: 84px;
+  --auth-ceramic-glaze-radius: 0 0 999px 999px;
+
+  --auth-well-bg: rgba(255,255,255,.72);
+  --auth-well-border: 1px solid rgba(120,78,40,.22);
+  --auth-well-shadow: 0 1px 2px rgba(120,78,40,.06) inset;
+  --auth-well-min-h: 50px;
+
+  --auth-glaze-primary: linear-gradient(170deg,#c67139,#a8591f);
+  --auth-glaze-primary-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 14px rgba(120,60,20,.26);
+  --auth-glaze-primary-ink: #fff8ee; /* 5.1:1 */
+  --auth-glaze-primary-min-h: 52px;
+
+  --auth-mark-face: linear-gradient(160deg,#c67139,#8c491a);
+  --auth-mark-shadow: 0 1px 0 rgba(255,255,255,.5) inset,0 4px 10px rgba(100,51,18,.30);
+  --auth-mark-ink: #fff6e9;
+  --auth-mark-size: 56px;
+
+  --auth-divider: linear-gradient(180deg,rgba(120,78,40,0),rgba(120,78,40,.16) 22%,rgba(120,78,40,.16) 78%,rgba(120,78,40,0));
+  /* ═══════════════════ END AUTH SCREENS ONLY ══════════════════════════ */
+}
