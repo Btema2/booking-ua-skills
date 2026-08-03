@@ -113,10 +113,83 @@ signed in. Emails are lowercased and trimmed before they are stored, so
 | `POST` | `/api/auth/logout` | End the session (idempotent) |
 | `GET` | `/api/auth/me` | Current user, or `401` |
 
+## Bookings and the overlap guarantee
+
+Two people must never end up with the same room at the same time — and the
+thing that guarantees it is a database constraint, not a check in the Nest
+service layer:
+
+```sql
+create extension if not exists btree_gist;
+
+alter table bookings add constraint bookings_no_overlap
+  exclude using gist (
+    room_id with =,
+    tstzrange(starts_at, ends_at, '[)') with &&
+  ) where (canceled_at is null);
+```
+
+A `SELECT` to check for a clash, followed by an `INSERT` if none is found,
+always leaves a race between the two statements. A GiST exclusion constraint
+closes it: Postgres rejects the conflicting `INSERT` atomically, at the
+storage layer, regardless of how many requests reach the table at once.
+
+- **`'[)'` — half-open range.** A booking ending at 10:00 and one starting at
+  10:00 do not overlap under this constraint. Back-to-back bookings are a
+  normal, desired case for a shared room and must not be rejected — a closed
+  range (`'[]'`) would incorrectly treat them as clashing on the shared
+  instant.
+- **`where (canceled_at is null)` — partial constraint.** Cancelling is a
+  soft delete (`canceled_at` set, row kept for history). Without this
+  predicate, a cancelled booking would keep holding its slot forever, since
+  the exclusion constraint has no other way to know a row is no longer
+  "live".
+- **The application never locks anything.** `BookingsService.create` issues
+  one `INSERT`; if two identical requests arrive at the same instant,
+  Postgres itself picks one winner and reports the loser's `INSERT` as a
+  constraint violation (SQLSTATE `23P01`), which the repository translates
+  to an HTTP `409` (see `CLAUDE.md` for the `DrizzleQueryError`/`runQuery`
+  unwrapping this relies on). No mutex, no `SELECT ... FOR UPDATE`.
+
+Reproduce it with:
+
+```bash
+npm run prove:race
+```
+
+`scripts/prove-no-overlap.mjs` registers a user, finds a free 1-hour slot
+inside office hours, and fires two byte-for-byte identical
+`POST /api/bookings` requests with `Promise.all` so they are genuinely
+in flight together. It then asserts exactly one `201`, exactly one `409`,
+and exactly one matching row in `GET /api/rooms/:id/bookings` — the DB, not
+the count of successful requests, is the source of truth.
+
+## Cancelling someone else's booking
+
+`DELETE /api/bookings/:id` returns `403` when the booking belongs to another
+user — checked server-side in `BookingsService.cancel` against the
+authenticated session, not by the frontend merely hiding the cancel button
+for rows you don't own. A client that never renders that button for someone
+else's booking would still be refused here.
+
+```bash
+npm run prove:403
+```
+
+`scripts/prove-forbidden-cancel.sh` registers two users in separate cookie
+jars, has the first create a booking, then has the second — authenticated as
+themselves — attempt to cancel it. The script prints the full raw response
+(`curl -i`) so the `403` and its Ukrainian message are visible directly, then
+re-reads the room's bookings to confirm nothing was actually cancelled.
+Finally the first user cancels their own booking successfully (`204`),
+showing the `403` above was about authorization, not a broken endpoint.
+
 ## What's explicitly out of scope here
 
-No bookings table and no room-schedule UI yet — those arrive in later phases.
-Beyond authentication, the groundwork this repo covers is: the monorepo
+No room-schedule UI yet, and no recurring bookings — the week grid, the create
+and cancel screens and the `booking_series` grouping all arrive in later
+phases, so `DELETE /api/bookings/:id` deliberately takes no `?scope=series`
+yet. Beyond authentication and bookings, the groundwork this repo covers is: the monorepo
 builds, the Docker image runs non-root with no dev dependencies, migrations +
 seed are idempotent, and routing correctly splits between the API (JSON,
 including 404s) and the SPA (HTML fallback for deep links).

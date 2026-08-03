@@ -14,7 +14,9 @@
     "dev:web": "npm run dev -w apps/web",
     "build": "npm run build -w packages/core && npm run build -w apps/web && npm run build -w apps/api && node scripts/copy-web-dist.js",
     "test": "npm test --workspaces --if-present",
-    "db:generate": "npm run db:generate -w apps/api"
+    "db:generate": "npm run db:generate -w apps/api",
+    "prove:race": "node scripts/prove-no-overlap.mjs",
+    "prove:403": "bash scripts/prove-forbidden-cancel.sh"
   },
   "devDependencies": {
     "typescript": "5.9.3"
