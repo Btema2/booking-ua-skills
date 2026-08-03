@@ -1,7 +1,7 @@
 import { DrizzleQueryError } from 'drizzle-orm/errors';
-import { EXCLUSION_VIOLATION } from '../db/driver-errors';
+import { EXCLUSION_VIOLATION, FOREIGN_KEY_VIOLATION } from '../db/driver-errors';
 import { DrizzleBookingsRepository } from './drizzle-bookings.repository';
-import { SlotTakenError } from './bookings.repository';
+import { RoomNotFoundError, SlotTakenError } from './bookings.repository';
 
 // The service spec's in-memory double raises SlotTakenError directly, so it can
 // never prove that the *real* repository recognises what Postgres actually
@@ -53,9 +53,9 @@ describe('DrizzleBookingsRepository.createBooking', () => {
     await expect(new DrizzleBookingsRepository().createBooking(NEW_BOOKING)).rejects.toBeInstanceOf(SlotTakenError);
   });
 
-  it('does not mistake an unrelated SQLSTATE (foreign key violation) for a slot conflict', async () => {
+  it('translates a foreign key violation (a roomId that does not exist) into RoomNotFoundError', async () => {
     const cause = Object.assign(new Error('insert or update on table "bookings" violates foreign key constraint'), {
-      code: '23503',
+      code: FOREIGN_KEY_VIOLATION,
       constraint: 'bookings_room_id_fkey',
     });
     insertRejectingWith(cause);
@@ -67,7 +67,27 @@ describe('DrizzleBookingsRepository.createBooking', () => {
       })
       .catch((caught: unknown) => caught as Error);
 
+    expect(error).toBeInstanceOf(RoomNotFoundError);
     expect(error).not.toBeInstanceOf(SlotTakenError);
-    expect(error).toMatchObject({ operation: 'createBooking', code: '23503' });
+  });
+
+  it('does not mistake an unrelated SQLSTATE for either domain error', async () => {
+    // 23502 = not_null_violation — plausible on this insert, but neither of
+    // the two SQLSTATEs this repository specifically translates.
+    const cause = Object.assign(new Error('null value in column violates not-null constraint'), {
+      code: '23502',
+    });
+    insertRejectingWith(cause);
+
+    const error: Error = await new DrizzleBookingsRepository()
+      .createBooking(NEW_BOOKING)
+      .then(() => {
+        throw new Error('createBooking was expected to reject');
+      })
+      .catch((caught: unknown) => caught as Error);
+
+    expect(error).not.toBeInstanceOf(SlotTakenError);
+    expect(error).not.toBeInstanceOf(RoomNotFoundError);
+    expect(error).toMatchObject({ operation: 'createBooking', code: '23502' });
   });
 });

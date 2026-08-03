@@ -17,6 +17,11 @@ export const UNIQUE_VIOLATION = '23505';
 // `bookings_no_overlap` check) — matched on `code`, never on message text.
 export const EXCLUSION_VIOLATION = '23P01';
 
+// Raised when an INSERT/UPDATE references a row that doesn't exist (e.g. a
+// booking's `room_id`). Matched on `code` so a bad reference maps to a clean
+// 4xx instead of falling through to a bare 500.
+export const FOREIGN_KEY_VIOLATION = '23503';
+
 interface DriverErrorFields {
   code?: unknown;
   constraint?: unknown;

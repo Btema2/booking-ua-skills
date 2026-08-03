@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOOKING_REJECTION_MESSAGES } from '../domain/booking-validation';
-import { BookingSchema, CreateBookingSchema, RoomBookingsQuerySchema } from './booking';
+import { BookingSchema, CreateBookingSchema, RoomBookingsQuerySchema, RoomIdPathSchema } from './booking';
 
 function messagesFor(result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) {
   return Object.fromEntries((result.error?.issues ?? []).map((issue) => [String(issue.path[0]), issue.message]));
@@ -97,6 +97,95 @@ describe('CreateBookingSchema', () => {
         endsAt: '2026-01-07T08:00:00.000Z',
       }).success,
     ).toBe(false);
+  });
+
+  // Past the int4 ceiling Postgres raises 22003 in the driver, so this has to
+  // fail in validation to stay a 400 rather than becoming a 500.
+  it('rejects a roomId beyond the Postgres int4 ceiling, in Ukrainian', () => {
+    const result = CreateBookingSchema.safeParse({
+      roomId: 3_000_000_000,
+      title: 'Нарада',
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+    // Zod's own ceiling message is English and would otherwise reach the user.
+    expect(messagesFor(result).roomId).toBe('Некоректна кімната');
+  });
+
+  // The path variant coerces first, so a non-numeric segment must still fail
+  // with the Ukrainian message rather than Zod's English coercion default.
+  it.each([
+    ['abc', 'a non-numeric path segment'],
+    ['3000000000', 'a path segment past the int4 ceiling'],
+    ['0', 'a non-positive path segment'],
+  ])('rejects %s in a room path — %s', (segment) => {
+    const result = RoomIdPathSchema.safeParse(segment);
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Некоректна кімната');
+  });
+
+  it('coerces a well-formed room path segment to a number', () => {
+    expect(RoomIdPathSchema.parse('4')).toBe(4);
+  });
+
+  describe('offset requirement on string instants', () => {
+    // Per ECMAScript, an offset-less date-time string parses in the host's
+    // local time zone rather than UTC — so the schema requires a trailing
+    // `Z` or `±HH:MM` and rejects everything else, including a bare date.
+    function withStartsAt(startsAt: unknown) {
+      return CreateBookingSchema.safeParse({ roomId: 1, title: 'Нарада', startsAt, endsAt: '2026-01-07T08:00:00.000Z' });
+    }
+
+    it('accepts a trailing Z', () => {
+      const result = withStartsAt('2026-08-10T10:00:00Z');
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts an explicit +03:00 offset', () => {
+      const result = withStartsAt('2026-08-10T10:00:00+03:00');
+      expect(result.success).toBe(true);
+    });
+
+    // Seconds are optional in ISO 8601, so both of these are well-formed
+    // instants that a client may legitimately send.
+    it.each(['2026-08-10T10:00Z', '2026-08-10T10:00+03:00'])('accepts %s, which omits seconds', (startsAt) => {
+      expect(withStartsAt(startsAt).success).toBe(true);
+    });
+
+    it('resolves an offset instant to the same moment as its UTC equivalent', () => {
+      const offset = withStartsAt('2026-08-10T13:00:00+03:00');
+      const utc = withStartsAt('2026-08-10T10:00:00Z');
+
+      expect(offset.success && utc.success).toBe(true);
+      expect(offset.data?.startsAt.getTime()).toBe(utc.data?.startsAt.getTime());
+    });
+
+    it('rejects a naive datetime string with no offset', () => {
+      const result = withStartsAt('2026-08-10T10:00:00');
+      expect(result.success).toBe(false);
+      expect(messagesFor(result).startsAt).toMatch(/дата/i);
+    });
+
+    it('rejects a date-only string', () => {
+      const result = withStartsAt('2026-08-10');
+      expect(result.success).toBe(false);
+      expect(messagesFor(result).startsAt).toMatch(/дата/i);
+    });
+
+    it('rejects a garbage string', () => {
+      const result = withStartsAt('not-a-date');
+      expect(result.success).toBe(false);
+      expect(messagesFor(result).startsAt).toMatch(/дата/i);
+    });
+
+    it('still accepts a real Date object, as react-hook-form supplies', () => {
+      const startsAt = new Date('2026-08-10T10:00:00Z');
+      const result = withStartsAt(startsAt);
+      expect(result.success).toBe(true);
+    });
   });
 
   it('does NOT check alignment, duration, office hours, or past-ness — that is validateBookingTimes', () => {

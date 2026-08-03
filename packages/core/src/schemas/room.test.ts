@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NewRoomSchema, RoomListQuerySchema, RoomSchema } from './room';
+import { NewRoomSchema, POSTGRES_INT4_MAX, RoomListQuerySchema, RoomSchema } from './room';
 
 describe('RoomSchema', () => {
   it('parses a valid room', () => {
@@ -28,6 +28,18 @@ describe('RoomSchema', () => {
     ).toThrow();
     expect(() =>
       RoomSchema.parse({ id: 1, name: 'Липа', floor: 1, capacity: -2 }),
+    ).toThrow();
+  });
+
+  it('accepts an id at exactly the Postgres int4 ceiling', () => {
+    expect(() =>
+      RoomSchema.parse({ id: POSTGRES_INT4_MAX, name: 'Липа', floor: 1, capacity: 4, amenities: null }),
+    ).not.toThrow();
+  });
+
+  it('rejects an id beyond the Postgres int4 ceiling, which would 500 as a numeric overflow', () => {
+    expect(() =>
+      RoomSchema.parse({ id: POSTGRES_INT4_MAX + 1, name: 'Липа', floor: 1, capacity: 4, amenities: null }),
     ).toThrow();
   });
 });

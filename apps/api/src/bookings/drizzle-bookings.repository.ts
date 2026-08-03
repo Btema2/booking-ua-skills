@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { and, asc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import { getConnection } from '../db/connection';
-import { EXCLUSION_VIOLATION, QueryFailedError, runQuery } from '../db/driver-errors';
+import { EXCLUSION_VIOLATION, FOREIGN_KEY_VIOLATION, QueryFailedError, runQuery } from '../db/driver-errors';
 import { bookings, users } from '../db/schema';
-import { BookingsRepository, SlotTakenError, type BookingRow, type NewBooking, type OwnedBookingRow } from './bookings.repository';
+import {
+  BookingsRepository,
+  RoomNotFoundError,
+  SlotTakenError,
+  type BookingRow,
+  type NewBooking,
+  type OwnedBookingRow,
+} from './bookings.repository';
 
 const BOOKING_COLUMNS = {
   id: bookings.id,
@@ -41,6 +48,11 @@ export class DrizzleBookingsRepository extends BookingsRepository {
     } catch (error) {
       if (error instanceof QueryFailedError && error.code === EXCLUSION_VIOLATION) {
         throw new SlotTakenError();
+      }
+      // `user_id` is the session's own id, never client-supplied, so this can
+      // only be the `room_id` reference — never a raw 500 for a bad roomId.
+      if (error instanceof QueryFailedError && error.code === FOREIGN_KEY_VIOLATION) {
+        throw new RoomNotFoundError();
       }
       throw error;
     }

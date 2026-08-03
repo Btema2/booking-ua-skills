@@ -41,12 +41,28 @@ export class SlotTakenError extends Error {
 }
 
 /**
+ * Raised when `createBooking`'s insert fails its `room_id` foreign key. The
+ * insert's other foreign key, `user_id`, is always the authenticated
+ * session's own id and can never be forged by the client, so a foreign-key
+ * violation on this insert can only ever mean the referenced room is gone.
+ */
+export class RoomNotFoundError extends Error {
+  constructor() {
+    super('Room does not exist');
+    this.name = 'RoomNotFoundError';
+  }
+}
+
+/**
  * Persistence boundary for bookings. Abstract class so it doubles as a Nest DI
  * token: production binds the Drizzle implementation, specs bind a double and
  * never touch Postgres.
  */
 export abstract class BookingsRepository {
-  /** @throws SlotTakenError when the room is already booked for that interval. */
+  /**
+   * @throws SlotTakenError when the room is already booked for that interval.
+   * @throws RoomNotFoundError when roomId does not reference an existing room.
+   */
   abstract createBooking(input: NewBooking): Promise<BookingRow>;
   abstract findBookingById(id: string): Promise<OwnedBookingRow | null>;
   /** Soft delete; idempotent at the storage layer, but the service checks state first. */

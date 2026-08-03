@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
+// Postgres `int4` ceiling. `rooms.id` is a serial (int4) column, so any value
+// beyond this raises SQLSTATE 22003 (numeric field overflow) before a query
+// can even run — bounding it here turns that into a clean 400 instead.
+export const POSTGRES_INT4_MAX = 2147483647;
+
 export const RoomSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.number().int().positive().max(POSTGRES_INT4_MAX),
   name: z.string().min(1),
   floor: z.number().int(),
   capacity: z.number().int().positive(),

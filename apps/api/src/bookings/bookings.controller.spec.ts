@@ -7,15 +7,27 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { SESSION_COOKIE_NAME } from '../auth/session-cookie';
 import { BookingsController } from './bookings.controller';
-import { BookingsRepository, SlotTakenError, type BookingRow, type NewBooking, type OwnedBookingRow } from './bookings.repository';
+import {
+  BookingsRepository,
+  RoomNotFoundError,
+  SlotTakenError,
+  type BookingRow,
+  type NewBooking,
+  type OwnedBookingRow,
+} from './bookings.repository';
 import { BookingsService } from './bookings.service';
 
 const SESSION_ID = 'valid-session-id';
 const USER = { id: '11111111-1111-4111-8111-111111111111', name: 'Іван', email: 'ivan@x.com', emailVerifiedAt: null };
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
 
-// Wednesday 09:00-10:00 Kyiv (winter, +2), far enough in the future not to
-// ever collide with the real clock this suite runs under.
+// Wednesday 09:00-10:00 Kyiv (winter, +2). This suite runs the *real*
+// BookingsService, which calls `new Date()` to reject past instants — so a
+// body fixed to one instant only stays valid as long as the wall clock
+// hasn't passed it yet. Fake timers pin "now" to a fixed point before it
+// (mirrors bookings.service.spec.ts), so the suite can never rot no matter
+// how far the real clock moves on.
+const NOW = new Date('2026-01-06T07:00:00.000Z');
 const VALID_BODY = {
   roomId: 3,
   title: 'Синк по Q4',
@@ -27,10 +39,14 @@ const VALID_BODY = {
 class RecordingBookingsRepository extends BookingsRepository {
   private readonly byId = new Map<string, BookingRow & { canceledAt: Date | null }>();
   rejectNextCreateWithSlotTaken = false;
+  rejectNextCreateWithRoomNotFound = false;
 
   async createBooking(input: NewBooking): Promise<BookingRow> {
     if (this.rejectNextCreateWithSlotTaken) {
       throw new SlotTakenError();
+    }
+    if (this.rejectNextCreateWithRoomNotFound) {
+      throw new RoomNotFoundError();
     }
     const row = { id: randomUUID(), ...input, canceledAt: null };
     this.byId.set(row.id, row);
@@ -82,6 +98,7 @@ describe('BookingsController', () => {
   let repository: RecordingBookingsRepository;
 
   beforeEach(async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] }).setSystemTime(NOW);
     repository = new RecordingBookingsRepository();
     const moduleRef = await Test.createTestingModule({
       controllers: [BookingsController],
@@ -99,6 +116,9 @@ describe('BookingsController', () => {
   });
 
   afterEach(async () => {
+    // Real timers restored before closing the app: server teardown may rely
+    // on its own timeouts, which a fake clock would otherwise stall.
+    jest.useRealTimers();
     await app.close();
   });
 
@@ -138,6 +158,14 @@ describe('BookingsController', () => {
       const response = await postBooking(VALID_BODY).expect(409);
 
       expect(response.body).toEqual({ statusCode: 409, message: 'Слот зайнятий' });
+    });
+
+    it('turns a nonexistent room into a 400 field error under roomId', async () => {
+      repository.rejectNextCreateWithRoomNotFound = true;
+
+      const response = await postBooking(VALID_BODY).expect(400);
+
+      expect(response.body).toEqual({ statusCode: 400, errors: { roomId: ['Обраної кімнати не існує'] } });
     });
 
     it('requires a session', async () => {

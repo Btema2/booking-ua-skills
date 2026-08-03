@@ -1,7 +1,14 @@
 import type { CreateBookingInput, PublicUser } from '@booking/core';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
-import { BookingsRepository, SlotTakenError, type BookingRow, type NewBooking, type OwnedBookingRow } from './bookings.repository';
+import {
+  BookingsRepository,
+  RoomNotFoundError,
+  SlotTakenError,
+  type BookingRow,
+  type NewBooking,
+  type OwnedBookingRow,
+} from './bookings.repository';
 
 const USER: PublicUser = { id: '11111111-1111-4111-8111-111111111111', name: 'Іван', email: 'ivan@x.com', emailVerifiedAt: null };
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
@@ -139,6 +146,17 @@ describe('BookingsService', () => {
 
       expect(error).toBeInstanceOf(ConflictException);
       expect(bodyOf(error)).toEqual({ statusCode: 409, message: 'Слот зайнятий' });
+    });
+
+    it('turns a repository RoomNotFoundError into a 400 field error under roomId', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      repository.createBooking.mockRejectedValue(new RoomNotFoundError());
+
+      const error = await createService(repository).create(USER, VALID_INPUT).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(bodyOf(error)).toEqual({ statusCode: 400, errors: { roomId: ['Обраної кімнати не існує'] } });
     });
 
     it('rethrows a repository failure that is not a slot conflict', async () => {

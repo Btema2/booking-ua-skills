@@ -6,9 +6,10 @@ import {
   bookingNotFound,
   bookingTimeRejection,
   cannotCancelOthersBooking,
+  roomNotFound,
   slotTaken,
 } from './bookings.errors';
-import { BookingsRepository, SlotTakenError, type BookingRow } from './bookings.repository';
+import { BookingsRepository, RoomNotFoundError, SlotTakenError, type BookingRow } from './bookings.repository';
 
 @Injectable()
 export class BookingsService {
@@ -34,6 +35,9 @@ export class BookingsService {
     } catch (error) {
       if (error instanceof SlotTakenError) {
         throw slotTaken();
+      }
+      if (error instanceof RoomNotFoundError) {
+        throw roomNotFound();
       }
       throw error;
     }
