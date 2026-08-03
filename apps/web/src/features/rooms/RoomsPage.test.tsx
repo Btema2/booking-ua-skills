@@ -90,50 +90,79 @@ describe('capacity filter', () => {
     await screen.findByRole('article', { name: /Дуб/ });
 
     const group = screen.getByRole('radiogroup');
-    expect(within(group).getAllByRole('radio')).toHaveLength(6);
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
     expect(screen.getByRole('radio', { name: 'Будь-яка' }).getAttribute('aria-checked')).toBe(
       'true',
     );
-    expect(screen.getByRole('radio', { name: 'від 8' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('radio', { name: 'від 12' }).getAttribute('aria-checked')).toBe('false');
   });
 
-  it('refetches with ?minCapacity=8 and writes the choice to the URL', async () => {
+  it('derives its chips from the capacities that actually exist', async () => {
+    // Rooms hold 12, 6 and 4. «від 4» would match all three, which is «Будь-яка»;
+    // anything above 12 could never match. Neither is offered.
+    renderRoomsPage('/', { 'GET /api/rooms': allRooms });
+    await screen.findByRole('article', { name: /Дуб/ });
+
+    const labels = within(screen.getByRole('radiogroup'))
+      .getAllByRole('radio')
+      .map((chip) => chip.textContent);
+
+    expect(labels).toEqual(['Будь-яка', 'від 6', 'від 12']);
+  });
+
+  it('offers no chip that the room list cannot satisfy', async () => {
+    renderRoomsPage('/', { 'GET /api/rooms': allRooms });
+    await screen.findByRole('article', { name: /Дуб/ });
+
+    const largest = Math.max(...[OAK, MAPLE, SYCAMORE].map((room) => room.capacity));
+    const thresholds = within(screen.getByRole('radiogroup'))
+      .getAllByRole('radio')
+      .map((chip) => Number((chip.textContent ?? '').replace('від ', '')))
+      .filter((value) => !Number.isNaN(value));
+
+    expect(thresholds.length).toBeGreaterThan(0);
+    for (const threshold of thresholds) {
+      expect(threshold).toBeLessThanOrEqual(largest);
+    }
+  });
+
+  it('refetches with ?minCapacity=12 and writes the choice to the URL', async () => {
     const { fetchMock } = renderRoomsPage('/', {
       'GET /api/rooms': allRooms,
-      'GET /api/rooms?minCapacity=8': () => jsonResponse(200, { rooms: [OAK] }),
+      'GET /api/rooms?minCapacity=12': () => jsonResponse(200, { rooms: [OAK] }),
     });
     await screen.findByRole('article', { name: /Дуб/ });
 
-    fireEvent.click(screen.getByRole('radio', { name: 'від 8' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'від 12' }));
 
     await waitFor(() => expect(screen.queryByRole('article', { name: /Явір/ })).toBeNull());
-    expect(window.location.search).toBe('?minCapacity=8');
+    expect(window.location.search).toBe('?minCapacity=12');
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(
-      '/api/rooms?minCapacity=8',
+      '/api/rooms?minCapacity=12',
     );
   });
 
   it('reads the filter back out of the URL on a deep link', async () => {
-    renderRoomsPage('/?minCapacity=8', {
+    renderRoomsPage('/?minCapacity=12', {
       'GET /api/rooms': allRooms,
-      'GET /api/rooms?minCapacity=8': () => jsonResponse(200, { rooms: [OAK] }),
+      'GET /api/rooms?minCapacity=12': () => jsonResponse(200, { rooms: [OAK] }),
     });
 
     await screen.findByRole('article', { name: /Дуб/ });
-    expect(screen.getByRole('radio', { name: 'від 8' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: 'від 12' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('moves between chips with the arrow keys', async () => {
     renderRoomsPage('/', {
       'GET /api/rooms': allRooms,
-      'GET /api/rooms?minCapacity=4': () => jsonResponse(200, { rooms: [OAK, MAPLE, SYCAMORE] }),
+      'GET /api/rooms?minCapacity=6': () => jsonResponse(200, { rooms: [OAK, MAPLE] }),
     });
     await screen.findByRole('article', { name: /Дуб/ });
 
     fireEvent.keyDown(screen.getByRole('radio', { name: 'Будь-яка' }), { key: 'ArrowRight' });
 
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: 'від 4' }).getAttribute('aria-checked')).toBe(
+      expect(screen.getByRole('radio', { name: 'від 6' }).getAttribute('aria-checked')).toBe(
         'true',
       ),
     );
@@ -143,14 +172,15 @@ describe('capacity filter', () => {
 describe('empty state', () => {
   afterEach(resetHarness);
 
+  /**
+   * No chip can produce this state any more — that is the point of deriving them.
+   * A hand-typed or stale `?minCapacity=` still can, so that is the way in.
+   */
   it('names the largest room that does exist and clears the filter on «Показати всі»', async () => {
-    renderRoomsPage('/', {
+    renderRoomsPage('/?minCapacity=99', {
       'GET /api/rooms': allRooms,
-      'GET /api/rooms?minCapacity=20': () => jsonResponse(200, { rooms: [] }),
+      'GET /api/rooms?minCapacity=99': () => jsonResponse(200, { rooms: [] }),
     });
-    await screen.findByRole('article', { name: /Дуб/ });
-
-    fireEvent.click(screen.getByRole('radio', { name: 'від 20' }));
 
     await screen.findByText('Таких кімнат немає');
     const body = screen.getByText(/Найбільша переговорна/);
@@ -209,13 +239,13 @@ describe('error state', () => {
         shouldFail
           ? jsonResponse(500, { statusCode: 500, message: 'Internal server error' })
           : allRooms(),
-      'GET /api/rooms?minCapacity=4': () => jsonResponse(200, { rooms: [OAK] }),
+      'GET /api/rooms?minCapacity=6': () => jsonResponse(200, { rooms: [OAK, MAPLE] }),
     });
     await screen.findByRole('article', { name: /Дуб/ });
 
     // Force a refetch of the same key that fails, so the cache still holds a good list.
     shouldFail = true;
-    fireEvent.click(screen.getByRole('radio', { name: 'від 4' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'від 6' }));
     await screen.findByRole('article', { name: /Дуб/ });
     fireEvent.click(screen.getByRole('radio', { name: 'Будь-яка' }));
 

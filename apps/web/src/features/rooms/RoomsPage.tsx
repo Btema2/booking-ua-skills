@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { Room } from '@booking/core';
 import { CapacityFilter, useCapacityFilter } from './CapacityFilter';
 import { RoomCard } from './RoomCard';
+import { capacityThresholds } from './capacityThresholds';
 import { CachedCopyNotice, RoomListEmpty, RoomListError, RoomListLoading } from './RoomListStates';
-import { useLargestRoom, useRooms } from './useRooms';
+import { largestOf, useRoomCatalogue, useRooms } from './useRooms';
 
 function RoomGrid({ rooms }: { readonly rooms: readonly Room[] }) {
   return (
@@ -30,8 +31,10 @@ export function RoomsPage() {
   useEffect(() => setShowingCachedCopy(false), [minCapacity]);
 
   const hasFilter = minCapacity !== undefined;
-  const isEmptyUnderFilter = hasFilter && rooms.isSuccess && rooms.data.length === 0;
-  const largestRoom = useLargestRoom(isEmptyUnderFilter);
+  // Every room there is, regardless of the active filter — see useRoomCatalogue.
+  const catalogue = useRoomCatalogue().data ?? [];
+  const thresholds = capacityThresholds(catalogue);
+  const largestRoom = largestOf(catalogue);
 
   const isShowingStaleList = rooms.isError && isShowingCachedCopy && rooms.data !== undefined;
 
@@ -77,7 +80,7 @@ export function RoomsPage() {
         </p>
       </header>
 
-      <CapacityFilter value={minCapacity} onChange={setMinCapacity} />
+      <CapacityFilter value={minCapacity} thresholds={thresholds} onChange={setMinCapacity} />
 
       <div className="flex flex-col gap-s4">{renderList()}</div>
     </section>

@@ -7,29 +7,29 @@ type CapacityOption = {
   readonly label: string;
 };
 
-const CAPACITY_OPTIONS: readonly CapacityOption[] = [
-  { value: undefined, label: 'Будь-яка' },
-  { value: 4, label: 'від 4' },
-  { value: 6, label: 'від 6' },
-  { value: 8, label: 'від 8' },
-  { value: 12, label: 'від 12' },
-  { value: 20, label: 'від 20' },
-];
+const ANY_CAPACITY: CapacityOption = { value: undefined, label: 'Будь-яка' };
+
+function toOptions(thresholds: readonly number[]): readonly CapacityOption[] {
+  return [ANY_CAPACITY, ...thresholds.map((value) => ({ value, label: `від ${value}` }))];
+}
 
 const MIN_CAPACITY_PARAM = 'minCapacity';
 
 /**
  * The filter lives in the URL because it is shareable state: a link to
  * `/?minCapacity=8` reproduces the screen, and the back button undoes a choice.
+ *
+ * Any positive integer is accepted, not only the values the chip row happens to
+ * offer. The chips are derived from the rooms that exist, so validating the URL
+ * against them would make `?minCapacity=99` — a stale link, or a room that has
+ * since shrunk — silently render the full list instead of the empty state.
  */
 export function useCapacityFilter() {
   const [searchParams, setSearchParams] = useSearchParams();
   const raw = searchParams.get(MIN_CAPACITY_PARAM);
 
-  // Never trust the URL — only a value the chip row can actually show counts.
-  const minCapacity = CAPACITY_OPTIONS.find(
-    (option) => option.value !== undefined && String(option.value) === raw,
-  )?.value;
+  const parsed = raw === null || raw.trim() === '' ? Number.NaN : Number(raw);
+  const minCapacity = Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 
   const setMinCapacity = useCallback(
     (value: number | undefined) => {
@@ -71,13 +71,18 @@ const ARROW_DELTA: Readonly<Record<string, number>> = {
 
 type CapacityFilterProps = {
   readonly value: number | undefined;
+  /** Ascending capacities to offer, from `capacityThresholds`. */
+  readonly thresholds: readonly number[];
   readonly onChange: (value: number | undefined) => void;
 };
 
-export function CapacityFilter({ value, onChange }: CapacityFilterProps) {
+export function CapacityFilter({ value, thresholds, onChange }: CapacityFilterProps) {
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const selectedIndex = CAPACITY_OPTIONS.findIndex((option) => option.value === value);
+  const options = toOptions(thresholds);
+  const selectedIndex = options.findIndex((option) => option.value === value);
   // A radiogroup is one tab stop: the checked chip carries it, arrows do the rest.
+  // A URL value no chip offers (?minCapacity=99) selects nothing, so the stop
+  // falls back to «Будь-яка» — the chip that gets the reader out of that state.
   const tabStopIndex = selectedIndex === -1 ? 0 : selectedIndex;
 
   function handleKeyDown(event: React.KeyboardEvent, index: number) {
@@ -86,9 +91,15 @@ export function CapacityFilter({ value, onChange }: CapacityFilterProps) {
       return;
     }
     event.preventDefault();
-    const next = (index + delta + CAPACITY_OPTIONS.length) % CAPACITY_OPTIONS.length;
-    onChange(CAPACITY_OPTIONS[next].value);
+    const next = (index + delta + options.length) % options.length;
+    onChange(options[next].value);
     chipRefs.current[next]?.focus();
+  }
+
+  // One room, or six rooms that all hold the same number: no threshold divides
+  // them, so a chip row would be «Будь-яка» alone. Render nothing instead.
+  if (thresholds.length === 0) {
+    return null;
   }
 
   return (
@@ -97,7 +108,7 @@ export function CapacityFilter({ value, onChange }: CapacityFilterProps) {
       aria-label="Фільтр за місткістю"
       className="flex flex-wrap gap-[var(--cap-chip-gap)]"
     >
-      {CAPACITY_OPTIONS.map((option, index) => {
+      {options.map((option, index) => {
         const isSelected = option.value === value;
         return (
           <button

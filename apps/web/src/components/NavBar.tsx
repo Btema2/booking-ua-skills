@@ -51,15 +51,29 @@ export function NavBar({ userName }: { userName: string }) {
           'max-narrow:gap-[var(--appbar-gap-narrow)]',
         ].join(' ')}
       >
+        {/*
+          Below the desktop breakpoint the bar carries the two tabs, the avatar and
+          the logout button, and those are all irreducible: together with padding
+          they need ~370px. The brand and the user's name are the only compressible
+          items, so both stand down until there is room for them. DESIGN-NOTES §4
+          drops the brand at ≤420px; it has to go earlier here because the handoff's
+          bar does not also carry a tab row. Hidden outright rather than sr-only —
+          it duplicates the «Кімнати» tab, so the accessibility tree loses nothing.
+        */}
         <Link
           to="/"
-          className={`shrink-0 rounded-full font-heading text-title-large text-on-surface max-narrow:hidden ${FOCUS_RING}`}
+          className={`shrink-0 rounded-full font-heading text-title-large text-on-surface max-desktop:hidden ${FOCUS_RING}`}
         >
           Переговорні
         </Link>
 
-        {/* Tabs keep their size; the user pill next to them is what gives way. */}
-        <ul className="flex shrink-0 items-center gap-s2 max-narrow:gap-s1">
+        {/*
+          Below ~345px the two tab labels alone exceed the bar. `min-w-0` plus
+          `overflow-x-auto` moves that overflow into the tab strip instead of the
+          document, so the page itself never scrolls sideways and the avatar and
+          logout button stay on screen at every width.
+        */}
+        <ul className="flex min-w-0 items-center gap-s2 overflow-x-auto max-narrow:gap-s1">
           <li>
             <NavLink to="/" end className={navTabClass}>
               Кімнати
@@ -81,14 +95,21 @@ export function NavBar({ userName }: { userName: string }) {
 
         <div className="ml-auto flex min-w-0 items-center gap-s2">
           {/* Avatar + name pill — DESIGN-NOTES §4: 30px avatar, pill pad 5px 14px 5px 5px. */}
-          <span className="flex min-w-0 items-center gap-s2 rounded-full bg-surface-container p-[5px] pr-[14px]">
+          <span className="flex shrink-0 items-center gap-s2 rounded-full bg-surface-container p-[5px] pr-[14px] max-desktop:gap-0 max-desktop:pr-[5px]">
             <span
               aria-hidden="true"
               className="grid size-[var(--nav-avatar)] shrink-0 place-items-center rounded-full bg-primary-container font-heading text-label-large text-on-primary-container"
             >
               {userName.slice(0, 1)}
             </span>
-            <span className="min-w-0 truncate text-label-large text-on-surface-variant">
+            {/*
+              `sr-only` rather than `hidden`: the name leaves the layout without
+              leaving the accessibility tree, which matters because the avatar beside
+              it is only the first letter and is aria-hidden. Truncating instead, as
+              this did before, collapsed «Іван» into a 14px «І…» — clipped content
+              rather than a deliberate one.
+            */}
+            <span className="text-label-large whitespace-nowrap text-on-surface-variant max-desktop:sr-only">
               {userName}
             </span>
           </span>

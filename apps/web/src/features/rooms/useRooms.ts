@@ -18,7 +18,7 @@ export function useRooms(minCapacity: number | undefined) {
   });
 }
 
-function largestOf(rooms: readonly Room[]): Room | undefined {
+export function largestOf(rooms: readonly Room[]): Room | undefined {
   return rooms.reduce<Room | undefined>(
     (largest, room) => (largest === undefined || room.capacity > largest.capacity ? room : largest),
     undefined,
@@ -26,17 +26,18 @@ function largestOf(rooms: readonly Room[]): Room | undefined {
 }
 
 /**
- * The empty state has to name a real room, so it reads the *unfiltered* list.
- * That is the same query key the screen loads first, so this is usually a cache
- * hit; `enabled` keeps it from firing until an empty result actually needs it
- * (which is what makes a deep link straight to `?minCapacity=20` still honest).
+ * The unfiltered list, which the screen needs for two things the filtered list
+ * cannot answer: which capacity chips are worth offering, and which room the
+ * empty state should name. Filtering to «від 12» would otherwise hide every
+ * smaller room from both.
+ *
+ * With no filter active this is the same query key as `useRooms`, so the two
+ * collapse into one request; only a filtered view costs a second.
  */
-export function useLargestRoom(enabled: boolean): Room | undefined {
-  const { data } = useQuery({
+export function useRoomCatalogue() {
+  return useQuery({
     queryKey: roomsQueryKey(undefined),
     queryFn: () => fetchRooms(undefined),
     retry: false,
-    enabled,
   });
-  return data === undefined ? undefined : largestOf(data);
 }
