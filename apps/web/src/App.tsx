@@ -6,7 +6,7 @@ import { RedirectIfAuthenticated } from './features/auth/RedirectIfAuthenticated
 import { RequireAuth } from './features/auth/RequireAuth';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
-import { HomePage } from './features/home/HomePage';
+import { RoomsPage } from './features/rooms/RoomsPage';
 
 export function App() {
   const [queryClient] = useState(createQueryClient);
@@ -20,7 +20,7 @@ export function App() {
             <Route path="/register" element={<RegisterPage />} />
           </Route>
           <Route element={<RequireAuth />}>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<RoomsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,1 +1,82 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+
+/* ============================================================================
+   Base layer — the ground the whole app sits on. Everything else is a Tailwind
+   utility built from the tokens; nothing here hardcodes a colour or a size.
+   ========================================================================= */
+@layer base {
+  body {
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-regular);
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-display);
+  }
+}
+
+/* ============================================================================
+   Skeleton shimmer — DESIGN-NOTES §8. A sweeping gradient over
+   --color-surface-container, 1.35s linear infinite, never a centred spinner.
+   Lives here rather than in the component because it needs @keyframes.
+   ========================================================================= */
+@layer components {
+  .skeleton-bar {
+    background-color: var(--color-surface-container);
+    background-image: var(--pattern-skeleton);
+    background-size: var(--pattern-skeleton-size);
+    background-repeat: no-repeat;
+    background-position: -320px 0;
+    animation: skeleton-shimmer var(--dur-shimmer) linear infinite;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: -320px 0;
+  }
+  to {
+    background-position: 320px 0;
+  }
+}
+
+/* ============================================================================
+   Reduced motion — DESIGN-NOTES §8: "everything collapses to --dur-reduced".
+   Collapsing the tokens themselves catches every token-driven transition; the
+   universal rule catches anything that slipped through with a literal duration.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: var(--dur-reduced);
+    --dur-chip: var(--dur-reduced);
+    --dur-block: var(--dur-reduced);
+    --dur-lift: var(--dur-reduced);
+    --dur-menu: var(--dur-reduced);
+    --dur-dialog: var(--dur-reduced);
+    --dur-sheet: var(--dur-reduced);
+    --dur-toast: var(--dur-reduced);
+    --dur-screen: var(--dur-reduced);
+    --dur-shimmer: var(--dur-reduced);
+    --dur-spin: var(--dur-reduced);
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: var(--dur-reduced) !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--dur-reduced) !important;
+    scroll-behavior: auto !important;
+  }
+}

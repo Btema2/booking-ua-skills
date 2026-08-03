@@ -16,9 +16,9 @@ export function RequireAuth() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-surface text-on-surface">
       <NavBar userName={user.name} />
-      <main className="mx-auto w-full max-w-4xl px-4 py-10">
+      <main className="mx-auto w-full max-w-[var(--page-max)] px-[var(--page-pad-x)] pt-[var(--page-pad-top)] pb-[var(--page-pad-bottom)]">
         <Outlet />
       </main>
     </div>
