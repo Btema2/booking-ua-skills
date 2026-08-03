@@ -20,3 +20,28 @@ export {
   type LoginInput,
   type PublicUser,
 } from './schemas/auth';
+export {
+  CreateBookingSchema,
+  RoomBookingsQuerySchema,
+  BookingSchema,
+  type CreateBookingInput,
+  type RoomBookingsQuery,
+  type Booking,
+} from './schemas/booking';
+export {
+  overlaps,
+  isAligned,
+  durationMinutes,
+  isWithinOfficeHours,
+  OFFICE_ZONE,
+  OFFICE_OPEN_HOUR,
+  OFFICE_CLOSE_HOUR,
+  slotsForWeek,
+  BOOKING_REJECTION_MESSAGES,
+  MIN_BOOKING_MINUTES,
+  MAX_BOOKING_MINUTES,
+  validateBookingTimes,
+  type BookingInterval,
+  type Slot,
+  type BookingRejection,
+} from './domain';

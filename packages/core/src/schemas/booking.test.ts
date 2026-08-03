@@ -1,0 +1,179 @@
+import { describe, expect, it } from 'vitest';
+import { BOOKING_REJECTION_MESSAGES } from '../domain/booking-validation';
+import { BookingSchema, CreateBookingSchema, RoomBookingsQuerySchema } from './booking';
+
+function messagesFor(result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) {
+  return Object.fromEntries((result.error?.issues ?? []).map((issue) => [String(issue.path[0]), issue.message]));
+}
+
+describe('CreateBookingSchema', () => {
+  it('parses a valid payload with ISO string instants, as sent over HTTP', () => {
+    const parsed = CreateBookingSchema.parse({
+      roomId: 1,
+      title: 'Синхронізація команди',
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(parsed.startsAt).toBeInstanceOf(Date);
+    expect(parsed.endsAt).toBeInstanceOf(Date);
+    expect(parsed.startsAt).toEqual(new Date('2026-01-07T07:00:00.000Z'));
+  });
+
+  it('parses a valid payload with Date instances, as react-hook-form already produces', () => {
+    const startsAt = new Date('2026-01-07T07:00:00.000Z');
+    const endsAt = new Date('2026-01-07T08:00:00.000Z');
+
+    const parsed = CreateBookingSchema.parse({ roomId: 1, title: 'Нарада', startsAt, endsAt });
+
+    expect(parsed.startsAt).toEqual(startsAt);
+    expect(parsed.endsAt).toEqual(endsAt);
+  });
+
+  it('trims the title', () => {
+    const parsed = CreateBookingSchema.parse({
+      roomId: 1,
+      title: '  Планування  ',
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(parsed.title).toBe('Планування');
+  });
+
+  it('rejects an empty title with the shared title message', () => {
+    const result = CreateBookingSchema.safeParse({
+      roomId: 1,
+      title: '',
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).title).toBe(BOOKING_REJECTION_MESSAGES.title);
+  });
+
+  it('rejects a title over 100 characters with the shared title message', () => {
+    const result = CreateBookingSchema.safeParse({
+      roomId: 1,
+      title: 'а'.repeat(101),
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).title).toBe(BOOKING_REJECTION_MESSAGES.title);
+  });
+
+  it('accepts a title at exactly 100 characters', () => {
+    const result = CreateBookingSchema.safeParse({
+      roomId: 1,
+      title: 'а'.repeat(100),
+      startsAt: '2026-01-07T07:00:00.000Z',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a non-ISO startsAt with a clear Ukrainian message', () => {
+    const result = CreateBookingSchema.safeParse({
+      roomId: 1,
+      title: 'Нарада',
+      startsAt: 'not-a-date',
+      endsAt: '2026-01-07T08:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).startsAt).toMatch(/дата/i);
+  });
+
+  it('rejects a roomId that is not a positive integer', () => {
+    expect(
+      CreateBookingSchema.safeParse({
+        roomId: 0,
+        title: 'Нарада',
+        startsAt: '2026-01-07T07:00:00.000Z',
+        endsAt: '2026-01-07T08:00:00.000Z',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('does NOT check alignment, duration, office hours, or past-ness — that is validateBookingTimes', () => {
+    // Misaligned, 5 minutes long, outside office hours, and in the past — all pass here.
+    const result = CreateBookingSchema.safeParse({
+      roomId: 1,
+      title: 'Будь-що',
+      startsAt: '2020-01-01T00:05:00.000Z',
+      endsAt: '2020-01-01T00:10:00.000Z',
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('RoomBookingsQuerySchema', () => {
+  it('parses a valid from/to range', () => {
+    const parsed = RoomBookingsQuerySchema.parse({
+      from: '2026-01-05T00:00:00.000Z',
+      to: '2026-01-12T00:00:00.000Z',
+    });
+
+    expect(parsed.from).toEqual(new Date('2026-01-05T00:00:00.000Z'));
+    expect(parsed.to).toEqual(new Date('2026-01-12T00:00:00.000Z'));
+  });
+
+  it('rejects a "to" that is not after "from"', () => {
+    const result = RoomBookingsQuerySchema.safeParse({
+      from: '2026-01-12T00:00:00.000Z',
+      to: '2026-01-05T00:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).to).toBeTruthy();
+  });
+
+  it('rejects an equal "from" and "to"', () => {
+    const result = RoomBookingsQuerySchema.safeParse({
+      from: '2026-01-05T00:00:00.000Z',
+      to: '2026-01-05T00:00:00.000Z',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('requires both from and to', () => {
+    expect(RoomBookingsQuerySchema.safeParse({ from: '2026-01-05T00:00:00.000Z' }).success).toBe(false);
+    expect(RoomBookingsQuerySchema.safeParse({ to: '2026-01-05T00:00:00.000Z' }).success).toBe(false);
+  });
+});
+
+describe('BookingSchema', () => {
+  it('parses what the API returns for one booking', () => {
+    const payload = {
+      id: '3f7b1c2e-4b2a-4c1a-9e2a-8a2b1c3d4e5f',
+      roomId: 1,
+      title: 'Нарада',
+      startsAt: new Date('2026-01-07T07:00:00.000Z'),
+      endsAt: new Date('2026-01-07T08:00:00.000Z'),
+      userId: '1a2b3c4d-5e6f-4789-8a9b-0c1d2e3f4a5b',
+      userName: 'Іван Петренко',
+    };
+
+    expect(BookingSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('rejects a non-uuid id', () => {
+    expect(
+      BookingSchema.safeParse({
+        id: 'not-a-uuid',
+        roomId: 1,
+        title: 'Нарада',
+        startsAt: new Date(),
+        endsAt: new Date(),
+        userId: '1a2b3c4d-5e6f-4789-8a9b-0c1d2e3f4a5b',
+        userName: 'Іван',
+      }).success,
+    ).toBe(false);
+  });
+});
