@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
 import {
   getCurrentKyivWeek,
+  getKyivWeek,
+  getViewerZone,
   getHourLabelsForGutter,
   getBookingGridRow,
 } from './timeUtils';
@@ -25,6 +27,7 @@ vi.mock('./useRoomBookings', () => ({
 }));
 
 describe('Week Grid Requirements (Phase 4a)', () => {
+  afterEach(cleanup);
   // Test 1: A 09:00–10:00 Kyiv booking occupies grid-row span 2, starting at row 1.
   it('1. A 09:00–10:00 Kyiv booking occupies grid-row span 2, starting at row 1', () => {
     const mondayKyiv = DateTime.now().setZone('Europe/Kyiv').startOf('week');
@@ -135,5 +138,46 @@ describe('Week Grid Requirements (Phase 4a)', () => {
 
     render(<RoomSchedulePage />, { wrapper });
     expect(await screen.findByText(/17 серпня — 23 серпня/)).toBeTruthy();
+  });
+
+  // Test 7: A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, and the gutter labels.
+  it('7. A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, and the gutter labels', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/room/1?week=2026-09-14']}>
+          <Routes>
+            <Route path="/room/:roomId" element={children} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    const { container } = render(<RoomSchedulePage />, { wrapper });
+
+    // Assert overlay message is present
+    expect(screen.getByText('Цього тижня все вільно')).toBeTruthy();
+
+    // Assert 7 day headers each with date number (14 to 20 for 2026-09-14 week)
+    expect(screen.getByText('14')).toBeTruthy();
+    expect(screen.getByText('15')).toBeTruthy();
+    expect(screen.getByText('16')).toBeTruthy();
+    expect(screen.getByText('17')).toBeTruthy();
+    expect(screen.getByText('18')).toBeTruthy();
+    expect(screen.getByText('19')).toBeTruthy();
+    expect(screen.getByText('20')).toBeTruthy();
+
+    // Assert gutter labels (computed per viewer zone)
+    const { daysKyiv } = getKyivWeek('2026-09-14');
+    const expectedGutter = getHourLabelsForGutter(daysKyiv, getViewerZone());
+    expect(screen.getByText(expectedGutter[0])).toBeTruthy();
+    expect(screen.getByText(expectedGutter[expectedGutter.length - 1])).toBeTruthy();
+
+    // Assert 20 rows in time gutter / grid
+    const rowHeaders = container.querySelectorAll('[role="rowheader"]');
+    expect(rowHeaders.length).toBe(20);
   });
 });

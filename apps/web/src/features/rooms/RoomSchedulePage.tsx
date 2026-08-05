@@ -78,9 +78,22 @@ export function RoomSchedulePage() {
         <div>
           <Link
             to="/"
-            className="inline-flex items-center gap-s1 text-title-small text-on-surface-variant hover:text-on-surface transition-colors"
+            className="inline-flex items-center gap-s1 text-[14px] font-semibold text-on-primary-container hover:text-primary transition-colors"
           >
-            ← Усі кімнати
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            <span>Усі кімнати</span>
           </Link>
         </div>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-s4 min-w-0">
@@ -120,109 +133,126 @@ export function RoomSchedulePage() {
         </div>
       </header>
 
-      {/* Legend Row */}
-      <div className="flex flex-wrap items-center gap-s4 text-body-small text-on-surface-variant">
-        <div className="flex items-center gap-s2">
-          <span className="flex size-4 items-center justify-center rounded-[4px] border-2 border-primary bg-primary-container">
-            <span className="size-[5px] rounded-full bg-primary" />
+      {/* Legend & Timezone Banner Container */}
+      <div className="flex flex-wrap items-center gap-s4 p-s3 px-s4 rounded-[var(--radius-md)] bg-surface-container-low border border-outline-variant text-body-small text-on-surface-variant">
+        <div className="flex items-center gap-s2 font-semibold">
+          <span className="flex size-[26px] h-[18px] items-center justify-center rounded-[6px] border-2 border-primary bg-primary-container relative shrink-0">
+            <span className="size-[6px] rounded-full bg-primary absolute left-[3px] top-[4px]" />
           </span>
           <span>Моє бронювання</span>
         </div>
-        <div className="flex items-center gap-s2">
-          <span className="flex size-4 items-center justify-center rounded-[4px] border border-outline-variant border-l-[3px] border-l-secondary bg-secondary-container">
-            <svg viewBox="0 0 24 24" width="8" height="8" stroke="var(--color-secondary)" strokeWidth="2.5" fill="none">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </span>
+        <div className="flex items-center gap-s2 font-semibold">
+          <span className="flex size-[26px] h-[18px] items-center justify-center rounded-[6px] border border-outline-variant border-l-[4px] border-l-secondary bg-secondary-container shrink-0" />
           <span>Чуже бронювання</span>
         </div>
-        <div className="flex items-center gap-s2">
-          <span className="flex size-4 items-center justify-center rounded-[4px] border border-outline-variant bg-surface-container-lowest text-[10px] font-bold text-on-surface-variant">
-            +
-          </span>
+        <div className="flex items-center gap-s2 font-semibold">
+          <span className="flex size-[26px] h-[18px] items-center justify-center rounded-[6px] border border-outline-variant bg-surface-container-lowest shrink-0" />
           <span>Вільно</span>
         </div>
-        <div className="flex items-center gap-s2">
-          <span className="size-4 rounded-[4px] border border-outline-variant bg-[var(--color-past-day)] [background-image:var(--pattern-past)]" />
+        <div className="flex items-center gap-s2 font-semibold">
+          <span className="flex size-[26px] h-[18px] items-center justify-center rounded-[6px] border border-outline-variant bg-[var(--color-past-day)] [background-image:var(--pattern-past-legend)] shrink-0" />
           <span>Минуло</span>
         </div>
-      </div>
 
-      {/* Timezone Banner */}
-      <div className="text-body-small font-medium text-on-surface-variant" data-testid="timezone-banner">
-        {formatTzBannerText(viewerZone, mondayKyiv)}
-      </div>
-
-      {bookings.length === 0 ? (
-        <WeekGridEmpty daysCount={7} />
-      ) : (
-        <div>
-          <WeekGridShell
-            daysKyiv={daysKyiv}
-            gutterLabels={gutterLabels}
-            isCurrentWeek={weekInfo.isCurrentWeek}
-            renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
-              const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
-              const occupiedRows = new Set<number>();
-              dayBookings.forEach(({ startRow, span }) => {
-                for (let r = startRow; r < startRow + span; r++) {
-                  occupiedRows.add(r);
-                }
-              });
-
-              return (
-                <>
-                  {Array.from({ length: 20 }, (_, i) => {
-                    const startRow = i + 1;
-                    const rowIndex = i;
-                    if (startRow <= pastRowsCount || occupiedRows.has(startRow)) {
-                      return null;
-                    }
-                    const isFocused =
-                      focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
-                    return (
-                      <BookingBlock
-                        key={`free-${i}`}
-                        startRow={startRow}
-                        span={1}
-                        tabIndex={isFocused ? 0 : -1}
-                        dataGridCell={`${dayIndex}-${rowIndex}`}
-                        onFocus={() => onCellFocus(dayIndex, rowIndex)}
-                      />
-                    );
-                  })}
-
-                  {dayBookings.map(({ booking, startRow, span }) => {
-                    const startSlotIndex = startRow - 1;
-                    const isFocused =
-                      focusedCoords.dayIndex === dayIndex &&
-                      focusedCoords.rowIndex >= startSlotIndex &&
-                      focusedCoords.rowIndex < startSlotIndex + span;
-
-                    return (
-                      <div key={booking.id} className="relative z-10 contents">
-                        <BookingBlock
-                          booking={booking}
-                          currentUserId={currentUserId}
-                          startRow={startRow}
-                          span={span}
-                          tabIndex={isFocused ? 0 : -1}
-                          dataGridCell={`${dayIndex}-${startSlotIndex}`}
-                          onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
-                        />
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            }}
-          />
-          <p className="mt-s3 text-center text-body-small text-on-surface-variant">
-            Натисніть будь-який вільний слот, щоб забронювати. Свої бронювання можна скасувати — чужі ні.
-          </p>
+        <div
+          className="ml-auto flex items-center gap-s2 rounded-full bg-surface-container px-[13px] py-[6px] text-[12.5px] font-semibold text-on-surface-variant"
+          data-testid="timezone-banner"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <span>{formatTzBannerText(viewerZone, mondayKyiv)}</span>
         </div>
-      )}
+      </div>
+
+      <div className="relative">
+        <WeekGridShell
+          daysKyiv={daysKyiv}
+          gutterLabels={gutterLabels}
+          isCurrentWeek={weekInfo.isCurrentWeek}
+          renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
+            const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
+            const occupiedRows = new Set<number>();
+            dayBookings.forEach(({ startRow, span }) => {
+              for (let r = startRow; r < startRow + span; r++) {
+                occupiedRows.add(r);
+              }
+            });
+
+            return (
+              <>
+                {Array.from({ length: 20 }, (_, i) => {
+                  const startRow = i + 1;
+                  const rowIndex = i;
+                  if (startRow <= pastRowsCount || occupiedRows.has(startRow)) {
+                    return null;
+                  }
+                  const isFocused =
+                    focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
+                  return (
+                    <BookingBlock
+                      key={`free-${i}`}
+                      startRow={startRow}
+                      span={1}
+                      tabIndex={isFocused ? 0 : -1}
+                      dataGridCell={`${dayIndex}-${rowIndex}`}
+                      onFocus={() => onCellFocus(dayIndex, rowIndex)}
+                    />
+                  );
+                })}
+
+                {dayBookings.map(({ booking, startRow, span }) => {
+                  const startSlotIndex = startRow - 1;
+                  const isFocused =
+                    focusedCoords.dayIndex === dayIndex &&
+                    focusedCoords.rowIndex >= startSlotIndex &&
+                    focusedCoords.rowIndex < startSlotIndex + span;
+
+                  return (
+                    <div key={booking.id} className="relative z-10 contents">
+                      <BookingBlock
+                        booking={booking}
+                        currentUserId={currentUserId}
+                        startRow={startRow}
+                        span={span}
+                        tabIndex={isFocused ? 0 : -1}
+                        dataGridCell={`${dayIndex}-${startSlotIndex}`}
+                        onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
+                      />
+                    </div>
+                  );
+                })}
+              </>
+            );
+          }}
+        />
+
+        {bookings.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-s2 p-s6 text-center">
+            <h3 className="font-heading text-headline-medium font-display text-on-surface">
+              Цього тижня все вільно
+            </h3>
+            <p className="text-body-medium text-on-surface-variant">
+              Жодного бронювання — оберіть будь-який слот
+            </p>
+          </div>
+        )}
+
+        <p className="mt-s3 text-center text-body-small text-on-surface-variant">
+          Натисніть будь-який вільний слот, щоб забронювати. Свої бронювання можна скасувати — чужі ні.
+        </p>
+      </div>
     </section>
   );
 }

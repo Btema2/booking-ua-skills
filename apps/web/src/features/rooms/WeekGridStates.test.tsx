@@ -24,18 +24,18 @@ describe('WeekGridEmpty', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Цього тижня все вільно' })).toBeTruthy();
     expect(screen.getByText('Жодного бронювання — оберіть будь-який слот')).toBeTruthy();
 
-    expect(screen.getByText('Пн')).toBeTruthy();
-    expect(screen.getByText('Вт')).toBeTruthy();
-    expect(screen.getByText('Ср')).toBeTruthy();
-    expect(screen.getByText('Чт')).toBeTruthy();
-    expect(screen.getByText('Пт')).toBeTruthy();
+    expect(screen.getByText('ПН')).toBeTruthy();
+    expect(screen.getByText('ВТ')).toBeTruthy();
+    expect(screen.getByText('СР')).toBeTruthy();
+    expect(screen.getByText('ЧТ')).toBeTruthy();
+    expect(screen.getByText('ПТ')).toBeTruthy();
   });
 
   it('supports custom daysCount', () => {
     render(<WeekGridEmpty daysCount={7} />);
 
-    expect(screen.getByText('Сб')).toBeTruthy();
-    expect(screen.getByText('Нд')).toBeTruthy();
+    expect(screen.getByText('СБ')).toBeTruthy();
+    expect(screen.getByText('НД')).toBeTruthy();
   });
 });
 
@@ -67,6 +67,6 @@ describe('WeekGridError', () => {
     render(<WeekGridError />);
 
     expect(screen.getByRole('alert')).toBeTruthy();
-    expect(screen.getByText('Пн')).toBeTruthy();
+    expect(screen.getByText('ПН')).toBeTruthy();
   });
 });

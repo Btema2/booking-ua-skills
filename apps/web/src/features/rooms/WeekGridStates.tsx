@@ -1,4 +1,8 @@
-import React from 'react';
+import { DateTime } from 'luxon';
+import { WeekGridShell } from './WeekGridShell';
+import { getHourLabelsForGutter, getViewerZone } from './timeUtils';
+
+const DEFAULT_DAY_NAMES = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
 
 /**
  * Skeleton bar helper utilizing the `.skeleton-bar` CSS class declared in styles.css.
@@ -30,8 +34,20 @@ export type WeekGridLoadingProps = {
  * Displays caption «Завантажуємо розклад…» over a shimmering block skeleton that
  * KEEPS the grid shape. Never uses a centred spinner.
  */
-export function WeekGridLoading({ daysCount = 5 }: WeekGridLoadingProps) {
+export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
   const days = Array.from({ length: daysCount });
+  const gutterTimes = [
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+  ];
 
   return (
     <div role="status" aria-busy="true" className="w-full">
@@ -39,7 +55,7 @@ export function WeekGridLoading({ daysCount = 5 }: WeekGridLoadingProps) {
         Завантажуємо розклад…
       </p>
 
-      <div className="overflow-clip rounded-lg border border-outline-variant bg-surface-container-lowest">
+      <div className="overflow-clip rounded-[var(--radius-lg)] border border-outline-variant bg-surface-container-lowest">
         {/* Sticky Header Skeleton */}
         <div
           className="grid border-b border-outline-variant bg-surface-container"
@@ -57,39 +73,57 @@ export function WeekGridLoading({ daysCount = 5 }: WeekGridLoadingProps) {
           ))}
         </div>
 
-        {/* Grid Body Skeleton keeping full grid geometry */}
+        {/* Grid Body Skeleton keeping full 20-row grid geometry */}
         <div
-          className="grid h-[440px] overflow-hidden"
-          style={{ gridTemplateColumns: `var(--time-gutter-w) repeat(${daysCount}, minmax(0, 1fr))` }}
+          className="grid overflow-hidden"
+          style={{
+            gridTemplateColumns: `var(--time-gutter-w) repeat(${daysCount}, minmax(0, 1fr))`,
+            gridTemplateRows: 'repeat(20, var(--slot-h))',
+          }}
         >
           {/* Time Gutter */}
-          <div className="flex flex-col border-r border-outline-variant bg-surface-container-low py-s2">
-            {['09:00', '11:00', '13:00', '15:00', '17:00'].map((time, i) => (
-              <div key={time} className="flex h-[88px] items-start justify-end px-s2">
-                <SkeletonBar className="h-3 w-10" delay={`${i * 0.1}s`} />
-              </div>
-            ))}
+          <div
+            className="grid border-r border-outline-variant bg-surface-container-lowest"
+            style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
+          >
+            {Array.from({ length: 20 }, (_, rowIndex) => {
+              const isHourRow = rowIndex % 2 === 0;
+              const timeIndex = Math.floor(rowIndex / 2);
+              return (
+                <div
+                  key={rowIndex}
+                  className={
+                    isHourRow
+                      ? 'border-t border-outline-variant px-s2 pt-[2px]'
+                      : 'border-t border-[var(--color-rule-half-hour)]'
+                  }
+                >
+                  {isHourRow ? (
+                    <SkeletonBar className="h-3 w-10 ml-auto" delay={`${timeIndex * 0.05}s`} />
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
 
           {/* Day Columns with staggered booking block skeletons */}
           {days.map((_, colIndex) => (
             <div
               key={colIndex}
-              className="relative flex flex-col gap-s3 border-r border-outline-variant p-s2 last:border-r-0"
+              className="relative grid border-r border-outline-variant p-s1 last:border-r-0"
+              style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
             >
-              <div className="flex flex-col gap-s4 py-s2">
-                <SkeletonBar
-                  className="h-16 w-full rounded-[var(--block-radius)]"
-                  delay={`${colIndex * 0.1}s`}
-                />
-                <SkeletonBar
-                  className="h-24 w-full rounded-[var(--block-radius)]"
-                  delay={`${colIndex * 0.15 + 0.1}s`}
-                />
-                <SkeletonBar
-                  className="h-12 w-full rounded-[var(--block-radius)]"
-                  delay={`${colIndex * 0.1 + 0.2}s`}
-                />
+              <div
+                className="col-span-1 rounded-[var(--block-radius)] p-s1"
+                style={{ gridRow: '2 / span 3' }}
+              >
+                <SkeletonBar className="h-full w-full rounded-[var(--block-radius)]" delay={`${colIndex * 0.1}s`} />
+              </div>
+              <div
+                className="col-span-1 rounded-[var(--block-radius)] p-s1"
+                style={{ gridRow: '7 / span 4' }}
+              >
+                <SkeletonBar className="h-full w-full rounded-[var(--block-radius)]" delay={`${colIndex * 0.15 + 0.1}s`} />
               </div>
             </div>
           ))}
@@ -106,60 +140,31 @@ export type WeekGridEmptyProps = {
   readonly dayNames?: readonly string[];
 };
 
-const DEFAULT_DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-
 /**
  * Week schedule empty state (DESIGN-NOTES.md §8).
- * Flat 5-column (or 7-column) tint block with «Цього тижня все вільно» /
- * «Жодного бронювання — оберіть будь-який слот».
+ * Renders full 20-row grid with overlay «Цього тижня все вільно» / «Жодного бронювання — оберіть будь-який слот».
  */
-export function WeekGridEmpty({ daysCount = 5, dayNames }: WeekGridEmptyProps) {
-  const columns = dayNames ?? DEFAULT_DAY_NAMES.slice(0, daysCount);
+export function WeekGridEmpty({ daysCount = 7, dayNames }: WeekGridEmptyProps) {
+  const daysKyiv = Array.from({ length: daysCount }, (_, i) =>
+    DateTime.now().setZone('Europe/Kyiv').startOf('week').plus({ days: i }),
+  );
+  const viewerZone = getViewerZone();
+  const gutterLabels = getHourLabelsForGutter(daysKyiv, viewerZone);
 
   return (
-    <div role="status" className="w-full">
-      <div className="relative overflow-clip rounded-lg border border-outline-variant bg-surface-container-lowest">
-        {/* Day Header Row */}
-        <div
-          className="grid border-b border-outline-variant bg-surface-container"
-          style={{ gridTemplateColumns: `var(--time-gutter-w) repeat(${columns.length}, minmax(0, 1fr))` }}
-        >
-          <div className="h-[var(--grid-head-h)] border-r border-outline-variant" />
-          {columns.map((day, index) => (
-            <div
-              key={index}
-              className="flex h-[var(--grid-head-h)] items-center justify-center border-r border-outline-variant text-label-small font-bold text-on-surface-variant last:border-r-0"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Flat Column Tint Block Body */}
-        <div className="relative min-h-[360px] bg-surface-container-lowest">
-          <div
-            className="absolute inset-0 grid"
-            style={{ gridTemplateColumns: `var(--time-gutter-w) repeat(${columns.length}, minmax(0, 1fr))` }}
-          >
-            <div className="border-r border-outline-variant bg-surface-container-low" />
-            {columns.map((_, index) => (
-              <div
-                key={index}
-                className="border-r border-outline-variant bg-surface-container-lowest/50 last:border-r-0"
-              />
-            ))}
-          </div>
-
-          {/* Empty Messaging */}
-          <div className="relative z-10 flex min-h-[360px] flex-col items-center justify-center gap-s2 p-s6 text-center">
-            <h3 className="font-heading text-headline-medium font-display text-on-surface">
-              Цього тижня все вільно
-            </h3>
-            <p className="text-body-medium text-on-surface-variant">
-              Жодного бронювання — оберіть будь-який слот
-            </p>
-          </div>
-        </div>
+    <div role="status" className="relative w-full">
+      <WeekGridShell
+        daysKyiv={daysKyiv}
+        gutterLabels={gutterLabels}
+        renderDayColumn={() => null}
+      />
+      <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-s2 p-s6 text-center">
+        <h3 className="font-heading text-headline-medium font-display text-on-surface">
+          Цього тижня все вільно
+        </h3>
+        <p className="text-body-medium text-on-surface-variant">
+          Жодного бронювання — оберіть будь-який слот
+        </p>
       </div>
     </div>
   );
