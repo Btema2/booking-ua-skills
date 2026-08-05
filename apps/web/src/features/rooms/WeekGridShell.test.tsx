@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { DateTime } from 'luxon';
 import { WeekGridShell } from './WeekGridShell';
+import { getHourLabelsForGutter, getViewerZone } from './timeUtils';
 
 describe('WeekGridShell', () => {
   afterEach(() => {
@@ -12,24 +13,10 @@ describe('WeekGridShell', () => {
     DateTime.fromISO('2026-08-03T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
   );
 
-  const sampleGutterLabels = [
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-    '18:00',
-  ];
-
   it('renders sticky header with day names and dates in Ukrainian', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
-        gutterLabels={sampleGutterLabels}
         renderDayColumn={(index) => <div data-testid={`col-${index}`}>Day {index}</div>}
       />,
     );
@@ -42,17 +29,18 @@ describe('WeekGridShell', () => {
     expect(screen.getByText('5')).toBeTruthy();
   });
 
-  it('renders gutter labels hung at top of hour rows', () => {
+  it('renders gutter labels hung at top of hour rows in every day column', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
-        gutterLabels={sampleGutterLabels}
         renderDayColumn={() => null}
       />,
     );
 
-    sampleGutterLabels.forEach((label) => {
-      expect(screen.getByText(label)).toBeTruthy();
+    const expectedLabels = getHourLabelsForGutter(sampleDays[0], getViewerZone());
+    expectedLabels.forEach((label) => {
+      // Each label repeats once per day column (7 columns), one per hour row.
+      expect(screen.getAllByText(label).length).toBe(7);
     });
   });
 
@@ -64,7 +52,6 @@ describe('WeekGridShell', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
-        gutterLabels={sampleGutterLabels}
         renderDayColumn={renderDayColumnMock}
       />,
     );
@@ -84,8 +71,7 @@ describe('WeekGridShell', () => {
       const { container, rerender } = render(
         <WeekGridShell
           daysKyiv={sampleDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={true}
+            isCurrentWeek={true}
           renderDayColumn={() => null}
         />,
       );
@@ -98,8 +84,7 @@ describe('WeekGridShell', () => {
       rerender(
         <WeekGridShell
           daysKyiv={sampleDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={false}
+            isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -114,8 +99,7 @@ describe('WeekGridShell', () => {
       const { container } = render(
         <WeekGridShell
           daysKyiv={sampleDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={true}
+            isCurrentWeek={true}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <>
               {Array.from({ length: 20 }, (_, r) => {
@@ -154,8 +138,7 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={allPastDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={false}
+            isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -171,8 +154,7 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={sampleDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={false}
+            isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -191,8 +173,7 @@ describe('WeekGridShell', () => {
       const { container } = render(
         <WeekGridShell
           daysKyiv={futureDays}
-          gutterLabels={sampleGutterLabels}
-          isCurrentWeek={false}
+            isCurrentWeek={false}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <button
               type="button"

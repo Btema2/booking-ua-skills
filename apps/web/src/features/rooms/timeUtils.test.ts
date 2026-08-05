@@ -59,7 +59,7 @@ describe('timeUtils', () => {
   describe('getHourLabelsForGutter', () => {
     it('returns 10 hour labels from 09:00 to 18:00 Kyiv converted to viewer zone', () => {
       const { daysKyiv } = getCurrentKyivWeek();
-      const labels = getHourLabelsForGutter(daysKyiv, 'Europe/Kyiv');
+      const labels = getHourLabelsForGutter(daysKyiv[0], 'Europe/Kyiv');
 
       expect(labels).toHaveLength(10);
       expect(labels[0]).toBe('09:00');
@@ -69,7 +69,7 @@ describe('timeUtils', () => {
 
     it('converts Kyiv hours to specified viewer timezone (e.g. UTC)', () => {
       const { daysKyiv } = getCurrentKyivWeek();
-      const labelsUTC = getHourLabelsForGutter(daysKyiv, 'UTC');
+      const labelsUTC = getHourLabelsForGutter(daysKyiv[0], 'UTC');
 
       // Summer time (EEST = UTC+3), 09:00 Kyiv is 06:00 UTC
       expect(labelsUTC[0]).toBe('06:00');
@@ -157,6 +157,23 @@ describe('timeUtils', () => {
       expect(sundayLabel).toBe('07:00');
 
       expect(mondayLabel).not.toBe(sundayLabel);
+    });
+
+    it('computes labels per-day when calling getHourLabelsForGutter across a Kyiv DST fall-back week', () => {
+      const dstWeek = getKyivWeek('2020-10-19');
+      const viewerZone = 'UTC';
+
+      // Monday 2020-10-19 is still on Kyiv summer time (UTC+3): 09:00 Kyiv = 06:00 UTC.
+      const mondayLabels = getHourLabelsForGutter(dstWeek.daysKyiv[0], viewerZone);
+      // Sunday 2020-10-25 falls back to Kyiv winter time (UTC+2): 09:00 Kyiv = 07:00 UTC.
+      const sundayLabels = getHourLabelsForGutter(dstWeek.daysKyiv[6], viewerZone);
+
+      expect(mondayLabels[0]).toBe('06:00');
+      expect(mondayLabels[6]).toBe('12:00'); // 15:00 Kyiv summer = 12:00 UTC
+      expect(sundayLabels[0]).toBe('07:00');
+      expect(sundayLabels[6]).toBe('13:00'); // 15:00 Kyiv winter = 13:00 UTC
+      expect(mondayLabels[0]).not.toBe(sundayLabels[0]);
+      expect(mondayLabels[6]).not.toBe(sundayLabels[6]);
     });
   });
 

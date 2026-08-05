@@ -108,8 +108,8 @@ describe('Week Grid Requirements (Phase 4a)', () => {
   // Test 5: Row labels computed per-instant: assert that with viewer zone Asia/Tokyo first row label differs from Europe/Kyiv label.
   it('5. Row labels computed per-instant: Asia/Tokyo first row label differs from Europe/Kyiv label', () => {
     const { daysKyiv } = getCurrentKyivWeek();
-    const kyivLabels = getHourLabelsForGutter(daysKyiv, 'Europe/Kyiv');
-    const tokyoLabels = getHourLabelsForGutter(daysKyiv, 'Asia/Tokyo');
+    const kyivLabels = getHourLabelsForGutter(daysKyiv[0], 'Europe/Kyiv');
+    const tokyoLabels = getHourLabelsForGutter(daysKyiv[0], 'Asia/Tokyo');
 
     expect(kyivLabels[0]).toBe('09:00');
     expect(tokyoLabels[0]).not.toBe(kyivLabels[0]);
@@ -171,15 +171,18 @@ describe('Week Grid Requirements (Phase 4a)', () => {
     expect(screen.getByText('19')).toBeTruthy();
     expect(screen.getByText('20')).toBeTruthy();
 
-    // Assert gutter labels (computed per viewer zone)
+    // Assert gutter labels (computed per viewer zone, one label per day column)
     const { daysKyiv } = getKyivWeek('2026-09-14');
-    const expectedGutter = getHourLabelsForGutter(daysKyiv, getViewerZone());
-    expect(screen.getByText(expectedGutter[0])).toBeTruthy();
-    expect(screen.getByText(expectedGutter[expectedGutter.length - 1])).toBeTruthy();
+    const expectedGutter = getHourLabelsForGutter(daysKyiv[0], getViewerZone());
+    expect(screen.getAllByText(expectedGutter[0]).length).toBe(7);
+    expect(screen.getAllByText(expectedGutter[expectedGutter.length - 1]).length).toBe(7);
 
-    // Assert 20 rows in time gutter / grid
-    const rowHeaders = container.querySelectorAll('[role="rowheader"]');
-    expect(rowHeaders.length).toBe(20);
+    // The shared time-gutter column was removed (labels now live inside each
+    // day column), so no [role="rowheader"] elements remain. Day headers are
+    // the empty "Час" gutter cell + the 7 day-name cells = 8 columnheaders,
+    // and the 7 day columns still each expose 20 interactive rows (140 cells).
+    const columnHeaders = container.querySelectorAll('[role="columnheader"]');
+    expect(columnHeaders.length).toBe(8);
 
     // Assert nothing covers or blocks the grid: every free slot in this
     // future week renders as a normal, clickable gridcell (7 days * 20 rows).

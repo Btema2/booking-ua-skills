@@ -1,10 +1,15 @@
 import { DateTime } from 'luxon';
 import React, { useState, useEffect } from 'react';
-import { getDayColumnStatus, getPastRowsCount, getNowLineInfo } from './timeUtils';
+import {
+  getDayColumnStatus,
+  getPastRowsCount,
+  getNowLineInfo,
+  getViewerZone,
+  getHourLabelsForGutter,
+} from './timeUtils';
 
 export interface WeekGridShellProps {
   readonly daysKyiv: DateTime[];
-  readonly gutterLabels: string[];
   readonly isCurrentWeek?: boolean;
   readonly renderDayColumn: (
     dayIndex: number,
@@ -34,10 +39,10 @@ const getInitialFocusedCoords = (days: DateTime[], nowTime: DateTime) => {
  */
 export function WeekGridShell({
   daysKyiv,
-  gutterLabels,
   isCurrentWeek = false,
   renderDayColumn,
 }: WeekGridShellProps) {
+  const viewerZone = getViewerZone();
   const [now, setNow] = useState(() => DateTime.now().setZone('Europe/Kyiv'));
   const [focusedCoords, setFocusedCoords] = useState(() =>
     getInitialFocusedCoords(daysKyiv, DateTime.now().setZone('Europe/Kyiv')),
@@ -172,41 +177,12 @@ export function WeekGridShell({
         className="grid grid-cols-[var(--grid-columns)]"
         style={{ gridTemplateColumns: 'var(--grid-columns)' }}
       >
-        {/* Time Gutter Column */}
-        <div
-          className="grid grid-rows-[repeat(20,var(--slot-h))] border-r border-outline-variant bg-surface-container-lowest"
-          style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
-        >
-          {Array.from({ length: 20 }, (_, rowIndex) => {
-            const isHourRow = rowIndex % 2 === 0;
-            const labelIndex = Math.floor(rowIndex / 2);
-            const label = isHourRow ? gutterLabels[labelIndex] : undefined;
-
-            return (
-              <div
-                key={rowIndex}
-                role="rowheader"
-                className={
-                  isHourRow
-                    ? 'border-t border-outline-variant'
-                    : 'border-t border-[var(--color-rule-half-hour)]'
-                }
-              >
-                {isHourRow && label !== undefined ? (
-                  <div className="text-[11.5px] font-bold tabular-nums pr-[10px] pt-[2px] text-right text-on-surface-variant">
-                    {label}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-
         {/* Day Columns */}
         {daysKyiv.map((day, dayIndex) => {
           const { isToday, isPastDay } = getDayColumnStatus(day, now);
           const pastRowsCount = getPastRowsCount(day, now);
           const nowLine = getNowLineInfo(day, isCurrentWeek, now);
+          const hourLabels = getHourLabelsForGutter(day, viewerZone);
 
           let colBgClass = 'bg-surface-container-lowest';
           if (isToday) {
@@ -219,7 +195,7 @@ export function WeekGridShell({
             <div
               key={day.toISO() ?? dayIndex}
               className={`relative grid grid-rows-[repeat(20,var(--slot-h))] border-r border-outline-variant last:border-r-0 ${colBgClass}`}
-              style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
+              style={{ gridColumn: dayIndex + 2, gridTemplateRows: 'repeat(20, var(--slot-h))' }}
             >
               {/* Background Hour & Half-Hour Rule Lines */}
               <div
@@ -238,6 +214,32 @@ export function WeekGridShell({
                           : 'border-t border-[var(--color-rule-half-hour)]'
                       }
                     />
+                  );
+                })}
+              </div>
+
+              {/* Per-column gutter labels overlay */}
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 grid grid-rows-[repeat(20,var(--slot-h))]"
+                style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
+                aria-hidden="true"
+              >
+                {Array.from({ length: 20 }, (_, rowIndex) => {
+                  const isHourRow = rowIndex % 2 === 0;
+                  const label = isHourRow
+                    ? hourLabels[Math.floor(rowIndex / 2)]
+                    : undefined;
+                  return (
+                    <div
+                      key={rowIndex}
+                      className="flex items-start justify-end pr-[6px] pt-[2px]"
+                    >
+                      {label ? (
+                        <span className="text-[11.5px] font-bold tabular-nums text-on-surface-variant">
+                          {label}
+                        </span>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>

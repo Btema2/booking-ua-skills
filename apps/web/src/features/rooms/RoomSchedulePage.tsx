@@ -6,7 +6,6 @@ import {
   getPrevKyivWeekParam,
   getNextKyivWeekParam,
   getViewerZone,
-  getHourLabelsForGutter,
   getBookingGridRow,
   formatKyivWeekRange,
   formatTzBannerText,
@@ -29,7 +28,6 @@ export function RoomSchedulePage() {
 
   const currentUserId = currentUserQuery.data?.id ?? null;
   const viewerZone = getViewerZone();
-  const gutterLabels = getHourLabelsForGutter(daysKyiv, viewerZone);
 
   if (roomQuery.isPending || bookingsQuery.isPending) {
     return (
@@ -185,7 +183,6 @@ export function RoomSchedulePage() {
       <div>
         <WeekGridShell
           daysKyiv={daysKyiv}
-          gutterLabels={gutterLabels}
           isCurrentWeek={weekInfo.isCurrentWeek}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
             const dayBookings = dayBookingsMap.get(dayIndex) ?? [];

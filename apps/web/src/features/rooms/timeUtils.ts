@@ -89,10 +89,9 @@ export function formatInstantTime(instantISO: string, viewerZone: string): strin
   return DateTime.fromISO(instantISO, { zone: 'utc' }).setZone(viewerZone).toFormat('HH:mm');
 }
 
-export function getHourLabelsForGutter(daysKyiv: DateTime[], viewerZone: string): string[] {
-  const mondayKyiv = daysKyiv[0];
+export function getHourLabelsForGutter(dayKyiv: DateTime, viewerZone: string): string[] {
   return Array.from({ length: 10 }, (_, h) =>
-    mondayKyiv
+    dayKyiv
       .set({ hour: 9 + h, minute: 0, second: 0, millisecond: 0 })
       .toUTC()
       .setZone(viewerZone)

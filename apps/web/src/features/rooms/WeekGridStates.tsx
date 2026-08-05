@@ -1,6 +1,5 @@
 import { DateTime } from 'luxon';
 import { WeekGridShell } from './WeekGridShell';
-import { getHourLabelsForGutter, getViewerZone } from './timeUtils';
 
 const DEFAULT_DAY_NAMES = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
 
@@ -135,16 +134,10 @@ export function WeekGridEmpty({ daysCount = 7 }: WeekGridEmptyProps) {
   const daysKyiv = Array.from({ length: daysCount }, (_, i) =>
     DateTime.now().setZone('Europe/Kyiv').startOf('week').plus({ days: i }),
   );
-  const viewerZone = getViewerZone();
-  const gutterLabels = getHourLabelsForGutter(daysKyiv, viewerZone);
 
   return (
     <div role="status" className="relative w-full">
-      <WeekGridShell
-        daysKyiv={daysKyiv}
-        gutterLabels={gutterLabels}
-        renderDayColumn={() => null}
-      />
+      <WeekGridShell daysKyiv={daysKyiv} renderDayColumn={() => null} />
       <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-s2 p-s6 text-center">
         <h3 className="font-heading text-headline-medium font-display text-on-surface">
           Цього тижня все вільно
