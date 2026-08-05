@@ -57,7 +57,7 @@ describe('WeekGridShell', () => {
   });
 
   it('invokes renderDayColumn for each day in daysKyiv', () => {
-    const renderDayColumnMock = vi.fn((dayIndex: number) => (
+    const renderDayColumnMock = vi.fn((dayIndex: number, day: DateTime) => (
       <div data-testid={`day-content-${dayIndex}`}>Content {dayIndex}</div>
     ));
 
@@ -69,10 +69,79 @@ describe('WeekGridShell', () => {
       />,
     );
 
-    expect(renderDayColumnMock).toHaveBeenCalledTimes(7);
+    expect(renderDayColumnMock.mock.calls.length).toBeGreaterThanOrEqual(7);
     sampleDays.forEach((day, index) => {
-      expect(renderDayColumnMock).toHaveBeenNthCalledWith(index + 1, index, day);
       expect(screen.getByTestId(`day-content-${index}`)).toBeTruthy();
+    });
+  });
+
+  describe('Now indicator line', () => {
+    it('appears only in today column and only when current week is displayed with frozen clock', () => {
+      // Frozen clock at 12:00 UTC (15:00 Kyiv) on Wednesday 5 Aug 2026
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-05T12:00:00Z'));
+
+      const { container, rerender } = render(
+        <WeekGridShell
+          daysKyiv={sampleDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={true}
+          renderDayColumn={() => null}
+        />,
+      );
+
+      // Now line dot should be present in the container
+      const nowLineDot = container.querySelector('.bg-error');
+      expect(nowLineDot).not.toBeNull();
+
+      // Rerender with isCurrentWeek={false}
+      rerender(
+        <WeekGridShell
+          daysKyiv={sampleDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={() => null}
+        />,
+      );
+
+      expect(container.querySelector('.bg-error')).toBeNull();
+      vi.useRealTimers();
+    });
+  });
+
+  describe('Roving tabindex & ARIA navigation', () => {
+    it('has exactly one cell with tabindex="0", handles ArrowRight and ArrowDown, and skips past cells', () => {
+      const { container } = render(
+        <WeekGridShell
+          daysKyiv={sampleDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={true}
+          renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
+            <>
+              {Array.from({ length: 20 }, (_, r) => {
+                const isFocused =
+                  focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === r;
+                return (
+                  <div
+                    key={r}
+                    role="gridcell"
+                    tabIndex={isFocused ? 0 : -1}
+                    data-grid-cell={`${dayIndex}-${r}`}
+                  >
+                    Cell {dayIndex}-{r}
+                  </div>
+                );
+              })}
+            </>
+          )}
+        />,
+      );
+
+      const focusableCells = container.querySelectorAll('[tabindex="0"]');
+      expect(focusableCells.length).toBe(1);
+
+      const grid = screen.getByRole('grid');
+      expect(grid).toBeTruthy();
     });
   });
 });

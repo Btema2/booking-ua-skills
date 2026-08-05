@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
 import {
   getCurrentKyivWeek,
@@ -7,6 +9,20 @@ import {
   getBookingGridRow,
 } from './timeUtils';
 import { BookingBlock } from './BookingBlock';
+import { RoomSchedulePage } from './RoomSchedulePage';
+
+vi.mock('./useRoomBookings', () => ({
+  useRoomDetails: () => ({
+    data: { id: '1', name: 'Тестова кімната', floor: 2, capacity: 6, amenities: 'Маркерна дошка' },
+    isPending: false,
+    isError: false,
+  }),
+  useRoomBookings: () => ({
+    data: { bookings: [] },
+    isPending: false,
+    isError: false,
+  }),
+}));
 
 describe('Week Grid Requirements (Phase 4a)', () => {
   // Test 1: A 09:00–10:00 Kyiv booking occupies grid-row span 2, starting at row 1.
@@ -94,5 +110,30 @@ describe('Week Grid Requirements (Phase 4a)', () => {
 
     expect(kyivLabels[0]).toBe('09:00');
     expect(tokyoLabels[0]).not.toBe(kyivLabels[0]);
+  });
+
+  // Test 6: The week in the URL search param survives a remount.
+  it('6. The week in the URL search param survives a remount', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/room/1?week=2026-08-17']}>
+          <Routes>
+            <Route path="/room/:roomId" element={children} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    const { unmount } = render(<RoomSchedulePage />, { wrapper });
+    expect(await screen.findByText(/17 серпня — 23 серпня/)).toBeTruthy();
+
+    unmount();
+
+    render(<RoomSchedulePage />, { wrapper });
+    expect(await screen.findByText(/17 серпня — 23 серпня/)).toBeTruthy();
   });
 });

@@ -4,6 +4,10 @@ import {
   formatInstantTime,
   getBookingGridRow,
   getCurrentKyivWeek,
+  getKyivWeek,
+  getPrevKyivWeekParam,
+  getNextKyivWeekParam,
+  formatTzBannerText,
   getHourLabelsForGutter,
   getViewerZone,
 } from './timeUtils';
@@ -97,6 +101,61 @@ describe('timeUtils', () => {
       // (14 - 9) * 2 + 1 = 11 slot index -> startRow 12
       expect(pos.startRow).toBe(12);
       expect(pos.span).toBe(3); // 90 min = 3 slots
+    });
+  });
+
+  describe('week navigation bounds across month and year boundaries', () => {
+    it('calculates prev and next week bounds across month boundaries', () => {
+      const weekAug = getKyivWeek('2026-08-31');
+      expect(weekAug.mondayKyiv.toFormat('yyyy-MM-dd')).toBe('2026-08-31');
+      expect(weekAug.sundayEndKyiv.toFormat('yyyy-MM-dd')).toBe('2026-09-06');
+
+      const nextWeek = getKyivWeek(getNextKyivWeekParam(weekAug.mondayKyiv));
+      expect(nextWeek.mondayKyiv.toFormat('yyyy-MM-dd')).toBe('2026-09-07');
+
+      const prevWeek = getKyivWeek(getPrevKyivWeekParam(weekAug.mondayKyiv));
+      expect(prevWeek.mondayKyiv.toFormat('yyyy-MM-dd')).toBe('2026-08-24');
+    });
+
+    it('calculates prev and next week bounds across year boundaries', () => {
+      const weekDec = getKyivWeek('2026-12-28');
+      expect(weekDec.mondayKyiv.toFormat('yyyy-MM-dd')).toBe('2026-12-28');
+      expect(weekDec.sundayEndKyiv.toFormat('yyyy-MM-dd')).toBe('2027-01-03');
+
+      const nextWeek = getKyivWeek(getNextKyivWeekParam(weekDec.mondayKyiv));
+      expect(nextWeek.mondayKyiv.toFormat('yyyy-MM-dd')).toBe('2027-01-04');
+    });
+  });
+
+  describe('formatTzBannerText', () => {
+    it('asserts computed offset string for Asia/Tokyo (+6), Europe/Warsaw (−1), and Europe/Kyiv', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const tokyoBanner = formatTzBannerText('Asia/Tokyo', instant);
+      expect(tokyoBanner).toBe('Час показано у вашому поясі — Asia/Tokyo, це +6 год до Києва');
+
+      const warsawBanner = formatTzBannerText('Europe/Warsaw', instant);
+      expect(warsawBanner).toBe('Час показано у вашому поясі — Europe/Warsaw, це −1 год до Києва');
+
+      const kyivBanner = formatTzBannerText('Europe/Kyiv', instant);
+      expect(kyivBanner).toBe('Київ (UTC+3)');
+    });
+  });
+
+  describe('DST transition week per-instant labels', () => {
+    it('computes labels per instant across a Kyiv DST transition week', () => {
+      const dstWeek = getKyivWeek('2020-10-19');
+      const viewerZone = 'UTC';
+
+      const mondayInstant = dstWeek.daysKyiv[0].set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
+      const mondayLabel = mondayInstant.toUTC().setZone(viewerZone).toFormat('HH:mm');
+      expect(mondayLabel).toBe('06:00');
+
+      const sundayInstant = dstWeek.daysKyiv[6].set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
+      const sundayLabel = sundayInstant.toUTC().setZone(viewerZone).toFormat('HH:mm');
+      expect(sundayLabel).toBe('07:00');
+
+      expect(mondayLabel).not.toBe(sundayLabel);
     });
   });
 });
