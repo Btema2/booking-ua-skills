@@ -34,13 +34,12 @@ describe('WeekGridShell', () => {
       />,
     );
 
-    expect(screen.getByText('Пн 03.08')).toBeTruthy();
-    expect(screen.getByText('Вт 04.08')).toBeTruthy();
-    expect(screen.getByText('Ср 05.08')).toBeTruthy();
-    expect(screen.getByText('Чт 06.08')).toBeTruthy();
-    expect(screen.getByText('Пт 07.08')).toBeTruthy();
-    expect(screen.getByText('Сб 08.08')).toBeTruthy();
-    expect(screen.getByText('Нд 09.08')).toBeTruthy();
+    expect(screen.getByText('ПН')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('ВТ')).toBeTruthy();
+    expect(screen.getByText('4')).toBeTruthy();
+    expect(screen.getByText('СР')).toBeTruthy();
+    expect(screen.getByText('5')).toBeTruthy();
   });
 
   it('renders gutter labels hung at top of hour rows', () => {

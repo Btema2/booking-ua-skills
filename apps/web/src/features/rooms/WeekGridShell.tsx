@@ -40,14 +40,23 @@ export function WeekGridShell({
         <div className="border-r border-outline-variant" />
 
         {/* 7 Day column headers */}
-        {daysKyiv.map((day, dayIndex) => (
-          <div
-            key={day.toISO() ?? dayIndex}
-            className="flex items-center justify-center border-r border-outline-variant text-center text-body-small font-semibold text-on-surface last:border-r-0"
-          >
-            {formatUkrainianDayHeader(day)}
-          </div>
-        ))}
+        {daysKyiv.map((day, dayIndex) => {
+          const dow = day?.setLocale('uk').toFormat('ccc').toUpperCase() ?? '';
+          const dayNum = day?.day ?? '';
+          return (
+            <div
+              key={day.toISO() ?? dayIndex}
+              className="flex flex-col items-center justify-center border-r border-outline-variant text-center last:border-r-0"
+            >
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-on-surface-variant leading-none">
+                {dow}
+              </span>
+              <span className="mt-[3px] font-heading font-display text-[20px] leading-none text-on-surface">
+                {dayNum}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Grid Frame Body */}
