@@ -222,7 +222,7 @@
      auth tile / header, 420px drops the brand text. Its JS switches the week
      grid to the single-day pager at `vw < 761`, i.e. desktop starts one pixel
      above --breakpoint-desktop. Use the JS boundary for the grid swap. */
-  --breakpoint-desktop: 760px;
+  --breakpoint-desktop: 761px;
   --breakpoint-narrow: 420px;
 }
 

@@ -28,6 +28,18 @@ function navTabClass({ isActive }: { isActive: boolean }) {
     : `${base} text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface`;
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getFirstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 export function NavBar({ userName }: { userName: string }) {
   const logout = useLogoutMutation();
 
@@ -95,27 +107,21 @@ export function NavBar({ userName }: { userName: string }) {
         </ul>
 
         <div className="ml-auto flex min-w-0 items-center gap-s2">
-          {/* Timezone chip pill — DESIGN-NOTES §4: pill 6px 12px, 12px/600, hidden <=760px */}
-          <span className="hidden desktop:inline-flex shrink-0 items-center rounded-full bg-surface-container px-[12px] py-[6px] text-[12px] font-semibold text-on-surface-variant">
-            {getViewerZone()}
+          {/* Timezone chip pill — DESIGN-NOTES §4: pill 6px 12px, 12px/600, surface-container-lowest fill, 1px border, hidden <=760px */}
+          <span className="hidden min-[761px]:inline-flex shrink-0 items-center gap-[7px] rounded-full border border-outline-variant bg-surface-container-lowest px-[12px] py-[6px] text-[12px] font-semibold text-on-surface-variant">
+            <span className="size-[6px] shrink-0 rounded-full bg-secondary" />
+            <span>{getViewerZone()}</span>
           </span>
-          {/* Avatar + name pill — DESIGN-NOTES §4: 30px avatar, pill pad 5px 14px 5px 5px. */}
-          <span className="flex shrink-0 items-center gap-s2 rounded-full bg-surface-container p-[5px] pr-[14px] max-desktop:gap-0 max-desktop:pr-[5px]">
+          {/* Avatar + name pill — DESIGN-NOTES §4: 30px avatar, pill pad 5px 14px 5px 5px, surface-container-lowest fill, 1px border */}
+          <span className="flex shrink-0 items-center gap-[9px] rounded-full border border-outline-variant bg-surface-container-lowest p-[5px] pr-[14px] max-desktop:gap-0 max-desktop:pr-[5px]">
             <span
               aria-hidden="true"
-              className="grid size-[var(--nav-avatar)] shrink-0 place-items-center rounded-full bg-primary-container font-heading text-label-large text-on-primary-container"
+              className="grid size-[var(--nav-avatar)] shrink-0 place-items-center rounded-full bg-secondary-container font-bold text-[12px] text-on-secondary-container"
             >
-              {userName.slice(0, 1)}
+              {getInitials(userName)}
             </span>
-            {/*
-              `sr-only` rather than `hidden`: the name leaves the layout without
-              leaving the accessibility tree, which matters because the avatar beside
-              it is only the first letter and is aria-hidden. Truncating instead, as
-              this did before, collapsed «Іван» into a 14px «І…» — clipped content
-              rather than a deliberate one.
-            */}
-            <span className="text-label-large whitespace-nowrap text-on-surface-variant max-desktop:sr-only">
-              {userName}
+            <span className="text-[13px] font-semibold whitespace-nowrap text-on-surface max-desktop:sr-only">
+              {getFirstName(userName)}
             </span>
           </span>
 
