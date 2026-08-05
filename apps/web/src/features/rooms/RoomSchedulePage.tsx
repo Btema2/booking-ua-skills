@@ -154,10 +154,6 @@ export function RoomSchedulePage() {
           <span>Минуло</span>
         </div>
 
-        {bookings.length === 0 && (
-          <span className="text-on-surface-variant">Цього тижня бронювань немає</span>
-        )}
-
         <div
           className="ml-auto flex items-center gap-s2 rounded-full bg-surface-container px-[13px] py-[6px] text-[12.5px] font-semibold text-on-surface-variant"
           data-testid="timezone-banner"
@@ -179,6 +175,12 @@ export function RoomSchedulePage() {
           <span>{formatTzBannerText(viewerZone, mondayKyiv)}</span>
         </div>
       </div>
+
+      {bookings.length === 0 && (
+        <p className="text-body-medium font-semibold text-on-surface-variant">
+          Цього тижня бронювань немає
+        </p>
+      )}
 
       <div>
         <WeekGridShell
