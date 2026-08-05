@@ -135,12 +135,10 @@ export function getDayColumnStatus(dayKyiv: DateTime, nowKyiv?: DateTime) {
 
   const isToday = dayStart.hasSame(todayInKyiv, 'day');
   const isPastDay = dayStart < todayInKyiv;
-  const isWeekend = dayKyiv.weekday === 6 || dayKyiv.weekday === 7;
 
   return {
     isToday,
     isPastDay,
-    isWeekend,
   };
 }
 

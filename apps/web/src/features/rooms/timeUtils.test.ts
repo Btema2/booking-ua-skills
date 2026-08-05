@@ -9,6 +9,7 @@ import {
   getNextKyivWeekParam,
   formatTzBannerText,
   getHourLabelsForGutter,
+  getNowLineInfo,
   getViewerZone,
 } from './timeUtils';
 
@@ -156,6 +157,28 @@ describe('timeUtils', () => {
       expect(sundayLabel).toBe('07:00');
 
       expect(mondayLabel).not.toBe(sundayLabel);
+    });
+  });
+
+  describe('getNowLineInfo', () => {
+    it('returns hidden outside 09:00-19:00 Kyiv and exact topPercentage at 18:39 Kyiv', () => {
+      const todayKyiv = DateTime.fromISO('2026-08-05T00:00:00', { zone: 'Europe/Kyiv' });
+
+      // 23:00 Kyiv -> hidden
+      const at2300 = DateTime.fromISO('2026-08-05T23:00:00', { zone: 'Europe/Kyiv' });
+      const info2300 = getNowLineInfo(todayKyiv, true, at2300);
+      expect(info2300.isVisible).toBe(false);
+
+      // 06:00 Kyiv -> hidden
+      const at0600 = DateTime.fromISO('2026-08-05T06:00:00', { zone: 'Europe/Kyiv' });
+      const info0600 = getNowLineInfo(todayKyiv, true, at0600);
+      expect(info0600.isVisible).toBe(false);
+
+      // 18:39 Kyiv -> visible at 96.5% top
+      const at1839 = DateTime.fromISO('2026-08-05T18:39:00', { zone: 'Europe/Kyiv' });
+      const info1839 = getNowLineInfo(todayKyiv, true, at1839);
+      expect(info1839.isVisible).toBe(true);
+      expect(info1839.topPercentage).toBeCloseTo(96.5, 1);
     });
   });
 });

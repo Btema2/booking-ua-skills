@@ -144,4 +144,41 @@ describe('WeekGridShell', () => {
       expect(grid).toBeTruthy();
     });
   });
+
+  describe('Weekend parity', () => {
+    it('asserts a Saturday cell and a Monday cell in the same future week have identical state', () => {
+      const futureDays = Array.from({ length: 7 }, (_, i) =>
+        DateTime.fromISO('2026-09-14T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
+      );
+
+      const { container } = render(
+        <WeekGridShell
+          daysKyiv={futureDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
+            <button
+              type="button"
+              data-testid={`cell-day-${dayIndex}`}
+              tabIndex={focusedCoords.dayIndex === dayIndex ? 0 : -1}
+            >
+              Slot
+            </button>
+          )}
+        />,
+      );
+
+      const mondayCell = screen.getByTestId('cell-day-0') as HTMLButtonElement; // Monday
+      const saturdayCell = screen.getByTestId('cell-day-5') as HTMLButtonElement; // Saturday
+
+      expect(mondayCell.disabled).toBe(false);
+      expect(saturdayCell.disabled).toBe(false);
+
+      const mondayCol = mondayCell.closest('.grid');
+      const saturdayCol = saturdayCell.closest('.grid');
+
+      expect(mondayCol?.className).toContain('bg-surface-container-lowest');
+      expect(saturdayCol?.className).toContain('bg-surface-container-lowest');
+    });
+  });
 });

@@ -136,14 +136,14 @@ export function WeekGridShell({
         {daysKyiv.map((day, dayIndex) => {
           const dow = day?.setLocale('uk').toFormat('ccc').toUpperCase() ?? '';
           const dayNum = day?.day ?? '';
-          const { isToday, isPastDay, isWeekend } = getDayColumnStatus(day, now);
+          const { isToday, isPastDay } = getDayColumnStatus(day, now);
 
           let headerClass =
             'flex flex-col items-center justify-center border-r border-outline-variant text-center last:border-r-0';
           if (isToday) {
             headerClass += ' bg-[var(--glass-today-head)]';
           }
-          if (isPastDay || isWeekend) {
+          if (isPastDay) {
             headerClass += ' opacity-60';
           }
 
