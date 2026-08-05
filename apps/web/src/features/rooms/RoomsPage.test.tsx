@@ -76,9 +76,12 @@ describe('room list', () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
     await screen.findByRole('link', { name: /Дуб/ });
 
-    const name = roomCard('Дуб').textContent ?? '';
-    expect(name).toContain('Місткість: 12 осіб');
-    expect(name).toContain('Поверх 2');
+    // Asserted against the computed accessible name (not `.textContent`) so an
+    // `aria-label` that silently overrides the sr-only spans would fail this test.
+    const link = screen.getByRole('link', {
+      name: /Дуб.*Місткість: 12 осіб.*Поверх 2/s,
+    });
+    expect(link).toBeTruthy();
   });
 });
 
