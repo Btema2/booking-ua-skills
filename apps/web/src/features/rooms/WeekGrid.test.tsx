@@ -171,16 +171,16 @@ describe('Week Grid Requirements (Phase 4a)', () => {
     expect(screen.getByText('19')).toBeTruthy();
     expect(screen.getByText('20')).toBeTruthy();
 
-    // Assert gutter labels (computed per viewer zone, one label per day column)
+    // Assert gutter labels (one shared 76px gutter column per DESIGN-NOTES.md
+    // §1, labels computed from Monday for viewer zone)
     const { daysKyiv } = getKyivWeek('2026-09-14');
     const expectedGutter = getHourLabelsForGutter(daysKyiv[0], getViewerZone());
-    expect(screen.getAllByText(expectedGutter[0]).length).toBe(7);
-    expect(screen.getAllByText(expectedGutter[expectedGutter.length - 1]).length).toBe(7);
+    expect(screen.getAllByText(expectedGutter[0]).length).toBe(1);
+    expect(screen.getAllByText(expectedGutter[expectedGutter.length - 1]).length).toBe(1);
 
-    // The shared time-gutter column was removed (labels now live inside each
-    // day column), so no [role="rowheader"] elements remain. Day headers are
-    // the empty "Час" gutter cell + the 7 day-name cells = 8 columnheaders,
-    // and the 7 day columns still each expose 20 interactive rows (140 cells).
+    // Day headers are the empty "Час" gutter cell + the 7 day-name cells = 8
+    // columnheaders, and the 7 day columns still each expose 20 interactive
+    // rows (140 cells).
     const columnHeaders = container.querySelectorAll('[role="columnheader"]');
     expect(columnHeaders.length).toBe(8);
 

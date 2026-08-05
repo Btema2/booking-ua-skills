@@ -36,7 +36,7 @@ describe('WeekGridShell', () => {
     expect(screen.getByText('5')).toBeTruthy();
   });
 
-  it('renders gutter labels hung at top of hour rows in every day column', () => {
+  it('renders gutter labels once each, hung at the top of their hour row in the shared gutter column', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
@@ -47,8 +47,9 @@ describe('WeekGridShell', () => {
 
     const expectedLabels = getHourLabelsForGutter(sampleDays[0], getViewerZone());
     expectedLabels.forEach((label) => {
-      // Each label repeats once per day column (7 columns), one per hour row.
-      expect(screen.getAllByText(label).length).toBe(7);
+      // One shared 76px gutter column (DESIGN-NOTES.md §1) — each hour label
+      // appears exactly once, not once per day column.
+      expect(screen.getAllByText(label).length).toBe(1);
     });
   });
 

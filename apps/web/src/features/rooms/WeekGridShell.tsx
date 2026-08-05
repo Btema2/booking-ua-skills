@@ -96,6 +96,16 @@ export function WeekGridShell({
   // users still have somewhere to land.
   const hasFocusableCell = daysKyiv.some((day) => getPastRowsCount(day, now) < 20);
 
+  // The grid has one shared 76px gutter column (DESIGN-NOTES.md §1), not one
+  // per day. getHourLabelsForGutter is per-day for DST correctness (a
+  // transition can fall mid-week), but the single visible gutter can only
+  // show one set of labels — Monday's, matching the reference used before
+  // the per-day DST fix. Booking positions and times remain per-instant
+  // correct regardless (getBookingGridRow, formatInstantTime), so this only
+  // affects the gutter's own hour text, and only in the rare week a DST
+  // transition falls between Monday and the currently-viewed day.
+  const gutterHourLabels = getHourLabelsForGutter(daysKyiv[0], viewerZone);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
       const { dayIndex, rowIndex } = focusedCoords;
@@ -223,12 +233,37 @@ export function WeekGridShell({
         className="grid grid-cols-[var(--grid-columns)]"
         style={{ gridTemplateColumns: 'var(--grid-columns)' }}
       >
+        {/* Shared Time Gutter — one column, labels hung at the top of each hour row */}
+        <div
+          className="grid grid-rows-[repeat(20,var(--slot-h))] border-r border-outline-variant bg-surface-container-lowest"
+          style={{ gridColumn: 1, gridTemplateRows: 'repeat(20, var(--slot-h))' }}
+          aria-hidden="true"
+        >
+          {Array.from({ length: 20 }, (_, rowIndex) => {
+            const isHourRow = rowIndex % 2 === 0;
+            const label = isHourRow ? gutterHourLabels[Math.floor(rowIndex / 2)] : undefined;
+            return (
+              <div
+                key={rowIndex}
+                className={`flex items-start justify-end pr-[6px] pt-[2px] ${
+                  isHourRow ? 'border-t border-outline-variant' : 'border-t border-[var(--color-rule-half-hour)]'
+                }`}
+              >
+                {label ? (
+                  <span className="text-[11.5px] font-bold tabular-nums text-on-surface-variant">
+                    {label}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Day Columns */}
         {daysKyiv.map((day, dayIndex) => {
           const { isToday, isPastDay } = getDayColumnStatus(day, now);
           const pastRowsCount = getPastRowsCount(day, now);
           const nowLine = getNowLineInfo(day, isCurrentWeek, now);
-          const hourLabels = getHourLabelsForGutter(day, viewerZone);
 
           let colBgClass = 'bg-surface-container-lowest';
           if (isToday) {
@@ -260,32 +295,6 @@ export function WeekGridShell({
                           : 'border-t border-[var(--color-rule-half-hour)]'
                       }
                     />
-                  );
-                })}
-              </div>
-
-              {/* Per-column gutter labels overlay */}
-              <div
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 grid grid-rows-[repeat(20,var(--slot-h))]"
-                style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
-                aria-hidden="true"
-              >
-                {Array.from({ length: 20 }, (_, rowIndex) => {
-                  const isHourRow = rowIndex % 2 === 0;
-                  const label = isHourRow
-                    ? hourLabels[Math.floor(rowIndex / 2)]
-                    : undefined;
-                  return (
-                    <div
-                      key={rowIndex}
-                      className="flex items-start justify-end pr-[6px] pt-[2px]"
-                    >
-                      {label ? (
-                        <span className="text-[11.5px] font-bold tabular-nums text-on-surface-variant">
-                          {label}
-                        </span>
-                      ) : null}
-                    </div>
                   );
                 })}
               </div>
