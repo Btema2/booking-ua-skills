@@ -13,10 +13,17 @@ describe('WeekGridShell', () => {
     DateTime.fromISO('2026-08-03T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
   );
 
+  const sampleWeekStartISO = DateTime.fromISO('2026-08-03T00:00:00', {
+    zone: 'Europe/Kyiv',
+  })
+    .toUTC()
+    .toISO()!;
+
   it('renders sticky header with day names and dates in Ukrainian', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={(index) => <div data-testid={`col-${index}`}>Day {index}</div>}
       />,
     );
@@ -33,6 +40,7 @@ describe('WeekGridShell', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={() => null}
       />,
     );
@@ -52,6 +60,7 @@ describe('WeekGridShell', () => {
     render(
       <WeekGridShell
         daysKyiv={sampleDays}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={renderDayColumnMock}
       />,
     );
@@ -71,7 +80,8 @@ describe('WeekGridShell', () => {
       const { container, rerender } = render(
         <WeekGridShell
           daysKyiv={sampleDays}
-            isCurrentWeek={true}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={true}
           renderDayColumn={() => null}
         />,
       );
@@ -84,7 +94,8 @@ describe('WeekGridShell', () => {
       rerender(
         <WeekGridShell
           daysKyiv={sampleDays}
-            isCurrentWeek={false}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -99,7 +110,8 @@ describe('WeekGridShell', () => {
       const { container } = render(
         <WeekGridShell
           daysKyiv={sampleDays}
-            isCurrentWeek={true}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={true}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <>
               {Array.from({ length: 20 }, (_, r) => {
@@ -138,7 +150,8 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={allPastDays}
-            isCurrentWeek={false}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -154,7 +167,8 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={sampleDays}
-            isCurrentWeek={false}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
       );
@@ -231,6 +245,7 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
@@ -251,6 +266,7 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
@@ -271,6 +287,7 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
@@ -297,7 +314,8 @@ describe('WeekGridShell', () => {
       const { container } = render(
         <WeekGridShell
           daysKyiv={futureDays}
-            isCurrentWeek={false}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={false}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <button
               type="button"

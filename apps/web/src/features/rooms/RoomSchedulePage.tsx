@@ -183,6 +183,7 @@ export function RoomSchedulePage() {
       <div>
         <WeekGridShell
           daysKyiv={daysKyiv}
+          weekStartISO={weekInfo.weekStartISO}
           isCurrentWeek={weekInfo.isCurrentWeek}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
             const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
