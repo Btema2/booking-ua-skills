@@ -141,6 +141,21 @@ describe('timeUtils', () => {
       const kyivBanner = formatTzBannerText('Europe/Kyiv', instant);
       expect(kyivBanner).toBe('Київ (UTC+3)');
     });
+
+    it('formats fractional-hour delta for Asia/Kolkata (+5:30)', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const kolkataBanner = formatTzBannerText('Asia/Kolkata', instant);
+      expect(kolkataBanner).toBe('Час показано у вашому поясі — Asia/Kolkata, це +2 год30 хв до Києва');
+    });
+
+    it('does not label a zone that merely shares Kyiv offset as Kyiv', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const helsinkiBanner = formatTzBannerText('Europe/Helsinki', instant);
+      expect(helsinkiBanner).toBe('Час показано у вашому поясі — Europe/Helsinki');
+      expect(helsinkiBanner).not.toContain('Київ');
+    });
   });
 
   describe('DST transition week per-instant labels', () => {

@@ -184,16 +184,28 @@ export function getNowLineInfo(dayKyiv: DateTime, isCurrentWeek: boolean, nowKyi
   return { isVisible: true, topPercentage };
 }
 
-export function formatTzBannerText(viewerZone: string, instant: DateTime): string {
-  const kyivOffset = instant.setZone('Europe/Kyiv').offset / 60;
-  const viewerOffset = instant.setZone(viewerZone).offset / 60;
-  const diffHours = viewerOffset - kyivOffset;
+function formatOffsetHuman(totalMinutes: number): string {
+  const sign = totalMinutes < 0 ? '−' : '+';
+  const abs = Math.abs(totalMinutes);
+  const hours = Math.floor(abs / 60);
+  const mins = abs % 60;
+  return mins === 0 ? `${sign}${hours} год` : `${sign}${hours} год${mins} хв`;
+}
 
-  if (viewerZone === 'Europe/Kyiv' || diffHours === 0) {
-    const sign = kyivOffset >= 0 ? `+${kyivOffset}` : `${kyivOffset}`;
-    return `Київ (UTC${sign})`;
+export function formatTzBannerText(viewerZone: string, instant: DateTime): string {
+  const kyivOffsetMinutes = instant.setZone('Europe/Kyiv').offset;
+  const viewerOffsetMinutes = instant.setZone(viewerZone).offset;
+  const diffMinutes = viewerOffsetMinutes - kyivOffsetMinutes;
+
+  if (viewerZone === 'Europe/Kyiv') {
+    const sign = kyivOffsetMinutes >= 0 ? '+' : '';
+    const kyivHours = Math.abs(kyivOffsetMinutes) / 60;
+    return `Київ (UTC${sign}${kyivHours})`;
   }
 
-  const diffStr = diffHours > 0 ? `+${diffHours} год` : `−${Math.abs(diffHours)} год`;
-  return `Час показано у вашому поясі — ${viewerZone}, це ${diffStr} до Києва`;
+  if (diffMinutes === 0) {
+    return `Час показано у вашому поясі — ${viewerZone}`;
+  }
+
+  return `Час показано у вашому поясі — ${viewerZone}, це ${formatOffsetHuman(diffMinutes)} до Києва`;
 }
