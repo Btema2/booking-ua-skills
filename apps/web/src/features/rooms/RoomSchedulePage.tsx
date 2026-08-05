@@ -117,7 +117,7 @@ export function RoomSchedulePage() {
               type="button"
               disabled={weekInfo.isCurrentWeek}
               onClick={() => setSearchParams({})}
-              className="h-[40px] px-s4 rounded-full border border-outline-variant bg-surface-container-lowest text-label-large text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+              className="h-[40px] px-s4 rounded-full border border-outline-variant bg-surface-container-lowest text-label-large font-bold text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               Цей тиждень
             </button>
@@ -154,6 +154,10 @@ export function RoomSchedulePage() {
           <span>Минуло</span>
         </div>
 
+        {bookings.length === 0 && (
+          <span className="text-on-surface-variant">Цього тижня бронювань немає</span>
+        )}
+
         <div
           className="ml-auto flex items-center gap-s2 rounded-full bg-surface-container px-[13px] py-[6px] text-[12.5px] font-semibold text-on-surface-variant"
           data-testid="timezone-banner"
@@ -176,7 +180,7 @@ export function RoomSchedulePage() {
         </div>
       </div>
 
-      <div className="relative">
+      <div>
         <WeekGridShell
           daysKyiv={daysKyiv}
           gutterLabels={gutterLabels}
@@ -238,18 +242,7 @@ export function RoomSchedulePage() {
           }}
         />
 
-        {bookings.length === 0 && (
-          <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-s2 p-s6 text-center">
-            <h3 className="font-heading text-headline-medium font-display text-on-surface">
-              Цього тижня все вільно
-            </h3>
-            <p className="text-body-medium text-on-surface-variant">
-              Жодного бронювання — оберіть будь-який слот
-            </p>
-          </div>
-        )}
-
-        <p className="mt-s3 text-center text-body-small text-on-surface-variant">
+        <p className="mt-s3 text-right text-body-small text-on-surface-variant">
           Натисніть будь-який вільний слот, щоб забронювати. Свої бронювання можна скасувати — чужі ні.
         </p>
       </div>

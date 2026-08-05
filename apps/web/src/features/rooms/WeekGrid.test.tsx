@@ -140,8 +140,8 @@ describe('Week Grid Requirements (Phase 4a)', () => {
     expect(await screen.findByText(/17 серпня — 23 серпня/)).toBeTruthy();
   });
 
-  // Test 7: A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, and the gutter labels.
-  it('7. A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, and the gutter labels', async () => {
+  // Test 7: A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, the gutter labels, and the caption — with no overlay covering the grid.
+  it('7. A week whose bookings response is [] still renders 20 rows, 7 day headers each with a date number, and the gutter labels, plus the caption', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -158,8 +158,9 @@ describe('Week Grid Requirements (Phase 4a)', () => {
 
     const { container } = render(<RoomSchedulePage />, { wrapper });
 
-    // Assert overlay message is present
-    expect(screen.getByText('Цього тижня все вільно')).toBeTruthy();
+    // Assert the empty-state caption is present, in the legend row — not an overlay
+    expect(screen.getByText('Цього тижня бронювань немає')).toBeTruthy();
+    expect(screen.queryByText('Цього тижня все вільно')).toBeNull();
 
     // Assert 7 day headers each with date number (14 to 20 for 2026-09-14 week)
     expect(screen.getByText('14')).toBeTruthy();
@@ -179,5 +180,11 @@ describe('Week Grid Requirements (Phase 4a)', () => {
     // Assert 20 rows in time gutter / grid
     const rowHeaders = container.querySelectorAll('[role="rowheader"]');
     expect(rowHeaders.length).toBe(20);
+
+    // Assert nothing covers or blocks the grid: every free slot in this
+    // future week renders as a normal, clickable gridcell (7 days * 20 rows).
+    const gridcells = container.querySelectorAll('[role="gridcell"]');
+    expect(gridcells.length).toBe(140);
+    expect(container.querySelector('.z-30')).toBeNull();
   });
 });
