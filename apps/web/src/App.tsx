@@ -7,6 +7,7 @@ import { RequireAuth } from './features/auth/RequireAuth';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { RoomsPage } from './features/rooms/RoomsPage';
+import { RoomSchedulePage } from './features/rooms/RoomSchedulePage';
 
 export function App() {
   const [queryClient] = useState(createQueryClient);
@@ -21,6 +22,7 @@ export function App() {
           </Route>
           <Route element={<RequireAuth />}>
             <Route path="/" element={<RoomsPage />} />
+            <Route path="/rooms/:roomId" element={<RoomSchedulePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

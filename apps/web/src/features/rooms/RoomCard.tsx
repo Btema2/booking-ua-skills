@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import type { Room } from '@booking/core';
 import { peopleLabel } from './plural';
 
@@ -6,15 +7,9 @@ const CARD =
   'rounded-lg border border-outline-variant bg-surface-container-low p-[var(--room-card-pad)] ' +
   'text-left';
 
-/**
- * Not interactive yet. Phase 4 wraps this in a link to the room's week grid; until
- * that destination exists, making it a <button> would put a focusable control that
- * does nothing into the tab order — one dead stop per room — and hover-lift it to
- * look clickable. It stays an <article> until there is somewhere to go.
- */
 export function RoomCard({ room }: { readonly room: Room }) {
   return (
-    <article aria-label={room.name} className={CARD}>
+    <Link to={`/rooms/${room.id}`} className={CARD}>
       <div className="flex w-full items-start justify-between gap-s3">
         <div className="min-w-0">
           <span className="block font-heading text-[28px] leading-[1.1] font-display text-on-surface">
@@ -35,6 +30,6 @@ export function RoomCard({ room }: { readonly room: Room }) {
         <span aria-hidden="true">{room.floor} поверх</span>
         <span className="sr-only">Поверх {room.floor}</span>
       </span>
-    </article>
+    </Link>
   );
 }
