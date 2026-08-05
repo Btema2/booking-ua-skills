@@ -122,7 +122,10 @@ export function BookingBlock({
         <button
           type="button"
           tabIndex={-1}
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
           className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
         >
           <div className="flex items-center gap-[5px] min-w-0 uppercase tracking-[0.04em] font-bold text-[11px] text-on-primary-container">
