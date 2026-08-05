@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Booking, Room } from '@booking/core';
+import type { Booking } from '@booking/core';
 import { apiRequest } from '../../lib/api';
 import { getCurrentKyivWeek } from './timeUtils';
+import { useRoomCatalogue } from './useRooms';
 
 export async function fetchRoomBookings(
   roomId: string,
@@ -11,10 +12,6 @@ export async function fetchRoomBookings(
   return apiRequest<{ bookings: Booking[] }>(
     `/rooms/${roomId}/bookings?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
   );
-}
-
-export async function fetchRoomDetails(roomId: string): Promise<Room> {
-  return apiRequest<Room>(`/rooms/${roomId}`);
 }
 
 export function useRoomBookings(roomId: string) {
@@ -27,9 +24,12 @@ export function useRoomBookings(roomId: string) {
 }
 
 export function useRoomDetails(roomId: string) {
-  return useQuery({
-    queryKey: ['room', roomId],
-    queryFn: () => fetchRoomDetails(roomId),
-    enabled: Boolean(roomId),
-  });
+  const catalogueQuery = useRoomCatalogue();
+  const room = catalogueQuery.data?.find((r) => String(r.id) === String(roomId));
+  return {
+    data: room,
+    isPending: catalogueQuery.isPending,
+    isError: catalogueQuery.isError,
+    refetch: catalogueQuery.refetch,
+  };
 }

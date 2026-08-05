@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { fetchRoomBookings, fetchRoomDetails, useRoomBookings, useRoomDetails } from './useRoomBookings';
+import { fetchRoomBookings, useRoomBookings, useRoomDetails } from './useRoomBookings';
 import { getCurrentKyivWeek } from './timeUtils';
 
 function createWrapper() {
@@ -42,26 +42,6 @@ describe('useRoomBookings', () => {
     });
   });
 
-  describe('fetchRoomDetails', () => {
-    it('calls GET /api/rooms/:roomId', async () => {
-      const roomMock = { id: 42, name: 'Дуб', floor: 2, capacity: 12, amenities: null };
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => roomMock,
-      });
-      vi.stubGlobal('fetch', mockFetch);
-
-      const result = await fetchRoomDetails('42');
-
-      expect(result).toEqual(roomMock);
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/rooms/42',
-        expect.objectContaining({ credentials: 'include' }),
-      );
-    });
-  });
-
   describe('useRoomBookings hook', () => {
     it('queries room bookings using current week boundaries', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
@@ -84,19 +64,22 @@ describe('useRoomBookings', () => {
   });
 
   describe('useRoomDetails hook', () => {
-    it('queries room details', async () => {
-      const roomMock = { id: 42, name: 'Дуб', floor: 2, capacity: 12, amenities: null };
+    it('finds room details from room catalogue', async () => {
+      const roomsMock = [
+        { id: 42, name: 'Дуб', floor: 2, capacity: 12, amenities: null },
+        { id: 43, name: 'Ясен', floor: 2, capacity: 8, amenities: null },
+      ];
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => roomMock,
+        json: async () => ({ rooms: roomsMock }),
       });
       vi.stubGlobal('fetch', mockFetch);
 
       const { result } = renderHook(() => useRoomDetails('42'), { wrapper: createWrapper() });
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toEqual(roomMock);
+      await waitFor(() => expect(result.current.isPending).toBe(false));
+      expect(result.current.data).toEqual(roomsMock[0]);
     });
   });
 });

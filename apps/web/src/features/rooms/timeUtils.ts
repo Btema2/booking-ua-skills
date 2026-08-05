@@ -15,6 +15,30 @@ export interface BookingGridPosition {
   span: number;
 }
 
+const UKRAINIAN_GENITIVE_MONTHS = [
+  'січня',
+  'лютого',
+  'березня',
+  'квітня',
+  'травня',
+  'червня',
+  'липня',
+  'серпня',
+  'вересня',
+  'жовтня',
+  'листопада',
+  'грудня',
+];
+
+export function formatKyivWeekRange(mondayKyiv: DateTime, sundayEndKyiv: DateTime): string {
+  const startDay = mondayKyiv.day;
+  const startMonth = UKRAINIAN_GENITIVE_MONTHS[mondayKyiv.month - 1];
+  const endDay = sundayEndKyiv.day;
+  const endMonth = UKRAINIAN_GENITIVE_MONTHS[sundayEndKyiv.month - 1];
+
+  return `${startDay} ${startMonth} — ${endDay} ${endMonth}`;
+}
+
 export function getCurrentKyivWeek(): KyivWeek {
   const mondayKyiv = DateTime.now().setZone('Europe/Kyiv').startOf('week');
   const sundayEndKyiv = mondayKyiv.plus({ days: 6 }).endOf('day');
