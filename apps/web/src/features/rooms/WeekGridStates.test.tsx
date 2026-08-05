@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { WeekGridEmpty, WeekGridError, WeekGridLoading } from './WeekGridStates';
+import { DefaultFallbackGrid, WeekGridError, WeekGridLoading } from './WeekGridStates';
 
 describe('WeekGridLoading', () => {
   afterEach(cleanup);
@@ -12,30 +12,6 @@ describe('WeekGridLoading', () => {
     expect(status.getAttribute('aria-busy')).toBe('true');
     expect(screen.getByText('Завантажуємо розклад…')).toBeTruthy();
     expect(screen.queryByRole('progressbar')).toBeNull();
-  });
-});
-
-describe('WeekGridEmpty', () => {
-  afterEach(cleanup);
-
-  it('renders empty schedule messages and 5 day columns by default', () => {
-    render(<WeekGridEmpty />);
-
-    expect(screen.getByRole('heading', { level: 3, name: 'Цього тижня все вільно' })).toBeTruthy();
-    expect(screen.getByText('Жодного бронювання — оберіть будь-який слот')).toBeTruthy();
-
-    expect(screen.getByText('ПН')).toBeTruthy();
-    expect(screen.getByText('ВТ')).toBeTruthy();
-    expect(screen.getByText('СР')).toBeTruthy();
-    expect(screen.getByText('ЧТ')).toBeTruthy();
-    expect(screen.getByText('ПТ')).toBeTruthy();
-  });
-
-  it('supports custom daysCount', () => {
-    render(<WeekGridEmpty daysCount={7} />);
-
-    expect(screen.getByText('СБ')).toBeTruthy();
-    expect(screen.getByText('НД')).toBeTruthy();
   });
 });
 
@@ -68,5 +44,18 @@ describe('WeekGridError', () => {
 
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.getByText('ПН')).toBeTruthy();
+  });
+
+  it('does not render misleading "everything is free" messaging in the error backdrop', () => {
+    render(
+      <WeekGridError>
+        <DefaultFallbackGrid daysCount={7} />
+      </WeekGridError>,
+    );
+
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Розклад може бути застарілим')).toBeTruthy();
+    expect(screen.queryByText('Цього тижня все вільно')).toBeNull();
+    expect(screen.queryByText('Жодного бронювання — оберіть будь-який слот')).toBeNull();
   });
 });
