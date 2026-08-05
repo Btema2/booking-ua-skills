@@ -145,6 +145,43 @@ describe('WeekGridShell', () => {
     });
   });
 
+  describe('Roving tabindex on an all-past week', () => {
+    it('falls back to making the grid root the tab stop when no day has a focusable slot', () => {
+      const allPastDays = Array.from({ length: 7 }, (_, i) =>
+        DateTime.fromISO('2020-01-06T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
+      );
+
+      render(
+        <WeekGridShell
+          daysKyiv={allPastDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={() => null}
+        />,
+      );
+
+      // No renderDayColumn cells exist at all here (mirrors RoomSchedulePage
+      // rendering nothing for a fully-past, booking-less week), so the only
+      // possible tab stop is the grid root itself.
+      const grid = screen.getByRole('grid');
+      expect(grid.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('leaves the grid root out of the tab order when a normal focusable slot exists', () => {
+      render(
+        <WeekGridShell
+          daysKyiv={sampleDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={() => null}
+        />,
+      );
+
+      const grid = screen.getByRole('grid');
+      expect(grid.getAttribute('tabindex')).toBe('-1');
+    });
+  });
+
   describe('Weekend parity', () => {
     it('asserts a Saturday cell and a Monday cell in the same future week have identical state', () => {
       const futureDays = Array.from({ length: 7 }, (_, i) =>

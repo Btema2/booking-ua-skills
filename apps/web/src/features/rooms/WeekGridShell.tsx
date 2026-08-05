@@ -54,6 +54,12 @@ export function WeekGridShell({
     setFocusedCoords(getInitialFocusedCoords(daysKyiv, now));
   }, [daysKyiv]);
 
+  // A week entirely in the past has no free slot left to land tabIndex=0 on
+  // (RoomSchedulePage never renders a free-slot cell for a past row). Fall
+  // back to making the grid root itself the single tab stop so keyboard
+  // users still have somewhere to land.
+  const hasFocusableCell = daysKyiv.some((day) => getPastRowsCount(day, now) < 20);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
       const { dayIndex, rowIndex } = focusedCoords;
@@ -120,8 +126,9 @@ export function WeekGridShell({
     <div
       role="grid"
       aria-label="Розклад переговорної"
+      tabIndex={hasFocusableCell ? -1 : 0}
       onKeyDown={handleKeyDown}
-      className="overflow-clip rounded-[var(--radius-lg)] border border-outline-variant bg-surface-container-lowest focus:outline-none"
+      className="overflow-clip rounded-[var(--radius-lg)] border border-outline-variant bg-surface-container-lowest focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
     >
       {/* Sticky Day Header Row */}
       <div
