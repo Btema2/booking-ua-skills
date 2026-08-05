@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DateTime } from 'luxon';
 import { WeekGridShell } from './WeekGridShell';
 
@@ -179,6 +179,133 @@ describe('WeekGridShell', () => {
 
       const grid = screen.getByRole('grid');
       expect(grid.getAttribute('tabindex')).toBe('-1');
+    });
+  });
+
+  describe('Enter/Space activation inside multi-row bookings', () => {
+    // A week sufficiently far ahead so no row is treated as past, keeping the
+    // initial focusedCoords on day 0.
+    const futureDays = Array.from({ length: 7 }, (_, i) =>
+      DateTime.fromISO('2026-09-14T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
+    );
+
+    // Reproduces the real DOM from RoomSchedulePage: free cells for rows 0..3
+    // are emitted first (ascending), then a span=2 booking anchored at `0-4`
+    // (covers rows 4..5). The booking gridcell only carries its start-slot
+    // attribute (`0-4`), never a marker for its interior rows.
+    const renderDayWithSpanBooking = (
+      onFreeClick: (row: number) => void,
+      onBookingClick: () => void,
+    ) =>
+      (dayIndex: number, _day: DateTime, _pastRowsCount: number, focusedCoords: { dayIndex: number; rowIndex: number }) => {
+        if (dayIndex !== 0) return null;
+        return (
+          <>
+            {[0, 1, 2, 3].map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="gridcell"
+                data-grid-cell={`0-${r}`}
+                tabIndex={
+                  focusedCoords.dayIndex === 0 && focusedCoords.rowIndex === r ? 0 : -1
+                }
+                onClick={() => onFreeClick(r)}
+              >
+                Free {r}
+              </button>
+            ))}
+            <button
+              type="button"
+              role="gridcell"
+              data-grid-cell="0-4"
+              tabIndex={
+                focusedCoords.dayIndex === 0 &&
+                focusedCoords.rowIndex >= 4 &&
+                focusedCoords.rowIndex < 6
+                  ? 0
+                  : -1
+              }
+              onClick={onBookingClick}
+            >
+              Booking 0-4
+            </button>
+          </>
+        );
+      };
+
+    const moveFocusToInteriorRow = (grid: HTMLElement) => {
+      // From initial row 0, ArrowDown five times to land on row 5, which is
+      // inside the booking's span but not its start row.
+      for (let i = 0; i < 5; i += 1) {
+        fireEvent.keyDown(grid, { key: 'ArrowDown' });
+      }
+    };
+
+    it('Enter on an interior span row activates the booking, not the first free cell', () => {
+      const onFreeClick = vi.fn();
+      const onBookingClick = vi.fn();
+
+      render(
+        <WeekGridShell
+          daysKyiv={futureDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
+        />,
+      );
+
+      const grid = screen.getByRole('grid');
+      moveFocusToInteriorRow(grid);
+      fireEvent.keyDown(grid, { key: 'Enter' });
+
+      expect(onBookingClick).toHaveBeenCalledTimes(1);
+      expect(onFreeClick).not.toHaveBeenCalled();
+    });
+
+    it('Space on an interior span row activates the booking, not the first free cell', () => {
+      const onFreeClick = vi.fn();
+      const onBookingClick = vi.fn();
+
+      render(
+        <WeekGridShell
+          daysKyiv={futureDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
+        />,
+      );
+
+      const grid = screen.getByRole('grid');
+      moveFocusToInteriorRow(grid);
+      fireEvent.keyDown(grid, { key: ' ' });
+
+      expect(onBookingClick).toHaveBeenCalledTimes(1);
+      expect(onFreeClick).not.toHaveBeenCalled();
+    });
+
+    it('Enter on an exact free row still activates that cell, not a lower one', () => {
+      const onFreeClick = vi.fn();
+      const onBookingClick = vi.fn();
+
+      render(
+        <WeekGridShell
+          daysKyiv={futureDays}
+          gutterLabels={sampleGutterLabels}
+          isCurrentWeek={false}
+          renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
+        />,
+      );
+
+      const grid = screen.getByRole('grid');
+      // Row 2 is an exact free cell, not inside a booking span.
+      for (let i = 0; i < 2; i += 1) {
+        fireEvent.keyDown(grid, { key: 'ArrowDown' });
+      }
+      fireEvent.keyDown(grid, { key: 'Enter' });
+
+      expect(onFreeClick).toHaveBeenCalledWith(2);
+      expect(onBookingClick).not.toHaveBeenCalled();
     });
   });
 
