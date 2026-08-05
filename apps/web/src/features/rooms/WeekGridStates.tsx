@@ -1,6 +1,3 @@
-import { DateTime } from 'luxon';
-import { WeekGridShell } from './WeekGridShell';
-
 const DEFAULT_DAY_NAMES = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
 
 /**
@@ -120,36 +117,6 @@ export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
   );
 }
 
-/* ── Empty State ─────────────────────────────────────────────────────────── */
-
-export type WeekGridEmptyProps = {
-  readonly daysCount?: number;
-};
-
-/**
- * Week schedule empty state (DESIGN-NOTES.md §8).
- * Renders full 20-row grid with overlay «Цього тижня все вільно» / «Жодного бронювання — оберіть будь-який слот».
- */
-export function WeekGridEmpty({ daysCount = 7 }: WeekGridEmptyProps) {
-  const daysKyiv = Array.from({ length: daysCount }, (_, i) =>
-    DateTime.now().setZone('Europe/Kyiv').startOf('week').plus({ days: i }),
-  );
-
-  return (
-    <div role="status" className="relative w-full">
-      <WeekGridShell daysKyiv={daysKyiv} renderDayColumn={() => null} />
-      <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-s2 p-s6 text-center">
-        <h3 className="font-heading text-headline-medium font-display text-on-surface">
-          Цього тижня все вільно
-        </h3>
-        <p className="text-body-medium text-on-surface-variant">
-          Жодного бронювання — оберіть будь-який слот
-        </p>
-      </div>
-    </div>
-  );
-}
-
 /* ── Error State ─────────────────────────────────────────────────────────── */
 
 export type WeekGridErrorProps = {
@@ -161,7 +128,7 @@ export type WeekGridErrorProps = {
 /**
  * Fallback grid frame rendered when WeekGridError has no children passed.
  */
-function DefaultFallbackGrid({ daysCount = 5 }: { readonly daysCount: number }) {
+export function DefaultFallbackGrid({ daysCount = 5 }: { readonly daysCount: number }) {
   const columns = DEFAULT_DAY_NAMES.slice(0, daysCount);
 
   return (

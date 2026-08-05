@@ -12,7 +12,7 @@ import {
 } from './timeUtils';
 import { WeekGridShell } from './WeekGridShell';
 import { BookingBlock } from './BookingBlock';
-import { WeekGridLoading, WeekGridEmpty, WeekGridError } from './WeekGridStates';
+import { WeekGridLoading, WeekGridError, DefaultFallbackGrid } from './WeekGridStates';
 
 export function RoomSchedulePage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -41,7 +41,7 @@ export function RoomSchedulePage() {
     return (
       <section className="flex flex-col gap-s5">
         <WeekGridError onRetry={() => { void roomQuery.refetch(); void bookingsQuery.refetch(); }}>
-          <WeekGridEmpty daysCount={7} />
+          <DefaultFallbackGrid daysCount={7} />
         </WeekGridError>
       </section>
     );
