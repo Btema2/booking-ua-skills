@@ -82,12 +82,12 @@ export function BookingBlock({
         tabIndex={tabIndex}
         data-grid-cell={dataGridCell}
         onFocus={onFocus}
+        onClick={onClick}
         style={gridRowStyle}
         className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[9px]"
       >
         <button
           type="button"
-          onClick={onClick}
           tabIndex={-1}
           className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
         >

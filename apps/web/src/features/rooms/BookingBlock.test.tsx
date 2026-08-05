@@ -48,6 +48,30 @@ describe('BookingBlock', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
+  it('fires onClick from the outer gridcell wrapper directly (roving-tabindex Enter/Space clicks this element, not the inner button)', () => {
+    const handleClick = vi.fn();
+    const currentUserId = 'u1111111-1111-1111-1111-111111111111';
+
+    const { container } = render(
+      <BookingBlock
+        booking={mockBooking}
+        currentUserId={currentUserId}
+        startRow={1}
+        span={2}
+        dataGridCell="0-0"
+        onClick={handleClick}
+      />,
+    );
+
+    const wrapper = container.querySelector('[data-grid-cell="0-0"]') as HTMLElement;
+    expect(wrapper.getAttribute('role')).toBe('gridcell');
+
+    // WeekGridShell's keyboard handler calls native .click() on the
+    // [data-grid-cell] element itself, not on any descendant.
+    wrapper.click();
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
   it("renders someone else's booking as a non-interactive div with first name in meta", () => {
     const currentUserId = 'u9999999-9999-9999-9999-999999999999';
 
