@@ -231,7 +231,6 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
-          gutterLabels={sampleGutterLabels}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
@@ -252,7 +251,6 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
-          gutterLabels={sampleGutterLabels}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
@@ -273,7 +271,6 @@ describe('WeekGridShell', () => {
       render(
         <WeekGridShell
           daysKyiv={futureDays}
-          gutterLabels={sampleGutterLabels}
           isCurrentWeek={false}
           renderDayColumn={renderDayWithSpanBooking(onFreeClick, onBookingClick)}
         />,
