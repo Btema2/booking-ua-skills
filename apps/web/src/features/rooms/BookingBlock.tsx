@@ -1,8 +1,10 @@
+import { DateTime } from 'luxon';
 import type { Booking } from '@booking/core';
 
 export interface BookingBlockProps {
   booking?: Booking | null;
   currentUserId?: string | null;
+  viewerZone: string;
   startRow: number;
   span: number;
   tabIndex?: number;
@@ -11,19 +13,27 @@ export interface BookingBlockProps {
   onClick?: () => void;
 }
 
-function formatTime(value: Date | string): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (isNaN(date.getTime())) {
-    return '';
-  }
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
+function toLuxonUtc(value: Date | string): DateTime {
+  return typeof value === 'string'
+    ? DateTime.fromISO(value, { zone: 'utc' })
+    : DateTime.fromJSDate(value, { zone: 'utc' });
 }
 
-function formatTimeRange(startsAt: Date | string, endsAt: Date | string): string {
-  const start = formatTime(startsAt);
-  const end = formatTime(endsAt);
+function formatTime(value: Date | string, viewerZone: string): string {
+  const dt = toLuxonUtc(value);
+  if (!dt.isValid) {
+    return '';
+  }
+  return dt.setZone(viewerZone).toFormat('HH:mm');
+}
+
+function formatTimeRange(
+  startsAt: Date | string,
+  endsAt: Date | string,
+  viewerZone: string,
+): string {
+  const start = formatTime(startsAt, viewerZone);
+  const end = formatTime(endsAt, viewerZone);
   return `${start}–${end}`;
 }
 
@@ -36,6 +46,7 @@ function getFirstName(userName: string): string {
 export function BookingBlock({
   booking,
   currentUserId,
+  viewerZone,
   startRow,
   span,
   tabIndex = -1,
@@ -68,7 +79,7 @@ export function BookingBlock({
   }
 
   const isOwn = Boolean(currentUserId && booking.userId === currentUserId);
-  const timeRange = formatTimeRange(booking.startsAt, booking.endsAt);
+  const timeRange = formatTimeRange(booking.startsAt, booking.endsAt, viewerZone);
 
   const titleSizeClass = span >= 2 ? 'text-[13px]' : 'text-[12px]';
   const titleClampClass =

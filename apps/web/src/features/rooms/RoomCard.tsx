@@ -9,7 +9,7 @@ const CARD =
 
 export function RoomCard({ room }: { readonly room: Room }) {
   return (
-    <Link to={`/rooms/${room.id}`} role="article" aria-label={room.name} className={CARD}>
+    <Link to={`/rooms/${room.id}`} role="link" aria-label={room.name} className={CARD}>
       <div className="flex w-full items-start justify-between gap-s3">
         <div className="min-w-0">
           <span className="block font-heading text-[28px] leading-[1.1] font-display text-on-surface">

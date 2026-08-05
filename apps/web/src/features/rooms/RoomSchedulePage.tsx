@@ -206,6 +206,7 @@ export function RoomSchedulePage() {
                   return (
                     <BookingBlock
                       key={`free-${i}`}
+                      viewerZone={viewerZone}
                       startRow={startRow}
                       span={1}
                       tabIndex={isFocused ? 0 : -1}
@@ -227,6 +228,7 @@ export function RoomSchedulePage() {
                       <BookingBlock
                         booking={booking}
                         currentUserId={currentUserId}
+                        viewerZone={viewerZone}
                         startRow={startRow}
                         span={span}
                         tabIndex={isFocused ? 0 : -1}
