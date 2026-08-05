@@ -117,6 +117,26 @@ describe('BookingBlock', () => {
     expect(wrapper.style.gridRow).toBe('5 / span 1');
   });
 
+  it('renders selected slot styling when isSelected is true and no booking is provided', () => {
+    const { container } = render(
+      <BookingBlock isSelected={true} viewerZone="Europe/Kyiv" startRow={5} span={1} />,
+    );
+
+    expect(screen.queryByRole('button')).toBeNull();
+    const label = screen.getByText('Обраний слот');
+    expect(label).toBeTruthy();
+    expect(label.className).toContain('text-primary');
+
+    const innerDiv = label.parentElement;
+    expect(innerDiv?.className).toContain('border-2');
+    expect(innerDiv?.className).toContain('border-dashed');
+    expect(innerDiv?.className).toContain('border-primary');
+    expect(innerDiv?.className).toContain('bg-[var(--glass-selected-slot)]');
+
+    const wrapper = container.firstElementChild as HTMLElement;
+    expect(wrapper.style.gridRow).toBe('5 / span 1');
+  });
+
   it('applies gridRow style to the outer wrapper and span 4 clamp', () => {
     const { container } = render(
       <BookingBlock

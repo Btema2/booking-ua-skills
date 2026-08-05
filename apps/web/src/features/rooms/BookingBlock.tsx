@@ -3,6 +3,7 @@ import type { Booking } from '@booking/core';
 
 export interface BookingBlockProps {
   booking?: Booking | null;
+  isSelected?: boolean;
   currentUserId?: string | null;
   viewerZone: string;
   startRow: number;
@@ -45,6 +46,7 @@ function getFirstName(userName: string): string {
 
 export function BookingBlock({
   booking,
+  isSelected,
   currentUserId,
   viewerZone,
   startRow,
@@ -59,6 +61,26 @@ export function BookingBlock({
 
   // 3. Free slot (when rendering an unoccupied slot on desktop)
   if (!booking) {
+    if (isSelected) {
+      return (
+        <div
+          role="gridcell"
+          tabIndex={tabIndex}
+          data-grid-cell={dataGridCell}
+          onFocus={onFocus}
+          onClick={onClick}
+          style={gridRowStyle}
+          className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[7px]"
+        >
+          <div className="w-full h-full flex items-center justify-center rounded-[7px] border-2 border-dashed border-primary bg-[var(--glass-selected-slot)] px-[4px] cursor-pointer">
+            <span className="text-primary font-bold text-[12px] select-none">
+              Обраний слот
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         role="gridcell"
@@ -100,6 +122,7 @@ export function BookingBlock({
         <button
           type="button"
           tabIndex={-1}
+          onClick={onClick}
           className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
         >
           <div className="flex items-center gap-[5px] min-w-0 uppercase tracking-[0.04em] font-bold text-[11px] text-on-primary-container">

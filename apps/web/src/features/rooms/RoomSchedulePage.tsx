@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
+import type { Booking } from '@booking/core';
+import { ApiError } from '../../lib/api';
 import { useRoomDetails, useRoomBookings } from './useRoomBookings';
 import { useCurrentUser } from '../auth/useCurrentUser';
 import {
@@ -13,6 +16,10 @@ import {
 import { WeekGridShell } from './WeekGridShell';
 import { BookingBlock } from './BookingBlock';
 import { WeekGridLoading, WeekGridError, DefaultFallbackGrid } from './WeekGridStates';
+import { CreateBookingModal } from '../bookings/CreateBookingModal';
+import { CancelBookingDialog } from '../bookings/CancelBookingDialog';
+import { useCreateBooking, useCancelBooking } from '../bookings/useBookingMutations';
+import { mapApiErrorToForm } from '../bookings/errorMapping';
 
 export function RoomSchedulePage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -28,6 +35,29 @@ export function RoomSchedulePage() {
 
   const currentUserId = currentUserQuery.data?.id ?? null;
   const viewerZone = getViewerZone();
+
+  const createMutation = useCreateBooking(validRoomId, weekInfo.weekStartISO);
+  const cancelMutation = useCancelBooking(validRoomId, weekInfo.weekStartISO);
+
+  // Modal states for Create Booking
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedSlotCoords, setSelectedSlotCoords] = useState<{ dayIndex: number; rowIndex: number } | null>(null);
+  const [selectedSlotInfo, setSelectedSlotInfo] = useState<{
+    initialStartISO: string;
+    initialEndISO: string;
+    dateDisplayStr: string;
+  }>({
+    initialStartISO: '',
+    initialEndISO: '',
+    dateDisplayStr: '',
+  });
+  const [serverFormError, setServerFormError] = useState<string | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<{ title?: string; time?: string }>({});
+
+  // Modal states for Cancel Booking
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   if (roomQuery.isPending || bookingsQuery.isPending) {
     return (
@@ -69,6 +99,61 @@ export function RoomSchedulePage() {
   if (room?.amenities) subtitleParts.push(room.amenities);
   subtitleParts.push(weekRangeStr);
   const subtitleStr = subtitleParts.join(' · ');
+
+  const handleFreeSlotClick = (dayIndex: number, rowIndex: number) => {
+    const dayKyiv = daysKyiv[dayIndex];
+    const slotStartKyiv = dayKyiv
+      .set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+      .plus({ minutes: rowIndex * 30 });
+    const initialStartISO = slotStartKyiv.toUTC().toISO()!;
+    const initialEndISO = slotStartKyiv.plus({ minutes: 30 }).toUTC().toISO()!;
+    const dateDisplayStr = dayKyiv.setLocale('uk').toFormat('EEEE, d MMMM');
+
+    setSelectedSlotCoords({ dayIndex, rowIndex });
+    setSelectedSlotInfo({ initialStartISO, initialEndISO, dateDisplayStr });
+    setServerFormError(null);
+    setServerFieldErrors({});
+    setIsCreateOpen(true);
+  };
+
+  const handleCreateSubmit = async (values: { title: string; startsAt: string; endsAt: string }) => {
+    setServerFormError(null);
+    setServerFieldErrors({});
+    try {
+      await createMutation.mutateAsync({
+        roomId: Number(validRoomId),
+        title: values.title,
+        startsAt: values.startsAt,
+        endsAt: values.endsAt,
+      });
+      setIsCreateOpen(false);
+    } catch (err) {
+      const mapped = mapApiErrorToForm(err);
+      setServerFieldErrors(mapped.fieldErrors);
+      setServerFormError(mapped.formError);
+    }
+  };
+
+  const handleBookingClick = (booking: Booking) => {
+    if (currentUserId && booking.userId === currentUserId) {
+      setBookingToCancel(booking);
+      setCancelError(null);
+      setIsCancelOpen(true);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!bookingToCancel) return;
+    setCancelError(null);
+    try {
+      await cancelMutation.mutateAsync(bookingToCancel.id);
+      setIsCancelOpen(false);
+      setBookingToCancel(null);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Ви не можете скасувати це бронювання';
+      setCancelError(msg);
+    }
+  };
 
   return (
     <section className="flex flex-col gap-s5">
@@ -204,15 +289,21 @@ export function RoomSchedulePage() {
                   }
                   const isFocused =
                     focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
+                  const isSelected =
+                    isCreateOpen &&
+                    selectedSlotCoords?.dayIndex === dayIndex &&
+                    selectedSlotCoords?.rowIndex === rowIndex;
                   return (
                     <BookingBlock
                       key={`free-${i}`}
                       viewerZone={viewerZone}
                       startRow={startRow}
                       span={1}
+                      isSelected={isSelected}
                       tabIndex={isFocused ? 0 : -1}
                       dataGridCell={`${dayIndex}-${rowIndex}`}
                       onFocus={() => onCellFocus(dayIndex, rowIndex)}
+                      onClick={() => handleFreeSlotClick(dayIndex, rowIndex)}
                     />
                   );
                 })}
@@ -235,6 +326,7 @@ export function RoomSchedulePage() {
                         tabIndex={isFocused ? 0 : -1}
                         dataGridCell={`${dayIndex}-${startSlotIndex}`}
                         onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
+                        onClick={() => handleBookingClick(booking)}
                       />
                     </div>
                   );
@@ -248,6 +340,34 @@ export function RoomSchedulePage() {
           Натисніть будь-який вільний слот, щоб забронювати. Свої бронювання можна скасувати — чужі ні.
         </p>
       </div>
+
+      <CreateBookingModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        roomName={room?.name ?? 'Переговорна'}
+        dateDisplayStr={selectedSlotInfo.dateDisplayStr}
+        initialStartISO={selectedSlotInfo.initialStartISO}
+        initialEndISO={selectedSlotInfo.initialEndISO}
+        viewerZone={viewerZone}
+        onSubmit={handleCreateSubmit}
+        isSubmitting={createMutation.isPending}
+        serverFormError={serverFormError}
+        serverFieldErrors={serverFieldErrors}
+      />
+
+      <CancelBookingDialog
+        isOpen={isCancelOpen}
+        booking={bookingToCancel}
+        roomName={room?.name ?? 'Переговорна'}
+        viewerZone={viewerZone}
+        onConfirm={handleCancelConfirm}
+        onClose={() => {
+          setIsCancelOpen(false);
+          setBookingToCancel(null);
+        }}
+        isDeleting={cancelMutation.isPending}
+        error={cancelError}
+      />
     </section>
   );
 }
