@@ -12,6 +12,12 @@ describe('WeekGridShell', () => {
     DateTime.fromISO('2026-08-03T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
   );
 
+  const sampleWeekStartISO = DateTime.fromISO('2026-08-03T00:00:00', {
+    zone: 'Europe/Kyiv',
+  })
+    .toUTC()
+    .toISO()!;
+
   const sampleGutterLabels = [
     '09:00',
     '10:00',
@@ -30,6 +36,7 @@ describe('WeekGridShell', () => {
       <WeekGridShell
         daysKyiv={sampleDays}
         gutterLabels={sampleGutterLabels}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={(index) => <div data-testid={`col-${index}`}>Day {index}</div>}
       />,
     );
@@ -47,6 +54,7 @@ describe('WeekGridShell', () => {
       <WeekGridShell
         daysKyiv={sampleDays}
         gutterLabels={sampleGutterLabels}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={() => null}
       />,
     );
@@ -65,6 +73,7 @@ describe('WeekGridShell', () => {
       <WeekGridShell
         daysKyiv={sampleDays}
         gutterLabels={sampleGutterLabels}
+        weekStartISO={sampleWeekStartISO}
         renderDayColumn={renderDayColumnMock}
       />,
     );
@@ -85,6 +94,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={sampleDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={true}
           renderDayColumn={() => null}
         />,
@@ -99,6 +109,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={sampleDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
@@ -115,6 +126,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={sampleDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={true}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <>
@@ -155,6 +167,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={allPastDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
@@ -172,6 +185,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={sampleDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={() => null}
         />,
@@ -192,6 +206,7 @@ describe('WeekGridShell', () => {
         <WeekGridShell
           daysKyiv={futureDays}
           gutterLabels={sampleGutterLabels}
+          weekStartISO={sampleWeekStartISO}
           isCurrentWeek={false}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords) => (
             <button

@@ -142,6 +142,7 @@ export function WeekGridEmpty({ daysCount = 7 }: WeekGridEmptyProps) {
     <div role="status" className="relative w-full">
       <WeekGridShell
         daysKyiv={daysKyiv}
+        weekStartISO={daysKyiv[0].toUTC().toISO()!}
         gutterLabels={gutterLabels}
         renderDayColumn={() => null}
       />

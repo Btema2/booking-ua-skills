@@ -4,6 +4,7 @@ import { getDayColumnStatus, getPastRowsCount, getNowLineInfo } from './timeUtil
 
 export interface WeekGridShellProps {
   readonly daysKyiv: DateTime[];
+  readonly weekStartISO: string;
   readonly gutterLabels: string[];
   readonly isCurrentWeek?: boolean;
   readonly renderDayColumn: (
@@ -34,6 +35,7 @@ const getInitialFocusedCoords = (days: DateTime[], nowTime: DateTime) => {
  */
 export function WeekGridShell({
   daysKyiv,
+  weekStartISO,
   gutterLabels,
   isCurrentWeek = false,
   renderDayColumn,
@@ -52,7 +54,7 @@ export function WeekGridShell({
 
   useEffect(() => {
     setFocusedCoords(getInitialFocusedCoords(daysKyiv, now));
-  }, [daysKyiv]);
+  }, [weekStartISO]);
 
   // A week entirely in the past has no free slot left to land tabIndex=0 on
   // (RoomSchedulePage never renders a free-slot cell for a past row). Fall

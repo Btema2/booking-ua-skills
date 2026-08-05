@@ -185,6 +185,7 @@ export function RoomSchedulePage() {
       <div>
         <WeekGridShell
           daysKyiv={daysKyiv}
+          weekStartISO={weekInfo.weekStartISO}
           gutterLabels={gutterLabels}
           isCurrentWeek={weekInfo.isCurrentWeek}
           renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
