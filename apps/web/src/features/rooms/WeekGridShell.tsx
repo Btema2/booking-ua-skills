@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   getDayColumnStatus,
   getPastRowsCount,
@@ -60,6 +60,35 @@ export function WeekGridShell({
   useEffect(() => {
     setFocusedCoords(getInitialFocusedCoords(daysKyiv, now));
   }, [weekStartISO]);
+
+  // Latest focusedCoords, readable from the now-driven effect below without
+  // putting focusedCoords itself in that effect's dependency array (which
+  // would re-run it on every arrow-key-driven focus move too, not just when
+  // the ticker advances `now`).
+  const focusedCoordsRef = useRef(focusedCoords);
+  useEffect(() => {
+    focusedCoordsRef.current = focusedCoords;
+  }, [focusedCoords]);
+
+  // The 30s ticker above can age the row `focusedCoords` points to into the
+  // past. RoomSchedulePage never renders a free-slot cell for a past row, so
+  // once that exact cell stops existing — while some other row elsewhere in
+  // the week is still non-past, keeping hasFocusableCell (and therefore the
+  // grid root's own tabIndex) unchanged — zero elements in the grid carry
+  // tabIndex=0 and the grid becomes unreachable by Tab. Re-derive
+  // focusedCoords only when the cell it currently points to has itself
+  // become past; do nothing otherwise, so a tick never clobbers in-progress
+  // arrow-key navigation.
+  useEffect(() => {
+    const current = focusedCoordsRef.current;
+    const focusedDay = daysKyiv[current.dayIndex];
+    const focusedCellIsPast = focusedDay
+      ? getPastRowsCount(focusedDay, now) > current.rowIndex
+      : false;
+    if (focusedCellIsPast) {
+      setFocusedCoords(getInitialFocusedCoords(daysKyiv, now));
+    }
+  }, [now]);
 
   // A week entirely in the past has no free slot left to land tabIndex=0 on
   // (RoomSchedulePage never renders a free-slot cell for a past row). Fall
