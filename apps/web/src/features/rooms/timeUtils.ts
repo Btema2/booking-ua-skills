@@ -4,7 +4,6 @@ export interface KyivWeek {
   mondayKyiv: DateTime;
   sundayEndKyiv: DateTime;
   weekStartISO: string;
-  weekParamStr: string;
   fromISO: string;
   toISO: string;
   daysKyiv: DateTime[];
@@ -57,14 +56,12 @@ export function getKyivWeek(weekParam?: string | null): KyivWeek {
   const fromISO = weekStartISO;
   const toISO = sundayEndKyiv.toUTC().toISO()!;
   const daysKyiv = Array.from({ length: 7 }, (_, i) => mondayKyiv.plus({ days: i }));
-  const weekParamStr = mondayKyiv.toFormat('yyyy-MM-dd');
   const isCurrentWeek = mondayKyiv.hasSame(currentMonday, 'day');
 
   return {
     mondayKyiv,
     sundayEndKyiv,
     weekStartISO,
-    weekParamStr,
     fromISO,
     toISO,
     daysKyiv,

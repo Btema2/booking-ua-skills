@@ -36,18 +36,6 @@ export type WeekGridLoadingProps = {
  */
 export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
   const days = Array.from({ length: daysCount });
-  const gutterTimes = [
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-    '18:00',
-  ];
 
   return (
     <div role="status" aria-busy="true" className="w-full">
@@ -137,14 +125,13 @@ export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
 
 export type WeekGridEmptyProps = {
   readonly daysCount?: number;
-  readonly dayNames?: readonly string[];
 };
 
 /**
  * Week schedule empty state (DESIGN-NOTES.md §8).
  * Renders full 20-row grid with overlay «Цього тижня все вільно» / «Жодного бронювання — оберіть будь-який слот».
  */
-export function WeekGridEmpty({ daysCount = 7, dayNames }: WeekGridEmptyProps) {
+export function WeekGridEmpty({ daysCount = 7 }: WeekGridEmptyProps) {
   const daysKyiv = Array.from({ length: daysCount }, (_, i) =>
     DateTime.now().setZone('Europe/Kyiv').startOf('week').plus({ days: i }),
   );
