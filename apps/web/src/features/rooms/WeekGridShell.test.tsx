@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DateTime } from 'luxon';
 import { WeekGridShell } from './WeekGridShell';
 import { getHourLabelsForGutter, getViewerZone } from './timeUtils';
@@ -175,6 +175,81 @@ describe('WeekGridShell', () => {
 
       const grid = screen.getByRole('grid');
       expect(grid.getAttribute('tabindex')).toBe('-1');
+    });
+  });
+
+  describe('Focus stays reachable as the clock ages the focused row past (task-7)', () => {
+    it('keeps exactly one tabindex="0" element after the 30s ticker ages the focused row into the past', () => {
+      // Frozen clock at exactly 09:00 Kyiv (06:00 UTC — Kyiv is UTC+3 in
+      // August) on Monday 3 Aug 2026: the very start of office hours, so
+      // pastRowsCount is 0 everywhere and the initial focusedCoords lands on
+      // day 0, row 0.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-03T06:00:00Z'));
+
+      // Mirrors RoomSchedulePage's real free-cell skip logic (lines ~200-210
+      // there): once a row's index falls below pastRowsCount, no cell is
+      // rendered for it at all. That's what makes the cell focusedCoords
+      // points to vanish from the DOM if focusedCoords doesn't move with
+      // time — the exact bug this test guards against.
+      const renderDayColumn = (
+        dayIndex: number,
+        _day: DateTime,
+        pastRowsCount: number,
+        focusedCoords: { dayIndex: number; rowIndex: number },
+      ) => (
+        <>
+          {Array.from({ length: 20 }, (_, r) => {
+            if (r < pastRowsCount) {
+              return null;
+            }
+            const isFocused =
+              focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === r;
+            return (
+              <div
+                key={r}
+                role="gridcell"
+                tabIndex={isFocused ? 0 : -1}
+                data-grid-cell={`${dayIndex}-${r}`}
+              >
+                Cell {dayIndex}-{r}
+              </div>
+            );
+          })}
+        </>
+      );
+
+      const { container } = render(
+        <WeekGridShell
+          daysKyiv={sampleDays}
+          weekStartISO={sampleWeekStartISO}
+          isCurrentWeek={true}
+          renderDayColumn={renderDayColumn}
+        />,
+      );
+
+      // Sanity check: focus starts on day 0's first slot (row 0).
+      expect(container.querySelectorAll('[tabindex="0"]').length).toBe(1);
+      expect(container.querySelector('[data-grid-cell="0-0"]')?.getAttribute('tabindex')).toBe(
+        '0',
+      );
+
+      // Advance real elapsed time past the 09:00-09:30 slot boundary. The
+      // ticker's setInterval fires repeatedly along the way, updating `now`
+      // each time; only the tick that actually crosses the boundary matters.
+      act(() => {
+        vi.advanceTimersByTime(31 * 60 * 1000);
+      });
+
+      // Row 0's cell is gone from the DOM (it aged into the past), but the
+      // grid must still expose exactly one live tab stop — the fix
+      // re-derives focusedCoords once its own row goes stale, instead of
+      // leaving it pointed at a cell that no longer exists.
+      expect(container.querySelector('[data-grid-cell="0-0"]')).toBeNull();
+      const focusableCells = container.querySelectorAll('[tabindex="0"]');
+      expect(focusableCells.length).toBe(1);
+
+      vi.useRealTimers();
     });
   });
 
