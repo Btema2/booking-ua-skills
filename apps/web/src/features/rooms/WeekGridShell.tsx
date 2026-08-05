@@ -104,11 +104,26 @@ export function WeekGridShell({
         }
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const activeEl = document.querySelector<HTMLElement>(
-          `[data-grid-cell="${dayIndex}-${rowIndex}"]`,
+        // A multi-row booking renders a single gridcell carrying only its
+        // start-slot value (data-grid-cell="day-startSlot"). Interior rows of
+        // that booking have no gridcell of their own, so when focus lands there
+        // the exact "day-row" lookup fails. Pick the same-day gridcell whose row
+        // (parsed from its data attribute) is the greatest one <= focusedRow —
+        // that is the booking's start cell (or the exact cell for a free slot).
+        const cells = document.querySelectorAll<HTMLElement>(
+          `[data-grid-cell^="${dayIndex}-"]`,
         );
-        if (activeEl) {
-          activeEl.click();
+        let gridTarget: HTMLElement | null = null;
+        let bestRow = -1;
+        for (const cell of cells) {
+          const cellRow = Number(cell.dataset.gridCell?.split('-')[1]);
+          if (Number.isFinite(cellRow) && cellRow <= rowIndex && cellRow > bestRow) {
+            gridTarget = cell;
+            bestRow = cellRow;
+          }
+        }
+        if (gridTarget) {
+          gridTarget.click();
         }
         return;
       }
