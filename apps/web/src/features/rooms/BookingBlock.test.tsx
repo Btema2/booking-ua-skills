@@ -7,8 +7,8 @@ const mockBooking: Booking = {
   id: 'b1111111-1111-1111-1111-111111111111',
   roomId: 1,
   title: 'Планування спринту',
-  startsAt: new Date(2026, 7, 5, 10, 0),
-  endsAt: new Date(2026, 7, 5, 11, 0),
+  startsAt: new Date('2026-08-05T10:00:00.000Z'),
+  endsAt: new Date('2026-08-05T11:00:00.000Z'),
   userId: 'u1111111-1111-1111-1111-111111111111',
   userName: 'Тарас Шевченко',
 };
@@ -26,6 +26,7 @@ describe('BookingBlock', () => {
       <BookingBlock
         booking={mockBooking}
         currentUserId={currentUserId}
+        viewerZone="Europe/Kyiv"
         startRow={1}
         span={2}
         onClick={handleClick}
@@ -41,7 +42,7 @@ describe('BookingBlock', () => {
     expect(button.className).toContain('rounded-[9px]');
     expect(button.className).toContain('px-[9px] py-[7px]');
 
-    expect(screen.getByText('Ви · 10:00–11:00')).toBeTruthy();
+    expect(screen.getByText('Ви · 13:00–14:00')).toBeTruthy();
     expect(screen.getByText('Планування спринту')).toBeTruthy();
 
     fireEvent.click(button);
@@ -56,6 +57,7 @@ describe('BookingBlock', () => {
       <BookingBlock
         booking={mockBooking}
         currentUserId={currentUserId}
+        viewerZone="Europe/Kyiv"
         startRow={1}
         span={2}
         dataGridCell="0-0"
@@ -79,6 +81,7 @@ describe('BookingBlock', () => {
       <BookingBlock
         booking={mockBooking}
         currentUserId={currentUserId}
+        viewerZone="Europe/Kyiv"
         startRow={2}
         span={1}
       />,
@@ -91,7 +94,7 @@ describe('BookingBlock', () => {
     expect(titleEl.className).toContain('line-clamp-1');
     expect(titleEl.className).toContain('text-[12px]');
 
-    const metaEl = screen.getByText('Тарас · 10:00–11:00');
+    const metaEl = screen.getByText('Тарас · 13:00–14:00');
     expect(metaEl).toBeTruthy();
 
     const card = titleEl.closest('div.rounded-\\[9px\\]');
@@ -104,7 +107,7 @@ describe('BookingBlock', () => {
 
   it('renders a free slot when no booking is provided', () => {
     const { container } = render(
-      <BookingBlock startRow={5} span={1} />,
+      <BookingBlock viewerZone="Europe/Kyiv" startRow={5} span={1} />,
     );
 
     expect(screen.queryByRole('button')).toBeNull();
@@ -116,7 +119,13 @@ describe('BookingBlock', () => {
 
   it('applies gridRow style to the outer wrapper and span 4 clamp', () => {
     const { container } = render(
-      <BookingBlock booking={mockBooking} currentUserId={mockBooking.userId} startRow={4} span={4} />,
+      <BookingBlock
+        booking={mockBooking}
+        currentUserId={mockBooking.userId}
+        viewerZone="Europe/Kyiv"
+        startRow={4}
+        span={4}
+      />,
     );
 
     const wrapper = container.firstElementChild as HTMLElement;
@@ -125,5 +134,20 @@ describe('BookingBlock', () => {
     const titleEl = screen.getByText('Планування спринту');
     expect(titleEl.className).toContain('line-clamp-4');
     expect(titleEl.className).toContain('text-[13px]');
+  });
+
+  it('formats booking times in the viewer zone, not browser-local', () => {
+    // 10:00Z/11:00Z is 13:00–14:00 in Kyiv (UTC+3) but 19:00–20:00 in Tokyo (UTC+9).
+    render(
+      <BookingBlock
+        booking={mockBooking}
+        currentUserId={mockBooking.userId}
+        viewerZone="Asia/Tokyo"
+        startRow={1}
+        span={2}
+      />,
+    );
+
+    expect(screen.getByText('Ви · 19:00–20:00')).toBeTruthy();
   });
 });

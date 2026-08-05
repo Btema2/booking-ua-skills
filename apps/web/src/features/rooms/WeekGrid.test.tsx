@@ -95,12 +95,12 @@ describe('Week Grid Requirements (Phase 4a)', () => {
     };
 
     const { rerender } = render(
-      <BookingBlock booking={ownBooking} currentUserId={currentUserId} startRow={1} span={2} />,
+      <BookingBlock booking={ownBooking} currentUserId={currentUserId} viewerZone={getViewerZone()} startRow={1} span={2} />,
     );
     expect(screen.getByText(/Ви ·/)).toBeTruthy();
 
     rerender(
-      <BookingBlock booking={otherBooking} currentUserId={currentUserId} startRow={5} span={2} />,
+      <BookingBlock booking={otherBooking} currentUserId={currentUserId} viewerZone={getViewerZone()} startRow={5} span={2} />,
     );
     expect(screen.getByText(/Тарас ·/)).toBeTruthy();
   });

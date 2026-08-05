@@ -43,7 +43,7 @@ const SYCAMORE = { id: 3, name: 'Явір', floor: 1, capacity: 4, amenities: '�
 
 const allRooms = () => jsonResponse(200, { rooms: [OAK, MAPLE, SYCAMORE] });
 
-const roomCard = (name: string) => screen.getByRole('article', { name: new RegExp(name) });
+const roomCard = (name: string) => screen.getByRole('link', { name: new RegExp(name) });
 
 describe('room list', () => {
   afterEach(resetHarness);
@@ -51,7 +51,7 @@ describe('room list', () => {
   it('renders one card per room the server returned', async () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
 
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
     expect(roomCard('Дуб')).toBeTruthy();
     expect(roomCard('Клен')).toBeTruthy();
     expect(roomCard('Явір')).toBeTruthy();
@@ -61,7 +61,7 @@ describe('room list', () => {
 
   it('renders no amenities line at all for a room whose amenities are null', async () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
-    await screen.findByRole('article', { name: /Клен/ });
+    await screen.findByRole('link', { name: /Клен/ });
 
     const maple = roomCard('Клен');
     // An empty <p> would still paint a blank line where the amenities belong.
@@ -74,7 +74,7 @@ describe('room list', () => {
 
   it('names the room capacity and floor in text a screen reader can read', async () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     const name = roomCard('Дуб').textContent ?? '';
     expect(name).toContain('Місткість: 12 осіб');
@@ -87,7 +87,7 @@ describe('capacity filter', () => {
 
   it('is exposed as a single radiogroup with one checked option', async () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     const group = screen.getByRole('radiogroup');
     expect(within(group).getAllByRole('radio')).toHaveLength(3);
@@ -101,7 +101,7 @@ describe('capacity filter', () => {
     // Rooms hold 12, 6 and 4. «від 4» would match all three, which is «Будь-яка»;
     // anything above 12 could never match. Neither is offered.
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     const labels = within(screen.getByRole('radiogroup'))
       .getAllByRole('radio')
@@ -112,7 +112,7 @@ describe('capacity filter', () => {
 
   it('offers no chip that the room list cannot satisfy', async () => {
     renderRoomsPage('/', { 'GET /api/rooms': allRooms });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     const largest = Math.max(...[OAK, MAPLE, SYCAMORE].map((room) => room.capacity));
     const thresholds = within(screen.getByRole('radiogroup'))
@@ -131,11 +131,11 @@ describe('capacity filter', () => {
       'GET /api/rooms': allRooms,
       'GET /api/rooms?minCapacity=12': () => jsonResponse(200, { rooms: [OAK] }),
     });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     fireEvent.click(screen.getByRole('radio', { name: 'від 12' }));
 
-    await waitFor(() => expect(screen.queryByRole('article', { name: /Явір/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('link', { name: /Явір/ })).toBeNull());
     expect(window.location.search).toBe('?minCapacity=12');
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(
       '/api/rooms?minCapacity=12',
@@ -148,7 +148,7 @@ describe('capacity filter', () => {
       'GET /api/rooms?minCapacity=12': () => jsonResponse(200, { rooms: [OAK] }),
     });
 
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
     expect(screen.getByRole('radio', { name: 'від 12' }).getAttribute('aria-checked')).toBe('true');
   });
 
@@ -157,7 +157,7 @@ describe('capacity filter', () => {
       'GET /api/rooms': allRooms,
       'GET /api/rooms?minCapacity=6': () => jsonResponse(200, { rooms: [OAK, MAPLE] }),
     });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     fireEvent.keyDown(screen.getByRole('radio', { name: 'Будь-яка' }), { key: 'ArrowRight' });
 
@@ -189,7 +189,7 @@ describe('empty state', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Показати всі' }));
 
-    await screen.findByRole('article', { name: /Явір/ });
+    await screen.findByRole('link', { name: /Явір/ });
     expect(window.location.search).toBe('');
   });
 });
@@ -228,7 +228,7 @@ describe('error state', () => {
     shouldFail = false;
     fireEvent.click(screen.getByRole('button', { name: 'Повторити' }));
 
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -241,12 +241,12 @@ describe('error state', () => {
           : allRooms(),
       'GET /api/rooms?minCapacity=6': () => jsonResponse(200, { rooms: [OAK, MAPLE] }),
     });
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
 
     // Force a refetch of the same key that fails, so the cache still holds a good list.
     shouldFail = true;
     fireEvent.click(screen.getByRole('radio', { name: 'від 6' }));
-    await screen.findByRole('article', { name: /Дуб/ });
+    await screen.findByRole('link', { name: /Дуб/ });
     fireEvent.click(screen.getByRole('radio', { name: 'Будь-яка' }));
 
     const alert = await screen.findByRole('alert');
@@ -255,7 +255,7 @@ describe('error state', () => {
 
     fireEvent.click(cached);
 
-    await screen.findByRole('article', { name: /Явір/ });
+    await screen.findByRole('link', { name: /Явір/ });
     expect(screen.getByText(/збережену копію/)).toBeTruthy();
   });
 });
