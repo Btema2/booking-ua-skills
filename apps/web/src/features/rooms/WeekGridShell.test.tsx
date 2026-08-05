@@ -53,6 +53,26 @@ describe('WeekGridShell', () => {
     });
   });
 
+  it('renders exactly one time gutter with exactly 10 hour labels, not one per day column (regression for 5dd502c)', () => {
+    // Task 1's DST fix (94c4a0f) briefly dropped the shared 76px gutter
+    // column and rendered hour labels inside every one of the 7 day
+    // columns instead — 70 label elements (10 x 7) overlapping booking
+    // content, instead of a single gutter with 10 (09:00-18:00, one per
+    // hour row per getHourLabelsForGutter). 298 passing tests at the time
+    // did not catch it because none asserted gutter cardinality, only
+    // label text presence. Fixed in 5dd502c; this guards regression.
+    render(
+      <WeekGridShell
+        daysKyiv={sampleDays}
+        weekStartISO={sampleWeekStartISO}
+        renderDayColumn={() => null}
+      />,
+    );
+
+    expect(screen.getAllByTestId('week-grid-gutter').length).toBe(1);
+    expect(screen.getAllByTestId('gutter-hour-label').length).toBe(10);
+  });
+
   it('invokes renderDayColumn for each day in daysKyiv', () => {
     const renderDayColumnMock = vi.fn((dayIndex: number, day: DateTime) => (
       <div data-testid={`day-content-${dayIndex}`}>Content {dayIndex}</div>

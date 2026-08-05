@@ -235,6 +235,7 @@ export function WeekGridShell({
       >
         {/* Shared Time Gutter — one column, labels hung at the top of each hour row */}
         <div
+          data-testid="week-grid-gutter"
           className="grid grid-rows-[repeat(20,var(--slot-h))] border-r border-outline-variant bg-surface-container-lowest"
           style={{ gridColumn: 1, gridTemplateRows: 'repeat(20, var(--slot-h))' }}
           aria-hidden="true"
@@ -250,7 +251,10 @@ export function WeekGridShell({
                 }`}
               >
                 {label ? (
-                  <span className="text-[11.5px] font-bold tabular-nums text-on-surface-variant">
+                  <span
+                    data-testid="gutter-hour-label"
+                    className="text-[11.5px] font-bold tabular-nums text-on-surface-variant"
+                  >
                     {label}
                   </span>
                 ) : null}
