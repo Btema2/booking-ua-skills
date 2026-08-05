@@ -31,21 +31,17 @@ describe('mapApiErrorToForm', () => {
     });
   });
 
-  it('maps time-related field errors (startsAt, endsAt, duration, time, alignment, officeHours, past) to fieldErrors.time', () => {
-    const keys = ['startsAt', 'endsAt', 'duration', 'time', 'alignment', 'officeHours', 'past'] as const;
-
-    for (const key of keys) {
-      const apiErr = new ApiError(400, 'Bad Request', {
-        [key]: [`Помилка для ${key}`],
-      });
-      const result = mapApiErrorToForm(apiErr);
-      expect(result).toEqual({
-        fieldErrors: {
-          time: `Помилка для ${key}`,
-        },
-        formError: null,
-      });
-    }
+  it('maps startsAt field error to fieldErrors.time', () => {
+    const apiErr = new ApiError(400, 'Bad Request', {
+      startsAt: ['Помилка для часу'],
+    });
+    const result = mapApiErrorToForm(apiErr);
+    expect(result).toEqual({
+      fieldErrors: {
+        time: 'Помилка для часу',
+      },
+      formError: null,
+    });
   });
 
   it('maps both title and time field errors simultaneously', () => {
@@ -68,7 +64,7 @@ describe('mapApiErrorToForm', () => {
       statusCode: 400,
       errors: {
         title: ['Заголовок занадто короткий'],
-        duration: ['Тривалість має бути кратна 30 хв'],
+        startsAt: ['Тривалість має бути кратна 30 хв'],
       },
     };
     const result = mapApiErrorToForm(rawErr);

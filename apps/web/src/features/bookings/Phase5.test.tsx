@@ -300,6 +300,40 @@ describe('Phase 5 Booking Feature', () => {
     });
   });
 
+  it('cancelling a booking with 403 Forbidden response restores the block onto grid and displays error message in dialog', async () => {
+    const ownBooking = {
+      id: 'b-own-403',
+      roomId: 1,
+      title: 'Бронювання 403',
+      startsAt: '2026-08-10T07:00:00.000Z',
+      endsAt: '2026-08-10T08:00:00.000Z',
+      userId: IVAN.id,
+      userName: IVAN.name,
+    };
+
+    renderPhase5Page('/rooms/1?week=2026-08-10', {
+      'GET /api/rooms/1/bookings': () => jsonResponse(200, { bookings: [ownBooking] }),
+      'DELETE /api/bookings/b-own-403': () =>
+        jsonResponse(403, {
+          statusCode: 403,
+          message: 'Ви не можете скасувати чуже бронювання',
+        }),
+    });
+
+    await screen.findByRole('heading', { name: 'Дуб' });
+    const bookingBlock = await screen.findByText('Бронювання 403');
+    fireEvent.click(bookingBlock);
+
+    const confirmBtn = await screen.findByRole('button', { name: 'Скасувати бронювання' });
+    fireEvent.click(confirmBtn);
+
+    // 403 error message shown in dialog
+    expect(await screen.findByText('Ви не можете скасувати чуже бронювання')).toBeTruthy();
+
+    // Booking is restored back onto grid
+    expect(within(screen.getByRole('grid')).getByText('Бронювання 403')).toBeTruthy();
+  });
+
   it('6. Another user\'s booking exposes no cancel control and is not a button', async () => {
     const otherBooking = {
       id: 'b-other-1',

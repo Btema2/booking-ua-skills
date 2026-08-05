@@ -129,27 +129,21 @@ export function CreateBookingModal({
     setValue('endsAt', newEnd, { shouldValidate: true });
   };
 
-  const handleFormSubmit = handleSubmit(
-    async (data) => {
-      console.log('Form submitted with valid data:', data);
-      const startsAtStr =
-        typeof data.startsAt === 'string'
-          ? data.startsAt
-          : (data.startsAt as Date).toISOString();
-      const endsAtStr =
-        typeof data.endsAt === 'string'
-          ? data.endsAt
-          : (data.endsAt as Date).toISOString();
-      await onSubmit({
-        title: data.title,
-        startsAt: startsAtStr,
-        endsAt: endsAtStr,
-      });
-    },
-    (invalidErrors) => {
-      console.log('Form submission invalid errors:', invalidErrors);
-    },
-  );
+  const handleFormSubmit = handleSubmit(async (data) => {
+    const startsAtStr =
+      typeof data.startsAt === 'string'
+        ? data.startsAt
+        : (data.startsAt as Date).toISOString();
+    const endsAtStr =
+      typeof data.endsAt === 'string'
+        ? data.endsAt
+        : (data.endsAt as Date).toISOString();
+    await onSubmit({
+      title: data.title,
+      startsAt: startsAtStr,
+      endsAt: endsAtStr,
+    });
+  });
 
   const inputStateClass = isSubmitting
     ? 'opacity-55 bg-surface-container-high cursor-not-allowed'

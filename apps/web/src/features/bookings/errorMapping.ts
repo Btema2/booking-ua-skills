@@ -8,15 +8,7 @@ export type FormErrorMappingResult = {
   formError: string | null;
 };
 
-const TIME_FIELD_KEYS = [
-  'startsAt',
-  'endsAt',
-  'duration',
-  'time',
-  'alignment',
-  'officeHours',
-  'past',
-] as const;
+
 
 function extractStringMessage(val: unknown): string | undefined {
   if (typeof val === 'string' && val.length > 0) {
@@ -73,13 +65,10 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
       }
     }
 
-    for (const key of TIME_FIELD_KEYS) {
-      if (key in errorsObj) {
-        const msg = extractStringMessage(errorsObj[key]);
-        if (msg) {
-          fieldErrors.time = msg;
-          break;
-        }
+    if ('startsAt' in errorsObj) {
+      const msg = extractStringMessage(errorsObj.startsAt);
+      if (msg) {
+        fieldErrors.time = msg;
       }
     }
   }
