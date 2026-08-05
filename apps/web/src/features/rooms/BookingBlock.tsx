@@ -5,6 +5,9 @@ export interface BookingBlockProps {
   currentUserId?: string | null;
   startRow: number;
   span: number;
+  tabIndex?: number;
+  dataGridCell?: string;
+  onFocus?: () => void;
   onClick?: () => void;
 }
 
@@ -35,6 +38,9 @@ export function BookingBlock({
   currentUserId,
   startRow,
   span,
+  tabIndex = -1,
+  dataGridCell,
+  onFocus,
   onClick,
 }: BookingBlockProps) {
   const gridRowStyle = { gridRow: `${startRow} / span ${span}` };
@@ -43,8 +49,16 @@ export function BookingBlock({
   // 3. Free slot (when rendering an unoccupied slot on desktop)
   if (!booking) {
     return (
-      <div style={gridRowStyle} className="py-[1.5px] px-[3px] min-h-0 min-w-0">
-        <div className="group w-full h-full flex items-center justify-center rounded-[7px] hover:bg-primary-container transition-colors duration-[var(--dur-fast)]">
+      <div
+        role="gridcell"
+        tabIndex={tabIndex}
+        data-grid-cell={dataGridCell}
+        onFocus={onFocus}
+        onClick={onClick}
+        style={gridRowStyle}
+        className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[7px]"
+      >
+        <div className="group w-full h-full flex items-center justify-center rounded-[7px] hover:bg-primary-container transition-colors duration-[var(--dur-fast)] cursor-pointer">
           <span className="opacity-0 group-hover:opacity-100 text-on-primary-container font-bold select-none">
             +
           </span>
@@ -63,10 +77,18 @@ export function BookingBlock({
   if (isOwn) {
     // 1. My booking
     return (
-      <div style={gridRowStyle} className="py-[1.5px] px-[3px] min-h-0 min-w-0">
+      <div
+        role="gridcell"
+        tabIndex={tabIndex}
+        data-grid-cell={dataGridCell}
+        onFocus={onFocus}
+        style={gridRowStyle}
+        className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[9px]"
+      >
         <button
           type="button"
           onClick={onClick}
+          tabIndex={-1}
           className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
         >
           <div className="flex items-center gap-[5px] min-w-0 uppercase tracking-[0.04em] font-bold text-[11px] text-on-primary-container">
@@ -87,7 +109,14 @@ export function BookingBlock({
   const firstName = getFirstName(booking.userName);
 
   return (
-    <div style={gridRowStyle} className="py-[1.5px] px-[3px] min-h-0 min-w-0">
+    <div
+      role="gridcell"
+      tabIndex={tabIndex}
+      data-grid-cell={dataGridCell}
+      onFocus={onFocus}
+      style={gridRowStyle}
+      className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[9px]"
+    >
       <div
         className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border border-outline-variant border-l-[4px] border-l-secondary bg-secondary-container text-on-secondary-container ${padClass}`}
       >

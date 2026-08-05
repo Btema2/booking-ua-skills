@@ -4,9 +4,11 @@ export interface KyivWeek {
   mondayKyiv: DateTime;
   sundayEndKyiv: DateTime;
   weekStartISO: string;
+  weekParamStr: string;
   fromISO: string;
   toISO: string;
   daysKyiv: DateTime[];
+  isCurrentWeek: boolean;
 }
 
 export interface BookingGridPosition {
@@ -39,22 +41,47 @@ export function formatKyivWeekRange(mondayKyiv: DateTime, sundayEndKyiv: DateTim
   return `${startDay} ${startMonth} — ${endDay} ${endMonth}`;
 }
 
-export function getCurrentKyivWeek(): KyivWeek {
-  const mondayKyiv = DateTime.now().setZone('Europe/Kyiv').startOf('week');
+export function getKyivWeek(weekParam?: string | null): KyivWeek {
+  const currentMonday = DateTime.now().setZone('Europe/Kyiv').startOf('week');
+  let mondayKyiv: DateTime = currentMonday;
+
+  if (weekParam) {
+    const parsed = DateTime.fromISO(weekParam, { zone: 'Europe/Kyiv' });
+    if (parsed.isValid) {
+      mondayKyiv = parsed.startOf('week');
+    }
+  }
+
   const sundayEndKyiv = mondayKyiv.plus({ days: 6 }).endOf('day');
   const weekStartISO = mondayKyiv.toUTC().toISO()!;
   const fromISO = weekStartISO;
   const toISO = sundayEndKyiv.toUTC().toISO()!;
   const daysKyiv = Array.from({ length: 7 }, (_, i) => mondayKyiv.plus({ days: i }));
+  const weekParamStr = mondayKyiv.toFormat('yyyy-MM-dd');
+  const isCurrentWeek = mondayKyiv.hasSame(currentMonday, 'day');
 
   return {
     mondayKyiv,
     sundayEndKyiv,
     weekStartISO,
+    weekParamStr,
     fromISO,
     toISO,
     daysKyiv,
+    isCurrentWeek,
   };
+}
+
+export function getCurrentKyivWeek(): KyivWeek {
+  return getKyivWeek();
+}
+
+export function getPrevKyivWeekParam(mondayKyiv: DateTime): string {
+  return mondayKyiv.minus({ weeks: 1 }).toFormat('yyyy-MM-dd');
+}
+
+export function getNextKyivWeekParam(mondayKyiv: DateTime): string {
+  return mondayKyiv.plus({ weeks: 1 }).toFormat('yyyy-MM-dd');
 }
 
 export function getViewerZone(): string {
@@ -99,4 +126,80 @@ export function getBookingGridRow(
     startRow,
     span,
   };
+}
+
+export function getDayColumnStatus(dayKyiv: DateTime, nowKyiv?: DateTime) {
+  const now = nowKyiv ?? DateTime.now().setZone('Europe/Kyiv');
+  const todayInKyiv = now.startOf('day');
+  const dayStart = dayKyiv.startOf('day');
+
+  const isToday = dayStart.hasSame(todayInKyiv, 'day');
+  const isPastDay = dayStart < todayInKyiv;
+  const isWeekend = dayKyiv.weekday === 6 || dayKyiv.weekday === 7;
+
+  return {
+    isToday,
+    isPastDay,
+    isWeekend,
+  };
+}
+
+export function getPastRowsCount(dayKyiv: DateTime, nowKyiv?: DateTime): number {
+  const now = nowKyiv ?? DateTime.now().setZone('Europe/Kyiv');
+  const todayInKyiv = now.startOf('day');
+  const dayStart = dayKyiv.startOf('day');
+
+  if (dayStart < todayInKyiv) {
+    return 20;
+  }
+  if (dayStart > todayInKyiv) {
+    return 0;
+  }
+
+  // Today
+  const minsFromMidnight = now.hour * 60 + now.minute;
+  if (minsFromMidnight < 540) {
+    return 0;
+  }
+  if (minsFromMidnight >= 1140) {
+    return 20;
+  }
+
+  return Math.floor((minsFromMidnight - 540) / 30);
+}
+
+export function getNowLineInfo(dayKyiv: DateTime, isCurrentWeek: boolean, nowKyiv?: DateTime) {
+  if (!isCurrentWeek) {
+    return { isVisible: false, topPercentage: 0 };
+  }
+
+  const now = nowKyiv ?? DateTime.now().setZone('Europe/Kyiv');
+  const todayInKyiv = now.startOf('day');
+  const dayStart = dayKyiv.startOf('day');
+
+  if (!dayStart.hasSame(todayInKyiv, 'day')) {
+    return { isVisible: false, topPercentage: 0 };
+  }
+
+  const minsFromMidnight = now.hour * 60 + now.minute + now.second / 60;
+  if (minsFromMidnight < 540 || minsFromMidnight >= 1140) {
+    return { isVisible: false, topPercentage: 0 };
+  }
+
+  const topPercentage = ((minsFromMidnight - 540) / 600) * 100;
+  return { isVisible: true, topPercentage };
+}
+
+export function formatTzBannerText(viewerZone: string, instant: DateTime): string {
+  const kyivOffset = instant.setZone('Europe/Kyiv').offset / 60;
+  const viewerOffset = instant.setZone(viewerZone).offset / 60;
+  const diffHours = viewerOffset - kyivOffset;
+
+  if (viewerZone === 'Europe/Kyiv' || diffHours === 0) {
+    const sign = kyivOffset >= 0 ? `+${kyivOffset}` : `${kyivOffset}`;
+    return `Київ (UTC${sign})`;
+  }
+
+  const diffStr = diffHours > 0 ? `+${diffHours} год` : `−${Math.abs(diffHours)} год`;
+  return `Час показано у вашому поясі — ${viewerZone}, це ${diffStr} до Києва`;
 }

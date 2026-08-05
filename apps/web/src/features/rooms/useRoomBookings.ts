@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Booking } from '@booking/core';
 import { apiRequest } from '../../lib/api';
-import { getCurrentKyivWeek } from './timeUtils';
+import { getCurrentKyivWeek, type KyivWeek } from './timeUtils';
 import { useRoomCatalogue } from './useRooms';
 
 export async function fetchRoomBookings(
@@ -14,8 +14,9 @@ export async function fetchRoomBookings(
   );
 }
 
-export function useRoomBookings(roomId: string) {
-  const { fromISO, toISO, weekStartISO } = getCurrentKyivWeek();
+export function useRoomBookings(roomId: string, weekInfo?: KyivWeek) {
+  const currentWeek = weekInfo ?? getCurrentKyivWeek();
+  const { fromISO, toISO, weekStartISO } = currentWeek;
   return useQuery({
     queryKey: ['room', roomId, 'bookings', weekStartISO],
     queryFn: () => fetchRoomBookings(roomId, fromISO, toISO),

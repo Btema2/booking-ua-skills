@@ -1,21 +1,33 @@
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useSearchParams } from 'react-router';
 import { useRoomDetails, useRoomBookings } from './useRoomBookings';
 import { useCurrentUser } from '../auth/useCurrentUser';
-import { getCurrentKyivWeek, getViewerZone, getHourLabelsForGutter, getBookingGridRow, formatKyivWeekRange } from './timeUtils';
+import {
+  getKyivWeek,
+  getPrevKyivWeekParam,
+  getNextKyivWeekParam,
+  getViewerZone,
+  getHourLabelsForGutter,
+  getBookingGridRow,
+  formatKyivWeekRange,
+  formatTzBannerText,
+} from './timeUtils';
 import { WeekGridShell } from './WeekGridShell';
 import { BookingBlock } from './BookingBlock';
 import { WeekGridLoading, WeekGridEmpty, WeekGridError } from './WeekGridStates';
-import { peopleLabel } from './plural';
 
 export function RoomSchedulePage() {
   const { roomId } = useParams<{ roomId: string }>();
   const validRoomId = roomId ?? '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const weekParam = searchParams.get('week');
+  const weekInfo = getKyivWeek(weekParam);
+  const { mondayKyiv, sundayEndKyiv, daysKyiv } = weekInfo;
+
   const roomQuery = useRoomDetails(validRoomId);
-  const bookingsQuery = useRoomBookings(validRoomId);
+  const bookingsQuery = useRoomBookings(validRoomId, weekInfo);
   const currentUserQuery = useCurrentUser();
 
   const currentUserId = currentUserQuery.data?.id ?? null;
-  const { mondayKyiv, sundayEndKyiv, daysKyiv } = getCurrentKyivWeek();
   const viewerZone = getViewerZone();
   const gutterLabels = getHourLabelsForGutter(daysKyiv, viewerZone);
 
@@ -62,7 +74,7 @@ export function RoomSchedulePage() {
 
   return (
     <section className="flex flex-col gap-s5">
-      <header className="flex flex-col gap-s2">
+      <header className="flex flex-col gap-s3">
         <div>
           <Link
             to="/"
@@ -71,11 +83,40 @@ export function RoomSchedulePage() {
             ← Усі кімнати
           </Link>
         </div>
-        <div className="flex flex-col min-w-0">
-          <h1 className="font-heading text-h1-fluid-room font-display text-on-surface">
-            {room?.name ?? 'Переговорна'}
-          </h1>
-          <p className="mt-s1 text-body-large text-on-surface-variant">{subtitleStr}</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-s4 min-w-0">
+          <div className="flex flex-col min-w-0">
+            <h1 className="font-heading text-h1-fluid-room font-display text-on-surface">
+              {room?.name ?? 'Переговорна'}
+            </h1>
+            <p className="mt-s1 text-body-large text-on-surface-variant">{subtitleStr}</p>
+          </div>
+
+          <div className="flex items-center gap-s2 shrink-0">
+            <button
+              type="button"
+              aria-label="Попередній тиждень"
+              onClick={() => setSearchParams({ week: getPrevKyivWeekParam(mondayKyiv) })}
+              className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              disabled={weekInfo.isCurrentWeek}
+              onClick={() => setSearchParams({})}
+              className="h-[40px] px-s4 rounded-full border border-outline-variant bg-surface-container-lowest text-label-large text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+            >
+              Цей тиждень
+            </button>
+            <button
+              type="button"
+              aria-label="Наступний тиждень"
+              onClick={() => setSearchParams({ week: getNextKyivWeekParam(mondayKyiv) })}
+              className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+            >
+              ›
+            </button>
+          </div>
         </div>
       </header>
 
@@ -108,6 +149,11 @@ export function RoomSchedulePage() {
         </div>
       </div>
 
+      {/* Timezone Banner */}
+      <div className="text-body-small font-medium text-on-surface-variant" data-testid="timezone-banner">
+        {formatTzBannerText(viewerZone, mondayKyiv)}
+      </div>
+
       {bookings.length === 0 ? (
         <WeekGridEmpty daysCount={7} />
       ) : (
@@ -115,24 +161,59 @@ export function RoomSchedulePage() {
           <WeekGridShell
             daysKyiv={daysKyiv}
             gutterLabels={gutterLabels}
-            renderDayColumn={(dayIndex) => {
+            isCurrentWeek={weekInfo.isCurrentWeek}
+            renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
               const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
+              const occupiedRows = new Set<number>();
+              dayBookings.forEach(({ startRow, span }) => {
+                for (let r = startRow; r < startRow + span; r++) {
+                  occupiedRows.add(r);
+                }
+              });
+
               return (
                 <>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <BookingBlock key={`free-${i}`} startRow={i + 1} span={1} />
-                  ))}
-
-                  {dayBookings.map(({ booking, startRow, span }) => (
-                    <div key={booking.id} className="relative z-10 contents">
+                  {Array.from({ length: 20 }, (_, i) => {
+                    const startRow = i + 1;
+                    const rowIndex = i;
+                    if (startRow <= pastRowsCount || occupiedRows.has(startRow)) {
+                      return null;
+                    }
+                    const isFocused =
+                      focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
+                    return (
                       <BookingBlock
-                        booking={booking}
-                        currentUserId={currentUserId}
+                        key={`free-${i}`}
                         startRow={startRow}
-                        span={span}
+                        span={1}
+                        tabIndex={isFocused ? 0 : -1}
+                        dataGridCell={`${dayIndex}-${rowIndex}`}
+                        onFocus={() => onCellFocus(dayIndex, rowIndex)}
                       />
-                    </div>
-                  ))}
+                    );
+                  })}
+
+                  {dayBookings.map(({ booking, startRow, span }) => {
+                    const startSlotIndex = startRow - 1;
+                    const isFocused =
+                      focusedCoords.dayIndex === dayIndex &&
+                      focusedCoords.rowIndex >= startSlotIndex &&
+                      focusedCoords.rowIndex < startSlotIndex + span;
+
+                    return (
+                      <div key={booking.id} className="relative z-10 contents">
+                        <BookingBlock
+                          booking={booking}
+                          currentUserId={currentUserId}
+                          startRow={startRow}
+                          span={span}
+                          tabIndex={isFocused ? 0 : -1}
+                          dataGridCell={`${dayIndex}-${startSlotIndex}`}
+                          onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
+                        />
+                      </div>
+                    );
+                  })}
                 </>
               );
             }}
