@@ -44,21 +44,27 @@ export function SkeletonBar({
   );
 }
 
-/** Keeps the card's own shape and padding so nothing jumps when the data lands. */
+/** Keeps the card's own shape, padding, and inner badge elements so nothing jumps when data loads. */
 function SkeletonCard({ delay }: { readonly delay: string }) {
   return (
     <li
       aria-hidden="true"
-      className="flex flex-col gap-[var(--room-card-gap)] rounded-lg border border-outline-variant bg-surface-container-low p-[var(--room-card-pad)]"
+      className="flex flex-col gap-[var(--room-card-gap)] rounded-[var(--radius-lg)] border border-outline-variant bg-surface-container-low p-[var(--room-card-pad)]"
     >
+      {/* Header: Name + Capacity Circle */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex w-full flex-col gap-s2">
-          <SkeletonBar className="h-[28px] w-3/5" delay={delay} />
-          <SkeletonBar className="h-[13px] w-4/5" delay={delay} />
+          <SkeletonBar className="h-[28px] w-3/5 rounded-md" delay={delay} />
+          <SkeletonBar className="h-[13px] w-4/5 rounded-sm" delay={delay} />
         </div>
-        <SkeletonBar className="size-[var(--room-cap-badge)] shrink-0" delay={delay} />
+        <SkeletonBar className="size-[var(--room-cap-badge)] shrink-0 rounded-full" delay={delay} />
       </div>
-      <SkeletonBar className="h-[26px] w-[92px]" delay={delay} />
+
+      {/* Footer: Floor tag pill + Availability tag pill */}
+      <div className="flex flex-wrap items-center gap-s2 pt-s1">
+        <SkeletonBar className="h-[24px] w-[64px] rounded-full" delay={delay} />
+        <SkeletonBar className="h-[24px] w-[130px] rounded-full" delay={delay} />
+      </div>
     </li>
   );
 }
