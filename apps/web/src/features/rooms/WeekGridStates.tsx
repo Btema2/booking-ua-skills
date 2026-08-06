@@ -33,6 +33,7 @@ const STAGGERED_BOOKINGS: Array<Array<{ row: string }>> = [
   [{ row: '4 / span 4' }, { row: '14 / span 3' }],  // Day 3 (ЧТ): 10:30-12:30, 15:30-17:00
   [{ row: '2 / span 4' }, { row: '10 / span 3' }],  // Day 4 (ПТ): 09:30-11:30, 13:30-15:00
   [{ row: '5 / span 3' }],                           // Day 5 (СБ): 11:00-12:30
+  [{ row: '3 / span 3' }],                           // Day 6 (НД): 10:00-11:30
 ];
 
 export type WeekGridLoadingProps = {
