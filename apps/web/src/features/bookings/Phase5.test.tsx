@@ -9,7 +9,7 @@ const IVAN = {
   id: '1f2ac0d6-8d61-4a2f-9f5c-7b2b6c0a1d31',
   name: 'Іван Петренко',
   email: 'ivan@example.com',
-  emailVerifiedAt: null,
+  emailVerifiedAt: '2026-08-06T12:00:00.000Z',
 };
 
 const OTHER_USER_ID = '99999999-8d61-4a2f-9f5c-7b2b6c0a1d31';

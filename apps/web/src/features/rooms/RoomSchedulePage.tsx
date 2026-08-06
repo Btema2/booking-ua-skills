@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/api';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { useRoomDetails, useRoomBookings } from './useRoomBookings';
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { EmailVerificationBanner } from '../auth/EmailVerificationBanner';
 import {
   getKyivWeek,
   getPrevKyivWeekParam,
@@ -73,6 +74,7 @@ export function RoomSchedulePage() {
 
   // Modal states for Create Booking
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isBannerHighlighted, setIsBannerHighlighted] = useState(false);
   const [selectedSlotCoords, setSelectedSlotCoords] = useState<{ dayIndex: number; rowIndex: number } | null>(null);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<{
     initialStartISO: string;
@@ -133,6 +135,14 @@ export function RoomSchedulePage() {
   const subtitleStr = subtitleParts.join(' · ');
 
   const handleFreeSlotClick = (dayIndex: number, rowIndex: number) => {
+    if (currentUserQuery.data && !currentUserQuery.data.emailVerifiedAt) {
+      setIsBannerHighlighted(true);
+      const bannerEl = document.getElementById('email-verification-banner');
+      bannerEl?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      bannerEl?.focus();
+      return;
+    }
+
     const dayKyiv = daysKyiv[dayIndex];
     const slotStartKyiv = dayKyiv
       .set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
@@ -340,6 +350,8 @@ export function RoomSchedulePage() {
           </div>
         </div>
       </header>
+
+      <EmailVerificationBanner highlighted={isBannerHighlighted} />
 
       {/* Legend & Timezone Banner Container */}
       <div className="flex flex-wrap items-center gap-s4 p-s3 px-s4 rounded-[var(--radius-md)] bg-surface-container-low border border-outline-variant text-body-small text-on-surface-variant">

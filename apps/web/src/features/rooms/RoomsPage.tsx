@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Room } from '@booking/core';
+import { EmailVerificationBanner } from '../auth/EmailVerificationBanner';
 import { CapacityFilter, useCapacityFilter } from './CapacityFilter';
 import { RoomCard } from './RoomCard';
 import { capacityThresholds } from './capacityThresholds';
@@ -79,6 +80,8 @@ export function RoomsPage() {
           Оберіть кімнату та вільний слот — бронювання з’явиться тут одразу.
         </p>
       </header>
+
+      <EmailVerificationBanner />
 
       <CapacityFilter value={minCapacity} thresholds={thresholds} onChange={setMinCapacity} />
 

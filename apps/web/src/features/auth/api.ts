@@ -22,3 +22,12 @@ export async function loginUser(input: LoginInput): Promise<PublicUser> {
 export function logoutUser(): Promise<void> {
   return apiRequest<void>('/auth/logout', { method: 'POST' });
 }
+
+export function verifyEmail(token: string): Promise<void> {
+  return apiRequest<void>(`/auth/verify/${token}`, { method: 'POST' });
+}
+
+export function resendVerificationToken(): Promise<void> {
+  return apiRequest<void>('/auth/verify/resend', { method: 'POST' });
+}
+
