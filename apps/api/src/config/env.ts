@@ -15,7 +15,10 @@ const EnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
-  TEST_DATABASE_URL: z.string().optional().default('postgres://booking:booking@localhost:5432/booking_test'),
+  // No default: connection.ts branches on presence to pick test vs discrete
+  // POSTGRES_* connection. A default here would make every runtime — dev,
+  // prod, docker — look "test-configured" and silently connect to the wrong DB.
+  TEST_DATABASE_URL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

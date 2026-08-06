@@ -5,11 +5,16 @@ import { getConnection, closeConnection } from '../src/db/connection';
 import { runMigrations } from '../src/db/migrate';
 import { seedRooms } from '../src/db/seed';
 
+// env.ts leaves TEST_DATABASE_URL undefined unless explicitly set, so a runtime
+// default lives here — test-harness-only, never affects app connection.ts.
+const DEFAULT_TEST_DATABASE_URL = 'postgres://booking:booking@localhost:5433/booking_test';
+
 export async function setupTestDb(): Promise<void> {
   const env = loadEnv();
-  const testDbUrl = process.env.TEST_DATABASE_URL || env.TEST_DATABASE_URL;
+  const testDbUrl = env.TEST_DATABASE_URL || DEFAULT_TEST_DATABASE_URL;
 
-  // Force process.env.TEST_DATABASE_URL so getConnection() connects to the test database
+  // Force process.env.TEST_DATABASE_URL so a later loadEnv() (inside
+  // getConnection()) picks it up and connects to the test database.
   process.env.TEST_DATABASE_URL = testDbUrl;
 
   // Connect to postgres maintenance DB to ensure test database exists

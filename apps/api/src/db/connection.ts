@@ -9,8 +9,8 @@ let db: NodePgDatabase<typeof schema> | undefined;
 export function getConnection(): { pool: Pool; db: NodePgDatabase<typeof schema> } {
   if (!pool || !db) {
     const env = loadEnv();
-    if (process.env.TEST_DATABASE_URL) {
-      pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+    if (env.TEST_DATABASE_URL) {
+      pool = new Pool({ connectionString: env.TEST_DATABASE_URL });
     } else {
       pool = new Pool({
         host: env.POSTGRES_HOST,
