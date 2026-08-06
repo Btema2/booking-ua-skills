@@ -162,7 +162,7 @@ explicitly **not** to be built.
 | Slot height | `56px` (redline prose annotates candidate A at `52px` — the implemented pager uses 56) | `--slot-h-mobile` |
 | Time gutter | `52px`, label `11px`/700, padding `3px 8px 0 0` | `--time-gutter-w-mobile` |
 | Now line | `left:52px; right:0`, `2px` `--color-error`, `10px` dot at `left:-5px` | |
-| Bottom bar | padding `12px 16px 16px`, top `1px` outline-variant, glass `#e2d2b5` @88% + `blur(14px) saturate(1.2)` → **~76px tall** (12 + 48 + 16) | `--bottom-bar-pad` |
+| Bottom bar | Removed — mobile navigation is handled by the top app bar instead | — |
 | Bottom-bar nav item | `60px` wide, `19px` icon, `10px`/700 label | `--bottom-bar-item-w` |
 | Bottom-bar CTA | pill, min-height `48px`, padding `0 22px`, Rubik `15px`, primary fill | `--bottom-bar-cta-h` |
 | My-bookings row ≤760px | stacks to a column, padding `14px 16px`, cancel button goes full width | |
