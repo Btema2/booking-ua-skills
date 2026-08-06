@@ -88,7 +88,8 @@ export function NotificationBell() {
           role="region"
           aria-label="Сповіщення"
           className={[
-            'fixed z-[var(--z-menu)] top-[70px] right-4 w-[min(330px,calc(100vw-32px))] p-s2 rounded-[var(--radius-lg,20px)]',
+            'absolute z-[var(--z-menu)] top-[calc(100%+10px)] right-0 w-[min(330px,calc(100vw-32px))] p-s2 rounded-[var(--radius-lg,20px)]',
+            'max-sm:fixed max-sm:top-[70px] max-sm:right-4 max-sm:w-[calc(100vw-32px)] max-sm:max-w-[330px]',
             'bg-[var(--glass-menu)] supports-[backdrop-filter]:backdrop-blur-[var(--blur-menu)]',
             'shadow-[var(--shadow-el-3)] border border-outline-variant',
             '[animation:notif-menu-in_var(--dur-menu)_var(--ease-spring)_both]',
