@@ -22,15 +22,23 @@ export function SkeletonBar({
 
 /* ── Loading State ───────────────────────────────────────────────────────── */
 
+const DAY_LABELS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
+const HOURS = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+// Staggered booking block slot positions per day column (gridRow span rules)
+const STAGGERED_BOOKINGS: Array<Array<{ row: string }>> = [
+  [{ row: '2 / span 3' }, { row: '9 / span 4' }],   // Day 0 (ПН): 09:30-11:00, 13:00-15:00
+  [{ row: '3 / span 4' }, { row: '12 / span 3' }],  // Day 1 (ВТ): 10:00-12:00, 14:30-16:00
+  [{ row: '1 / span 3' }, { row: '8 / span 4' }],   // Day 2 (СР): 09:00-10:30, 12:30-14:30
+  [{ row: '4 / span 4' }, { row: '14 / span 3' }],  // Day 3 (ЧТ): 10:30-12:30, 15:30-17:00
+  [{ row: '2 / span 4' }, { row: '10 / span 3' }],  // Day 4 (ПТ): 09:30-11:30, 13:30-15:00
+  [{ row: '5 / span 3' }],                           // Day 5 (СБ): 11:00-12:30
+];
+
 export type WeekGridLoadingProps = {
   readonly daysCount?: number;
 };
 
-/**
- * Week schedule loading state (DESIGN-NOTES.md §8).
- * Displays caption «Завантажуємо розклад…» over a shimmering block skeleton that
- * KEEPS the grid shape. Never uses a centred spinner.
- */
 export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
   const days = Array.from({ length: daysCount });
 
@@ -50,10 +58,12 @@ export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
           {days.map((_, index) => (
             <div
               key={index}
-              className="flex h-[var(--grid-head-h)] flex-col items-center justify-center gap-s1 border-r border-outline-variant p-s2 last:border-r-0"
+              className="flex h-[var(--grid-head-h)] flex-col items-center justify-center gap-1 border-r border-outline-variant p-s2 last:border-r-0"
             >
-              <SkeletonBar className="h-3 w-8" delay={`${index * 0.05}s`} />
-              <SkeletonBar className="h-5 w-6" delay={`${index * 0.05 + 0.1}s`} />
+              <span className="text-label-small font-bold text-on-surface-variant">
+                {DAY_LABELS[index % DAY_LABELS.length]}
+              </span>
+              <SkeletonBar className="h-3.5 w-6 rounded-full" delay={`${index * 0.05}s`} />
             </div>
           ))}
         </div>
@@ -66,52 +76,51 @@ export function WeekGridLoading({ daysCount = 7 }: WeekGridLoadingProps) {
             gridTemplateRows: 'repeat(20, var(--slot-h))',
           }}
         >
-          {/* Time Gutter */}
+          {/* Time Gutter with static hour labels */}
           <div
             className="grid border-r border-outline-variant bg-surface-container-lowest"
             style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
           >
             {Array.from({ length: 20 }, (_, rowIndex) => {
               const isHourRow = rowIndex % 2 === 0;
-              const timeIndex = Math.floor(rowIndex / 2);
+              const hourText = HOURS[Math.floor(rowIndex / 2)];
               return (
                 <div
                   key={rowIndex}
                   className={
                     isHourRow
-                      ? 'border-t border-outline-variant px-s2 pt-[2px]'
+                      ? 'border-t border-outline-variant px-s2 pt-[2px] text-right text-label-small font-bold text-on-surface-variant tabular-nums'
                       : 'border-t border-[var(--color-rule-half-hour)]'
                   }
                 >
-                  {isHourRow ? (
-                    <SkeletonBar className="h-3 w-10 ml-auto" delay={`${timeIndex * 0.05}s`} />
-                  ) : null}
+                  {isHourRow ? hourText : null}
                 </div>
               );
             })}
           </div>
 
-          {/* Day Columns with staggered booking block skeletons */}
-          {days.map((_, colIndex) => (
-            <div
-              key={colIndex}
-              className="relative grid border-r border-outline-variant p-s1 last:border-r-0"
-              style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
-            >
+          {/* Day Columns with realistic rectangular booking card skeletons */}
+          {days.map((_, colIndex) => {
+            const bookings = STAGGERED_BOOKINGS[colIndex % STAGGERED_BOOKINGS.length];
+            return (
               <div
-                className="col-span-1 rounded-[var(--block-radius)] p-s1"
-                style={{ gridRow: '2 / span 3' }}
+                key={colIndex}
+                className="relative grid border-r border-outline-variant p-[var(--cell-pad)] last:border-r-0"
+                style={{ gridTemplateRows: 'repeat(20, var(--slot-h))' }}
               >
-                <SkeletonBar className="h-full w-full rounded-[var(--block-radius)]" delay={`${colIndex * 0.1}s`} />
+                {bookings.map((b, bIdx) => (
+                  <div
+                    key={bIdx}
+                    className="col-span-1 flex flex-col justify-between rounded-[var(--block-radius)] border border-outline-variant/40 bg-surface-container p-s2 shadow-xs"
+                    style={{ gridRow: b.row }}
+                  >
+                    <SkeletonBar className="h-3 w-3/4 rounded-xs bg-surface-container-high" delay={`${(colIndex * 2 + bIdx) * 0.08}s`} />
+                    <SkeletonBar className="h-2.5 w-1/2 rounded-xs bg-surface-container-high" delay={`${(colIndex * 2 + bIdx) * 0.08 + 0.04}s`} />
+                  </div>
+                ))}
               </div>
-              <div
-                className="col-span-1 rounded-[var(--block-radius)] p-s1"
-                style={{ gridRow: '7 / span 4' }}
-              >
-                <SkeletonBar className="h-full w-full rounded-[var(--block-radius)]" delay={`${colIndex * 0.15 + 0.1}s`} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

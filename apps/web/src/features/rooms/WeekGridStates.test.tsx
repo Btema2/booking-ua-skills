@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DefaultFallbackGrid, SkeletonBar, WeekGridError, WeekGridLoading } from './WeekGridStates';
@@ -23,6 +24,20 @@ describe('WeekGridLoading', () => {
     expect(status.getAttribute('aria-busy')).toBe('true');
     expect(screen.getByText('Завантажуємо розклад…')).toBeTruthy();
     expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('renders static time labels (09:00 to 18:00) in time gutter', () => {
+    render(<WeekGridLoading daysCount={7} />);
+    expect(screen.getByText('09:00')).toBeTruthy();
+    expect(screen.getByText('12:00')).toBeTruthy();
+    expect(screen.getByText('18:00')).toBeTruthy();
+  });
+
+  it('renders Ukrainian day headers (ПН to НД) in loading skeleton', () => {
+    render(<WeekGridLoading daysCount={7} />);
+    expect(screen.getByText('ПН')).toBeTruthy();
+    expect(screen.getByText('ВТ')).toBeTruthy();
+    expect(screen.getByText('НД')).toBeTruthy();
   });
 });
 
