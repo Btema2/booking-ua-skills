@@ -19,6 +19,7 @@
     "prove:403": "bash scripts/prove-forbidden-cancel.sh"
   },
   "devDependencies": {
+    "playwright": "^1.62.1",
     "typescript": "5.9.3"
   }
 }

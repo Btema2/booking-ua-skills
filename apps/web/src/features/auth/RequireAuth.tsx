@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router';
 import { AppSkeleton } from '../../components/AppSkeleton';
 import { NavBar } from '../../components/NavBar';
+import { BottomBar } from '../../components/BottomBar';
 import { useCurrentUser } from './useCurrentUser';
 
 /** Layout route for authenticated screens: the nav bar plus the routed content. */
@@ -16,11 +17,12 @@ export function RequireAuth() {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface">
+    <div className="min-h-screen bg-surface text-on-surface pb-[76px] min-[761px]:pb-0">
       <NavBar userName={user.name} />
       <main className="mx-auto w-full max-w-[var(--page-max)] px-[var(--page-pad-x)] pt-[var(--page-pad-top)] pb-[var(--page-pad-bottom)]">
         <Outlet />
       </main>
+      <BottomBar />
     </div>
   );
 }

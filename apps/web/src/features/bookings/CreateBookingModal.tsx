@@ -168,11 +168,11 @@ export function CreateBookingModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 bg-[var(--color-scrim)] backdrop-blur-[var(--blur-scrim-dialog)] z-[var(--z-dialog)] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-[var(--color-scrim)] backdrop-blur-[var(--blur-scrim-dialog)] z-[var(--z-dialog)] flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-surface-container-low text-on-surface rounded-[var(--radius-lg)] p-6 shadow-[var(--shadow-el-3)] w-full max-w-[480px] z-[var(--z-dialog)] relative cursor-default"
+        className="bg-surface-container-low text-on-surface rounded-[var(--radius-lg)] p-6 shadow-[var(--shadow-el-3)] w-full max-w-[480px] max-h-[90vh] overflow-y-auto z-[var(--z-dialog)] relative cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">

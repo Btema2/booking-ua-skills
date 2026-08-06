@@ -45,7 +45,7 @@ export function CancelBookingDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[var(--z-dialog,70)] flex items-center justify-center p-4 bg-[var(--color-scrim,rgba(46,43,37,0.44))] backdrop-blur-[var(--blur-scrim-dialog,3px)]"
+      className="fixed inset-0 z-[var(--z-dialog,70)] flex items-center justify-center p-4 bg-[var(--color-scrim,rgba(46,43,37,0.44))] backdrop-blur-[var(--blur-scrim-dialog,3px)] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cancel-dialog-title"
