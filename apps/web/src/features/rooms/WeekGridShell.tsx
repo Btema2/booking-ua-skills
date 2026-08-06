@@ -306,8 +306,8 @@ export function WeekGridShell({
               {/* Merged Past Hatching Block */}
               {pastRowsCount > 0 && (
                 <div
-                  className="pointer-events-none z-0 bg-[var(--color-past-day)] [background-image:var(--pattern-past)]"
-                  style={{ gridRow: `1 / ${pastRowsCount + 1}` }}
+                  className="pointer-events-none absolute inset-x-0 top-0 z-0 bg-[var(--color-past-day)] [background-image:var(--pattern-past)]"
+                  style={{ height: `calc(${pastRowsCount} * var(--slot-h))` }}
                   aria-hidden="true"
                 />
               )}
