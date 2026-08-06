@@ -4,6 +4,7 @@ import type { Booking } from '@booking/core';
 export interface BookingBlockProps {
   booking?: Booking | null;
   isSelected?: boolean;
+  isMobile?: boolean;
   currentUserId?: string | null;
   viewerZone: string;
   startRow: number;
@@ -47,6 +48,7 @@ function getFirstName(userName: string): string {
 export function BookingBlock({
   booking,
   isSelected,
+  isMobile = false,
   currentUserId,
   viewerZone,
   startRow,
@@ -57,9 +59,18 @@ export function BookingBlock({
   onClick,
 }: BookingBlockProps) {
   const gridRowStyle = { gridRow: `${startRow} / span ${span}` };
-  const padClass = span >= 2 ? 'px-[9px] py-[7px]' : 'px-[8px] py-[4px]';
 
-  // 3. Free slot (when rendering an unoccupied slot on desktop)
+  const cellPadClass = isMobile ? 'py-[3px] px-[8px]' : 'py-[1.5px] px-[3px]';
+  const blockRadiusClass = isMobile ? 'rounded-[10px]' : 'rounded-[9px]';
+  const padClass = isMobile
+    ? span >= 2
+      ? 'px-[12px] py-[9px]'
+      : 'px-[11px] py-[7px]'
+    : span >= 2
+      ? 'px-[9px] py-[7px]'
+      : 'px-[8px] py-[4px]';
+
+  // 3. Free slot
   if (!booking) {
     if (isSelected) {
       return (
@@ -70,9 +81,13 @@ export function BookingBlock({
           onFocus={onFocus}
           onClick={onClick}
           style={gridRowStyle}
-          className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[7px]"
+          className={`${cellPadClass} min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${isMobile ? 'rounded-full' : 'rounded-[7px]'}`}
         >
-          <div className="w-full h-full flex items-center justify-center rounded-[7px] border-2 border-dashed border-primary bg-[var(--glass-selected-slot)] px-[4px] cursor-pointer">
+          <div
+            className={`w-full h-full flex items-center justify-center border-2 border-dashed border-primary bg-[var(--glass-selected-slot)] px-[4px] cursor-pointer ${
+              isMobile ? 'rounded-full' : 'rounded-[7px]'
+            }`}
+          >
             <span className="text-primary font-bold text-[12px] select-none">
               Обраний слот
             </span>
@@ -81,6 +96,28 @@ export function BookingBlock({
       );
     }
 
+    if (isMobile) {
+      // Mobile free slot: transparent, pill radius 999px, 1.5px dashed outline-variant, always-visible +
+      return (
+        <div
+          role="gridcell"
+          tabIndex={tabIndex}
+          data-grid-cell={dataGridCell}
+          onFocus={onFocus}
+          onClick={onClick}
+          style={gridRowStyle}
+          className={`${cellPadClass} min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-full`}
+        >
+          <div className="w-full h-full flex items-center justify-center rounded-full border-[1.5px] border-dashed border-outline-variant bg-transparent active:bg-surface-container-high transition-colors duration-[var(--dur-fast)] cursor-pointer">
+            <span className="text-on-surface-variant font-bold text-[14px] select-none">
+              +
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // Desktop free slot: transparent, radius 7px, hover reveals +
     return (
       <div
         role="gridcell"
@@ -89,7 +126,7 @@ export function BookingBlock({
         onFocus={onFocus}
         onClick={onClick}
         style={gridRowStyle}
-        className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[7px]"
+        className={`${cellPadClass} min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[7px]`}
       >
         <div className="group w-full h-full flex items-center justify-center rounded-[7px] hover:bg-primary-container transition-colors duration-[var(--dur-fast)] cursor-pointer">
           <span className="opacity-0 group-hover:opacity-100 text-on-primary-container font-bold select-none">
@@ -103,9 +140,20 @@ export function BookingBlock({
   const isOwn = Boolean(currentUserId && booking.userId === currentUserId);
   const timeRange = formatTimeRange(booking.startsAt, booking.endsAt, viewerZone);
 
-  const titleSizeClass = span >= 2 ? 'text-[13px]' : 'text-[12px]';
+  const titleSizeClass = isMobile
+    ? span >= 2
+      ? 'text-[14px]'
+      : 'text-[13px]'
+    : span >= 2
+      ? 'text-[13px]'
+      : 'text-[12px]';
+
   const titleClampClass =
     span === 1 ? 'line-clamp-1' : span <= 3 ? 'line-clamp-2' : 'line-clamp-4';
+
+  const dotSizeClass = isMobile ? 'size-[8px]' : 'w-[7px] h-[7px]';
+  const glyphSize = isMobile ? 11 : 10;
+  const metaTrackingClass = isMobile ? 'tracking-[0.03em]' : 'tracking-[0.04em]';
 
   if (isOwn) {
     // 1. My booking
@@ -117,7 +165,7 @@ export function BookingBlock({
         onFocus={onFocus}
         onClick={onClick}
         style={gridRowStyle}
-        className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[9px]"
+        className={`${cellPadClass} min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${blockRadiusClass}`}
       >
         <button
           type="button"
@@ -126,10 +174,10 @@ export function BookingBlock({
             e.stopPropagation();
             onClick?.();
           }}
-          className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
+          className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border ${blockRadiusClass} border-2 border-primary bg-primary-container text-on-primary-container hover:shadow-[var(--shadow-el-2)] transition-shadow duration-[var(--dur-block)] cursor-pointer ${padClass}`}
         >
-          <div className="flex items-center gap-[5px] min-w-0 uppercase tracking-[0.04em] font-bold text-[11px] text-on-primary-container">
-            <span className="w-[7px] h-[7px] rounded-full bg-primary shrink-0" aria-hidden="true" />
+          <div className={`flex items-center gap-[5px] min-w-0 uppercase ${metaTrackingClass} font-bold text-[11px] text-on-primary-container`}>
+            <span className={`${dotSizeClass} rounded-full bg-primary shrink-0`} aria-hidden="true" />
             <span className="whitespace-nowrap overflow-hidden text-ellipsis">
               Ви · {timeRange}
             </span>
@@ -152,16 +200,16 @@ export function BookingBlock({
       data-grid-cell={dataGridCell}
       onFocus={onFocus}
       style={gridRowStyle}
-      className="py-[1.5px] px-[3px] min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-[9px]"
+      className={`${cellPadClass} min-h-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${blockRadiusClass}`}
     >
       <div
-        className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border rounded-[9px] border border-outline-variant border-l-[4px] border-l-secondary bg-secondary-container text-on-secondary-container ${padClass}`}
+        className={`w-full h-full flex flex-col justify-start text-left overflow-hidden box-border ${blockRadiusClass} border border-outline-variant border-l-[4px] border-l-secondary bg-secondary-container text-on-secondary-container ${padClass}`}
       >
         <div className="flex items-center gap-[5px] min-w-0 tracking-[0.02em] font-bold text-[11px] text-on-secondary-container">
           <svg
             viewBox="0 0 24 24"
-            width="10"
-            height="10"
+            width={glyphSize}
+            height={glyphSize}
             stroke="var(--color-secondary)"
             strokeWidth="3"
             fill="none"

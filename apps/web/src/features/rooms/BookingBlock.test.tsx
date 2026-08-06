@@ -170,4 +170,30 @@ describe('BookingBlock', () => {
 
     expect(screen.getByText('Ви · 19:00–20:00')).toBeTruthy();
   });
+
+  it('renders correctly when isMobile is true', () => {
+    const { container } = render(
+      <BookingBlock
+        booking={mockBooking}
+        currentUserId={mockBooking.userId}
+        viewerZone="Europe/Kyiv"
+        isMobile={true}
+        startRow={1}
+        span={2}
+      />,
+    );
+
+    const button = screen.getByRole('button');
+    expect(button.className).toContain('rounded-[10px]');
+    expect(button.className).toContain('px-[12px] py-[9px]');
+    expect(screen.getByText('Планування спринту').className).toContain('text-[14px]');
+
+    const freeSlotRender = render(
+      <BookingBlock isMobile={true} viewerZone="Europe/Kyiv" startRow={3} span={1} />,
+    );
+    expect(freeSlotRender.getByText('+')).toBeTruthy();
+    const freeSlotContainer = freeSlotRender.container.firstElementChild as HTMLElement;
+    expect(freeSlotContainer.className).toContain('rounded-full');
+    expect(freeSlotRender.getByText('+').parentElement?.className).toContain('border-[1.5px]');
+  });
 });
