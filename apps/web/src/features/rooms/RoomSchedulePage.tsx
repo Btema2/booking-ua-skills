@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
+import { DateTime } from 'luxon';
 import type { Booking } from '@booking/core';
 import { ApiError } from '../../lib/api';
+import { useIsMobile } from '../../lib/useIsMobile';
 import { useRoomDetails, useRoomBookings } from './useRoomBookings';
 import { useCurrentUser } from '../auth/useCurrentUser';
 import {
@@ -14,6 +16,7 @@ import {
   formatTzBannerText,
 } from './timeUtils';
 import { WeekGridShell } from './WeekGridShell';
+import { MobileDayPager } from './MobileDayPager';
 import { BookingBlock } from './BookingBlock';
 import { WeekGridLoading, WeekGridError, DefaultFallbackGrid } from './WeekGridStates';
 import { CreateBookingModal } from '../bookings/CreateBookingModal';
@@ -22,12 +25,41 @@ import { useCreateBooking, useCancelBooking } from '../bookings/useBookingMutati
 import { mapApiErrorToForm } from '../bookings/errorMapping';
 
 export function RoomSchedulePage() {
+  const isMobile = useIsMobile(761);
   const { roomId } = useParams<{ roomId: string }>();
   const validRoomId = roomId ?? '';
   const [searchParams, setSearchParams] = useSearchParams();
   const weekParam = searchParams.get('week');
+  const dayParam = searchParams.get('day');
+
   const weekInfo = getKyivWeek(weekParam);
   const { mondayKyiv, sundayEndKyiv, daysKyiv } = weekInfo;
+
+  // Derive selected day index for mobile pager
+  let selectedDayIndex = 0;
+  if (dayParam) {
+    const matchedIdx = daysKyiv.findIndex((d) => d.toISODate() === dayParam);
+    if (matchedIdx !== -1) {
+      selectedDayIndex = matchedIdx;
+    }
+  } else if (weekInfo.isCurrentWeek) {
+    const todayIso = DateTime.now().setZone('Europe/Kyiv').toISODate();
+    const todayIdx = daysKyiv.findIndex((d) => d.toISODate() === todayIso);
+    if (todayIdx !== -1) {
+      selectedDayIndex = todayIdx;
+    }
+  }
+
+  const handleSelectDayIndex = (index: number) => {
+    const dayIso = daysKyiv[index]?.toISODate();
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (dayIso) {
+        next.set('day', dayIso);
+      }
+      return next;
+    });
+  };
 
   const roomQuery = useRoomDetails(validRoomId);
   const bookingsQuery = useRoomBookings(validRoomId, weekInfo);
@@ -155,6 +187,79 @@ export function RoomSchedulePage() {
     }
   };
 
+  const renderDayColumn = (
+    dayIndex: number,
+    _day: unknown,
+    pastRowsCount: number,
+    focusedCoords: { dayIndex: number; rowIndex: number },
+    onCellFocus: (dayIndex: number, rowIndex: number) => void,
+  ) => {
+    const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
+    const occupiedRows = new Set<number>();
+    dayBookings.forEach(({ startRow, span }) => {
+      for (let r = startRow; r < startRow + span; r++) {
+        occupiedRows.add(r);
+      }
+    });
+
+    return (
+      <>
+        {Array.from({ length: 20 }, (_, i) => {
+          const startRow = i + 1;
+          const rowIndex = i;
+          if (startRow <= pastRowsCount || occupiedRows.has(startRow)) {
+            return null;
+          }
+          const isFocused =
+            focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
+          const isSelected =
+            isCreateOpen &&
+            selectedSlotCoords?.dayIndex === dayIndex &&
+            selectedSlotCoords?.rowIndex === rowIndex;
+          return (
+            <BookingBlock
+              key={`free-${i}`}
+              viewerZone={viewerZone}
+              isMobile={isMobile}
+              startRow={startRow}
+              span={1}
+              isSelected={isSelected}
+              tabIndex={isFocused ? 0 : -1}
+              dataGridCell={`${dayIndex}-${rowIndex}`}
+              onFocus={() => onCellFocus(dayIndex, rowIndex)}
+              onClick={() => handleFreeSlotClick(dayIndex, rowIndex)}
+            />
+          );
+        })}
+
+        {dayBookings.map(({ booking, startRow, span }) => {
+          const startSlotIndex = startRow - 1;
+          const isFocused =
+            focusedCoords.dayIndex === dayIndex &&
+            focusedCoords.rowIndex >= startSlotIndex &&
+            focusedCoords.rowIndex < startSlotIndex + span;
+
+          return (
+            <div key={booking.id} className="relative z-10 contents">
+              <BookingBlock
+                booking={booking}
+                currentUserId={currentUserId}
+                viewerZone={viewerZone}
+                isMobile={isMobile}
+                startRow={startRow}
+                span={span}
+                tabIndex={isFocused ? 0 : -1}
+                dataGridCell={`${dayIndex}-${startSlotIndex}`}
+                onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
+                onClick={() => handleBookingClick(booking)}
+              />
+            </div>
+          );
+        })}
+      </>
+    );
+  };
+
   return (
     <section className="flex flex-col gap-s5">
       <header className="flex flex-col gap-s3">
@@ -191,7 +296,14 @@ export function RoomSchedulePage() {
             <button
               type="button"
               aria-label="Попередній тиждень"
-              onClick={() => setSearchParams({ week: getPrevKyivWeekParam(mondayKyiv) })}
+              onClick={() => {
+                const prevWeek = getPrevKyivWeekParam(mondayKyiv);
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set('week', prevWeek);
+                  return next;
+                });
+              }}
               className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               ‹
@@ -199,7 +311,13 @@ export function RoomSchedulePage() {
             <button
               type="button"
               disabled={weekInfo.isCurrentWeek}
-              onClick={() => setSearchParams({})}
+              onClick={() => {
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete('week');
+                  return next;
+                });
+              }}
               className="h-[40px] px-s4 rounded-full border border-outline-variant bg-surface-container-lowest text-label-large font-bold text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               Цей тиждень
@@ -207,7 +325,14 @@ export function RoomSchedulePage() {
             <button
               type="button"
               aria-label="Наступний тиждень"
-              onClick={() => setSearchParams({ week: getNextKyivWeekParam(mondayKyiv) })}
+              onClick={() => {
+                const nextWeek = getNextKyivWeekParam(mondayKyiv);
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set('week', nextWeek);
+                  return next;
+                });
+              }}
               className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               ›
@@ -266,75 +391,22 @@ export function RoomSchedulePage() {
       )}
 
       <div>
-        <WeekGridShell
-          daysKyiv={daysKyiv}
-          weekStartISO={weekInfo.weekStartISO}
-          isCurrentWeek={weekInfo.isCurrentWeek}
-          renderDayColumn={(dayIndex, _day, pastRowsCount, focusedCoords, onCellFocus) => {
-            const dayBookings = dayBookingsMap.get(dayIndex) ?? [];
-            const occupiedRows = new Set<number>();
-            dayBookings.forEach(({ startRow, span }) => {
-              for (let r = startRow; r < startRow + span; r++) {
-                occupiedRows.add(r);
-              }
-            });
-
-            return (
-              <>
-                {Array.from({ length: 20 }, (_, i) => {
-                  const startRow = i + 1;
-                  const rowIndex = i;
-                  if (startRow <= pastRowsCount || occupiedRows.has(startRow)) {
-                    return null;
-                  }
-                  const isFocused =
-                    focusedCoords.dayIndex === dayIndex && focusedCoords.rowIndex === rowIndex;
-                  const isSelected =
-                    isCreateOpen &&
-                    selectedSlotCoords?.dayIndex === dayIndex &&
-                    selectedSlotCoords?.rowIndex === rowIndex;
-                  return (
-                    <BookingBlock
-                      key={`free-${i}`}
-                      viewerZone={viewerZone}
-                      startRow={startRow}
-                      span={1}
-                      isSelected={isSelected}
-                      tabIndex={isFocused ? 0 : -1}
-                      dataGridCell={`${dayIndex}-${rowIndex}`}
-                      onFocus={() => onCellFocus(dayIndex, rowIndex)}
-                      onClick={() => handleFreeSlotClick(dayIndex, rowIndex)}
-                    />
-                  );
-                })}
-
-                {dayBookings.map(({ booking, startRow, span }) => {
-                  const startSlotIndex = startRow - 1;
-                  const isFocused =
-                    focusedCoords.dayIndex === dayIndex &&
-                    focusedCoords.rowIndex >= startSlotIndex &&
-                    focusedCoords.rowIndex < startSlotIndex + span;
-
-                  return (
-                    <div key={booking.id} className="relative z-10 contents">
-                      <BookingBlock
-                        booking={booking}
-                        currentUserId={currentUserId}
-                        viewerZone={viewerZone}
-                        startRow={startRow}
-                        span={span}
-                        tabIndex={isFocused ? 0 : -1}
-                        dataGridCell={`${dayIndex}-${startSlotIndex}`}
-                        onFocus={() => onCellFocus(dayIndex, startSlotIndex)}
-                        onClick={() => handleBookingClick(booking)}
-                      />
-                    </div>
-                  );
-                })}
-              </>
-            );
-          }}
-        />
+        {isMobile ? (
+          <MobileDayPager
+            daysKyiv={daysKyiv}
+            selectedDayIndex={selectedDayIndex}
+            onSelectDayIndex={handleSelectDayIndex}
+            isCurrentWeek={weekInfo.isCurrentWeek}
+            renderDayColumn={renderDayColumn}
+          />
+        ) : (
+          <WeekGridShell
+            daysKyiv={daysKyiv}
+            weekStartISO={weekInfo.weekStartISO}
+            isCurrentWeek={weekInfo.isCurrentWeek}
+            renderDayColumn={renderDayColumn}
+          />
+        )}
 
         <p className="mt-s3 text-right text-body-small text-on-surface-variant">
           Натисніть будь-який вільний слот, щоб забронювати. Свої бронювання можна скасувати — чужі ні.
@@ -371,3 +443,4 @@ export function RoomSchedulePage() {
     </section>
   );
 }
+
