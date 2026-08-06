@@ -57,6 +57,9 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
 - Luxon 3 for timezone math, never `Temporal` (unsupported on Safari/iOS).
 - Week grid columns = office days (Kyiv calendar); row labels render in
   viewer's zone — never one fixed offset applied to whole week.
+- Mobile single-day pager vs desktop grid breakpoint: CSS uses `max-width: 760px`;
+  JS switcher (`useIsMobile`) switches grid to single-day pager at `vw < 761` (desktop is `>= 761px`).
+- Room Schedule URL Search Params: `?week=YYYY-MM-DD` specifies the week range; `?day=YYYY-MM-DD` (Kyiv date) specifies the active day for the mobile pager. Navigating from list/my-bookings must pass both `week` and `day` so mobile lands on the exact day of a meeting while desktop continues to render the full week grid.
 - Own-vs-other booking distinguished by shape/text too, never colour alone;
   7:1 contrast floor inside grid.
 
