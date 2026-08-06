@@ -26,6 +26,12 @@ export interface SessionRow {
   user: UserRow;
 }
 
+export interface VerificationTokenRow {
+  token: string;
+  userId: string;
+  expiresAt: Date;
+}
+
 /**
  * Raised by any `AuthRepository` whose store rejects a second user with the same
  * email. Translating at the persistence boundary keeps SQLSTATE knowledge inside
@@ -49,7 +55,14 @@ export abstract class AuthRepository {
   /** @throws EmailAlreadyTakenError when the email is already registered. */
   abstract createUser(user: NewUser): Promise<UserRow>;
   abstract findUserByEmail(email: string): Promise<UserWithPasswordRow | null>;
+  abstract findUserById(userId: string): Promise<UserRow | null>;
   abstract createSession(session: NewSession): Promise<void>;
   abstract findSessionWithUser(sessionId: string): Promise<SessionRow | null>;
   abstract deleteSession(sessionId: string): Promise<void>;
+  abstract createVerificationToken(token: string, userId: string, expiresAt: Date): Promise<void>;
+  abstract findVerificationToken(token: string): Promise<VerificationTokenRow | null>;
+  abstract deleteVerificationToken(token: string): Promise<void>;
+  abstract deleteVerificationTokensForUser(userId: string): Promise<void>;
+  abstract markEmailVerified(userId: string): Promise<void>;
 }
+
