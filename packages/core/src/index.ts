@@ -27,9 +27,11 @@ export {
   BookingSchema,
   RoomIdSchema,
   RoomIdPathSchema,
+  MyBookingsQuerySchema,
   type CreateBookingInput,
   type RoomBookingsQuery,
   type Booking,
+  type MyBookingsQuery,
 } from './schemas/booking';
 export {
   overlaps,
@@ -40,6 +42,7 @@ export {
   OFFICE_OPEN_HOUR,
   OFFICE_CLOSE_HOUR,
   slotsForWeek,
+  getKyivWeekParamForInstant,
   BOOKING_REJECTION_MESSAGES,
   MIN_BOOKING_MINUTES,
   MAX_BOOKING_MINUTES,

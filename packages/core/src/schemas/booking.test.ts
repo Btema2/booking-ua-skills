@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOOKING_REJECTION_MESSAGES } from '../domain/booking-validation';
-import { BookingSchema, CreateBookingSchema, RoomBookingsQuerySchema, RoomIdPathSchema } from './booking';
+import { BookingSchema, CreateBookingSchema, MyBookingsQuerySchema, RoomBookingsQuerySchema, RoomIdPathSchema } from './booking';
 
 function messagesFor(result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) {
   return Object.fromEntries((result.error?.issues ?? []).map((issue) => [String(issue.path[0]), issue.message]));
@@ -266,3 +266,50 @@ describe('BookingSchema', () => {
     ).toBe(false);
   });
 });
+
+describe('MyBookingsQuerySchema', () => {
+  it('parses valid status upcoming with default page and limit', () => {
+    const parsed = MyBookingsQuerySchema.parse({ status: 'upcoming' });
+    expect(parsed).toEqual({ status: 'upcoming', page: 1, limit: 10 });
+  });
+
+  it('parses valid status past with coerced page and limit', () => {
+    const parsed = MyBookingsQuerySchema.parse({ status: 'past', page: '2', limit: '20' });
+    expect(parsed).toEqual({ status: 'past', page: 2, limit: 20 });
+  });
+
+  it('rejects invalid status with Ukrainian error message', () => {
+    const result = MyBookingsQuerySchema.safeParse({ status: 'invalid' });
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).status).toBe('Некоректний статус');
+  });
+
+  it('rejects missing status with Ukrainian error message', () => {
+    const result = MyBookingsQuerySchema.safeParse({});
+    expect(result.success).toBe(false);
+    expect(messagesFor(result).status).toBe('Некоректний статус');
+  });
+
+  it('rejects non-positive or invalid page with Ukrainian error message', () => {
+    const resultZero = MyBookingsQuerySchema.safeParse({ status: 'upcoming', page: 0 });
+    expect(resultZero.success).toBe(false);
+    expect(messagesFor(resultZero).page).toBe('Некоректна сторінка');
+
+    const resultNeg = MyBookingsQuerySchema.safeParse({ status: 'upcoming', page: -1 });
+    expect(resultNeg.success).toBe(false);
+    expect(messagesFor(resultNeg).page).toBe('Некоректна сторінка');
+
+    const resultInvalid = MyBookingsQuerySchema.safeParse({ status: 'upcoming', page: 'abc' });
+    expect(resultInvalid.success).toBe(false);
+    expect(messagesFor(resultInvalid).page).toBe('Некоректна сторінка');
+  });
+
+  it('rejects invalid limit values', () => {
+    const resultOverMax = MyBookingsQuerySchema.safeParse({ status: 'upcoming', limit: 101 });
+    expect(resultOverMax.success).toBe(false);
+
+    const resultZero = MyBookingsQuerySchema.safeParse({ status: 'upcoming', limit: 0 });
+    expect(resultZero.success).toBe(false);
+  });
+});
+

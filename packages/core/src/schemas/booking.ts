@@ -75,3 +75,16 @@ export const BookingSchema = z.object({
 });
 
 export type Booking = z.infer<typeof BookingSchema>;
+
+export const MyBookingsQuerySchema = z.object({
+  status: z.enum(['upcoming', 'past'], { error: 'Некоректний статус' }),
+  page: z.coerce
+    .number({ error: 'Некоректна сторінка' })
+    .int({ error: 'Некоректна сторінка' })
+    .positive({ error: 'Некоректна сторінка' })
+    .default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+});
+
+export type MyBookingsQuery = z.infer<typeof MyBookingsQuerySchema>;
+
