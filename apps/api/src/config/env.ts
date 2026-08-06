@@ -15,6 +15,7 @@ const EnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  TEST_DATABASE_URL: z.string().optional().default('postgres://booking:booking@localhost:5432/booking_test'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
