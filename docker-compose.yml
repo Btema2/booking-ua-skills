@@ -7,7 +7,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      # Host side 5433, not 5432: avoids clashing with a local Postgres a judge
+      # machine may already have running on the standard port. Container-internal
+      # port stays 5432 — the api service talks to `db:5432` over the compose
+      # network, unaffected by this remap.
+      - "5433:5432"
     volumes:
       - booking-db-data:/var/lib/postgresql
     healthcheck:
