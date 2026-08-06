@@ -46,6 +46,11 @@ class RecordingBookingsRepository extends BookingsRepository {
     this.calls.push([roomId, from, to]);
     return ROWS;
   }
+
+  async listMyBookings(): Promise<never> {
+    throw new Error('Not implemented');
+  }
+
 }
 
 const authServiceDouble = {

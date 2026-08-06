@@ -65,6 +65,11 @@ class RecordingBookingsRepository extends BookingsRepository {
     }
   }
 
+  async listMyBookings(): Promise<never> {
+    throw new Error('Not implemented');
+  }
+
+
   async listRoomBookings(): Promise<BookingRow[]> {
     return [...this.byId.values()];
   }

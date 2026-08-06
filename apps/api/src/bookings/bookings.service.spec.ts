@@ -44,6 +44,7 @@ function createRepository(): MockedRepository {
     findBookingById: jest.fn(async () => null),
     cancelBooking: jest.fn(async () => undefined),
     listRoomBookings: jest.fn(async () => []),
+    listMyBookings: jest.fn(async () => ({ bookings: [], total: 0, page: 1, limit: 10, hasMore: false })),
   };
 }
 
