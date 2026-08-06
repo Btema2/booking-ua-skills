@@ -20,6 +20,13 @@ export function cannotCancelOthersBooking(): ForbiddenException {
   return new ForbiddenException({ statusCode: HttpStatus.FORBIDDEN, message: CANNOT_CANCEL_OTHERS_BOOKING_MESSAGE });
 }
 
+export function emailVerificationRequired(): ForbiddenException {
+  return new ForbiddenException({
+    statusCode: HttpStatus.FORBIDDEN,
+    message: 'Для створення бронювання необхідно підтвердити пошту',
+  });
+}
+
 export function bookingAlreadyCanceled(): ConflictException {
   return new ConflictException({ statusCode: HttpStatus.CONFLICT, message: BOOKING_ALREADY_CANCELED_MESSAGE });
 }

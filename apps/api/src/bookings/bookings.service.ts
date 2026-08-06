@@ -6,6 +6,7 @@ import {
   bookingNotFound,
   bookingTimeRejection,
   cannotCancelOthersBooking,
+  emailVerificationRequired,
   roomNotFound,
   slotTaken,
 } from './bookings.errors';
@@ -22,6 +23,10 @@ export class BookingsService {
   constructor(private readonly bookingsRepo: BookingsRepository) {}
 
   async create(user: PublicUser, input: CreateBookingInput): Promise<BookingRow> {
+    if (!user.emailVerifiedAt) {
+      throw emailVerificationRequired();
+    }
+
     // `new Date()` is read here, and only here — packages/core stays pure and
     // testable, taking `now` as a parameter instead.
     const rejection = validateBookingTimes(input, new Date());

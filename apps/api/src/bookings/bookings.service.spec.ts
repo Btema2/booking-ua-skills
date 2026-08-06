@@ -10,7 +10,13 @@ import {
   type OwnedBookingRow,
 } from './bookings.repository';
 
-const USER: PublicUser = { id: '11111111-1111-4111-8111-111111111111', name: 'Іван', email: 'ivan@x.com', emailVerifiedAt: null };
+const USER: PublicUser = {
+  id: '11111111-1111-4111-8111-111111111111',
+  name: 'Іван',
+  email: 'ivan@x.com',
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+};
+const UNVERIFIED_USER: PublicUser = { ...USER, emailVerifiedAt: null };
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
 const BOOKING_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -68,6 +74,33 @@ describe('BookingsService', () => {
   });
 
   describe('create', () => {
+    it('returns 403 Forbidden with email verification message for unverified user (emailVerifiedAt: null)', async () => {
+      useFixedNow();
+      const repository = createRepository();
+
+      const error = await createService(repository)
+        .create(UNVERIFIED_USER, VALID_INPUT)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(bodyOf(error)).toEqual({
+        statusCode: 403,
+        message: 'Для створення бронювання необхідно підтвердити пошту',
+      });
+      expect(repository.createBooking).not.toHaveBeenCalled();
+    });
+
+    it('succeeds for a verified user (emailVerifiedAt: "2026-01-01T00:00:00.000Z")', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      const verifiedUser: PublicUser = { ...USER, emailVerifiedAt: '2026-01-01T00:00:00.000Z' };
+
+      const result = await createService(repository).create(verifiedUser, VALID_INPUT);
+
+      expect(result).toEqual(VALID_ROW);
+      expect(repository.createBooking).toHaveBeenCalled();
+    });
+
     it('returns the created row for a valid, well-formed booking', async () => {
       useFixedNow();
       const repository = createRepository();
