@@ -107,7 +107,7 @@ export class AuthService {
     const token = randomBytes(SESSION_ID_BYTES).toString('base64url');
     const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
     await this.repository.createVerificationToken(token, userId, expiresAt);
-    const url = `http://localhost:3000/api/auth/verify/${token}`;
+    const url = `http://localhost:3000/verify/${token}`;
     console.log(url);
     return token;
   }

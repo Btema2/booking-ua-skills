@@ -111,7 +111,7 @@ describe('AuthService', () => {
       expect(repository.createVerificationToken).toHaveBeenCalledTimes(1);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
       const logLine = consoleSpy.mock.calls[0][0] as string;
-      expect(logLine).toMatch(/^http:\/\/localhost:3000\/api\/auth\/verify\/[A-Za-z0-9_-]+$/);
+      expect(logLine).toMatch(/^http:\/\/localhost:3000\/verify\/[A-Za-z0-9_-]+$/);
       expect(logLine).not.toContain('ivan@x.com');
       expect(logLine).not.toContain('$2b$');
 

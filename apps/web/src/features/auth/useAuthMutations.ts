@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import type { PublicUser } from '@booking/core';
-import { loginUser, logoutUser, registerUser } from './api';
+import { loginUser, logoutUser, registerUser, verifyEmail } from './api';
 import { currentUserQueryKey } from './useCurrentUser';
 
 /**
@@ -27,6 +27,15 @@ export function useRegisterMutation() {
 export function useLoginMutation() {
   const seedCurrentUser = useSeedCurrentUser();
   return useMutation({ mutationFn: loginUser, onSuccess: seedCurrentUser });
+}
+
+/** No cached user shape to seed — just drop the stale `emailVerifiedAt: null` so the banner and booking guard update immediately. */
+export function useVerifyEmailMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: verifyEmail,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: currentUserQueryKey }),
+  });
 }
 
 export function useLogoutMutation() {

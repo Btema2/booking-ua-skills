@@ -200,8 +200,8 @@ showing the `403` above was about authorization, not a broken endpoint.
 
 Per the tournament brief, real SMTP is not required in development mode. Instead, confirmation links are generated and logged directly to the server output.
 
-- **Finding the link:** Run `docker compose logs api` and look for the printed URL on registration or resend: `http://localhost:3000/api/auth/verify/<token>`.
-- **Verifying the account:** Hitting `POST /api/auth/verify/<token>` (or opening the link) marks `email_verified_at` on the user account and deletes the token.
+- **Finding the link:** Run `docker compose logs api` and look for the printed URL on registration or resend: `http://localhost:3000/verify/<token>`.
+- **Verifying the account:** Opening the link loads a confirmation screen that calls `POST /api/auth/verify/<token>`, which marks `email_verified_at` on the user account and deletes the token.
 - **Server-side booking enforcement:** Unverified users are blocked from creating bookings with an HTTP `403 Forbidden` response (`"Для створення бронювання необхідно підтвердити пошту"`). This check is enforced on the server in `BookingsService`, distinct from ownership authorization 403s.
 - **Re-sending links:** Logged-in unverified users can request a new link using the «Надіслати ще раз» banner button (`POST /api/auth/verify/resend`). This invalidates any previous token for that user and prints a fresh link to `docker compose logs api`.
 - **Token expiration:** Each verification token expires after 24 hours.

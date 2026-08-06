@@ -9,6 +9,7 @@ import { RegisterPage } from './features/auth/RegisterPage';
 import { RoomsPage } from './features/rooms/RoomsPage';
 import { RoomSchedulePage } from './features/rooms/RoomSchedulePage';
 import { MyBookingsPage } from './features/bookings/MyBookingsPage';
+import { VerifyEmailPage } from './features/auth/VerifyEmailPage';
 
 export function App() {
   const [queryClient] = useState(createQueryClient);
@@ -17,6 +18,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route path="/verify/:token" element={<VerifyEmailPage />} />
           <Route element={<RedirectIfAuthenticated />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
