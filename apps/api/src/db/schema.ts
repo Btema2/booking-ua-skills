@@ -65,3 +65,12 @@ export const bookings = pgTable(
     index('bookings_room_starts_at_idx').on(table.roomId, table.startsAt),
   ],
 );
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  token: text('token').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
+

@@ -50,6 +50,13 @@
       "when": 1786020711037,
       "tag": "0006_add_bookings_user_id_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786033484158,
+      "tag": "0007_great_miracleman",
+      "breakpoints": true
     }
   ]
 }
