@@ -93,16 +93,9 @@ export function NavBar({ userName }: { userName: string }) {
             </NavLink>
           </li>
           <li>
-            {/*
-              The screen behind this tab arrives in Phase 6. Rendering it as a live
-              link would send the reader to /bookings, which the catch-all route
-              redirects straight back to / with `replace` — a tab that appears to do
-              nothing and cannot be undone with Back. A disabled button says the same
-              thing honestly, and assistive tech announces the unavailability.
-            */}
-            <button type="button" disabled className={navTabClass({ isActive: false })}>
+            <NavLink to="/my-bookings" className={navTabClass}>
               Мої бронювання
-            </button>
+            </NavLink>
           </li>
         </ul>
 
