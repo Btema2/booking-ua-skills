@@ -28,11 +28,18 @@ const PILL_GHOST = `${PILL_BASE} border-outline-variant bg-transparent text-on-s
 // `.skeleton-bar` and its keyframes live in styles.css, where AppSkeleton already
 // uses them. Re-declaring the sweep here would put two copies of one primitive in
 // the app, free to drift apart, and reinsert a <style> node on every filter change.
-function SkeletonBar({ className, delay }: { readonly className: string; readonly delay: string }) {
+export function SkeletonBar({
+  className = '',
+  delay,
+}: {
+  readonly className?: string;
+  readonly delay?: string;
+}) {
+  const roundedClass = className.includes('rounded-') ? '' : 'rounded-md';
   return (
     <span
-      className={`skeleton-bar block rounded-full ${className}`}
-      style={{ animationDelay: delay }}
+      className={`skeleton-bar block ${roundedClass} ${className}`.trim()}
+      style={delay ? { animationDelay: delay } : undefined}
     />
   );
 }

@@ -4,16 +4,17 @@ const DEFAULT_DAY_NAMES = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД
  * Skeleton bar helper utilizing the `.skeleton-bar` CSS class declared in styles.css.
  * Applies --pattern-skeleton shimmer animation over surface-container blocks.
  */
-function SkeletonBar({
+export function SkeletonBar({
   className = '',
   delay,
 }: {
   readonly className?: string;
   readonly delay?: string;
 }) {
+  const roundedClass = className.includes('rounded-') ? '' : 'rounded-md';
   return (
     <span
-      className={`skeleton-bar block rounded-full ${className}`}
+      className={`skeleton-bar block ${roundedClass} ${className}`.trim()}
       style={delay ? { animationDelay: delay } : undefined}
     />
   );

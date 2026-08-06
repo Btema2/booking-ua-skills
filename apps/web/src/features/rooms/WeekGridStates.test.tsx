@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { DefaultFallbackGrid, WeekGridError, WeekGridLoading } from './WeekGridStates';
+import { DefaultFallbackGrid, SkeletonBar, WeekGridError, WeekGridLoading } from './WeekGridStates';
+
+describe('SkeletonBar', () => {
+  afterEach(cleanup);
+
+  it('renders SkeletonBar with provided rounding classes instead of forcing rounded-full', () => {
+    const { container } = render(<SkeletonBar className="h-4 w-12 rounded-[var(--block-radius)]" />);
+    const span = container.querySelector('span');
+    expect(span?.className).toContain('rounded-[var(--block-radius)]');
+    expect(span?.className).not.toContain('rounded-full');
+  });
+});
 
 describe('WeekGridLoading', () => {
   afterEach(cleanup);
