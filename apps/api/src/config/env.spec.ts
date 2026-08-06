@@ -45,17 +45,17 @@ describe('loadEnv', () => {
     expect(loadEnv(blanked)).toMatchObject({ COOKIE_SECURE: false, NODE_ENV: 'development', PORT: 3000 });
   });
 
-  it('still rejects a blank value for a variable that has no default', () => {
-    expect(() => loadEnv({ ...validSource, POSTGRES_HOST: '' })).toThrow(/POSTGRES_HOST/);
+  it('defaults POSTGRES_HOST to localhost when blank, since every field now has a default', () => {
+    expect(loadEnv({ ...validSource, POSTGRES_HOST: '' }).POSTGRES_HOST).toBe('localhost');
   });
 
   it('rejects a COOKIE_SECURE value that is neither true nor false', () => {
     expect(() => loadEnv({ ...validSource, COOKIE_SECURE: 'yes' })).toThrow(/COOKIE_SECURE/);
   });
 
-  it('throws naming the missing key when POSTGRES_PASSWORD is absent', () => {
+  it('defaults POSTGRES_PASSWORD to booking when absent', () => {
     const { POSTGRES_PASSWORD, ...rest } = validSource;
-    expect(() => loadEnv(rest)).toThrow(/POSTGRES_PASSWORD/);
+    expect(loadEnv(rest).POSTGRES_PASSWORD).toBe('booking');
   });
 
   it('defaults PORT to 3000 and NODE_ENV to development when omitted', () => {
