@@ -1,0 +1,43 @@
+import { Client } from 'pg';
+import { sql } from 'drizzle-orm';
+import { loadEnv } from '../src/config/env';
+import { getConnection } from '../src/db/connection';
+import { runMigrations } from '../src/db/migrate';
+import { seedRooms } from '../src/db/seed';
+
+export async function setupTestDb(): Promise<void> {
+  const env = loadEnv();
+  const testDbUrl = process.env.TEST_DATABASE_URL || env.TEST_DATABASE_URL;
+
+  // Force process.env.TEST_DATABASE_URL so getConnection() connects to the test database
+  process.env.TEST_DATABASE_URL = testDbUrl;
+
+  // Connect to postgres maintenance DB to ensure test database exists
+  try {
+    const urlObj = new URL(testDbUrl);
+    const dbName = urlObj.pathname.slice(1);
+    urlObj.pathname = '/postgres';
+    const adminUrl = urlObj.toString();
+
+    const adminClient = new Client({ connectionString: adminUrl });
+    await adminClient.connect();
+    const res = await adminClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+    if (res.rowCount === 0) {
+      await adminClient.query(`CREATE DATABASE "${dbName}"`);
+    }
+    await adminClient.end();
+  } catch {
+    // Fallback silently if admin DB is not directly accessible (e.g. custom credentials)
+  }
+
+  // Run programmatic migrations against test database
+  await runMigrations();
+
+  // Seed rooms into test database
+  await seedRooms();
+}
+
+export async function truncateTables(): Promise<void> {
+  const { db } = getConnection();
+  await db.execute(sql`TRUNCATE TABLE bookings, users, sessions, email_verification_tokens RESTART IDENTITY CASCADE;`);
+}
