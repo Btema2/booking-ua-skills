@@ -45,8 +45,8 @@ illustration, **not** a column spec. Real columns are `1fr`.
 | Gutter label | `11.5px`/700, tabular-nums, padding `2px 10px 0 0`, hung at the top of its hour | `--gutter-label-pad` |
 
 Column backgrounds: today `--color-today-column` (`rgba(255,225,208,.34)`),
-past day `--color-past-day` (`rgba(226,210,181,.30)`), non-working day
-`--color-surface-container`, otherwise `--color-surface-container-lowest`.
+past day `--color-past-day` (`rgba(226,210,181,.30)`),
+otherwise `--color-surface-container-lowest`.
 Today's **header** cell is tinted `--glass-today-head`
 (`color-mix(in srgb,#ffd0b4 78%,transparent)`); past days and weekends drop the
 whole header cell to `opacity:.6`.
@@ -95,7 +95,6 @@ Other slot states:
 | Free (mobile) | transparent, pill `999px` | `1.5px dashed` outline-variant | always-visible `+`, one tappable block per free row |
 | Selected | `--glass-selected-slot` (`#ffe1d0` @ 55%) | `2px dashed` `--color-primary` | dashed edge + the label «Обраний слот» |
 | Past / disabled | `--color-past-day` + 135° hatch `--pattern-past` | none | texture, not a colour change; not focusable, no pointer |
-| Non-working day | `--color-surface-container` | none | header at 60% opacity, no hover affordance |
 
 A contiguous run of dead rows is merged into **one** cell so the hatch reads as
 a single striped block, not 20 tiles.
@@ -163,8 +162,6 @@ explicitly **not** to be built.
 | Time gutter | `52px`, label `11px`/700, padding `3px 8px 0 0` | `--time-gutter-w-mobile` |
 | Now line | `left:52px; right:0`, `2px` `--color-error`, `10px` dot at `left:-5px` | |
 | Bottom bar | Removed — mobile navigation is handled by the top app bar instead | — |
-| Bottom-bar nav item | `60px` wide, `19px` icon, `10px`/700 label | `--bottom-bar-item-w` |
-| Bottom-bar CTA | pill, min-height `48px`, padding `0 22px`, Rubik `15px`, primary fill | `--bottom-bar-cta-h` |
 | My-bookings row ≤760px | stacks to a column, padding `14px 16px`, cancel button goes full width | |
 
 ---
