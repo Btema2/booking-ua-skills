@@ -57,6 +57,13 @@
       "when": 1786033484158,
       "tag": "0007_great_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786057604257,
+      "tag": "0008_rich_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

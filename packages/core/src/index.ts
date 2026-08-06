@@ -47,7 +47,9 @@ export {
   MIN_BOOKING_MINUTES,
   MAX_BOOKING_MINUTES,
   validateBookingTimes,
+  shouldNotifyBookingEnding,
   type BookingInterval,
   type Slot,
   type BookingRejection,
+  type EndingSoonCheck,
 } from './domain';

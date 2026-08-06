@@ -46,5 +46,7 @@ export async function setupTestDb(): Promise<void> {
 
 export async function truncateTables(): Promise<void> {
   const { db } = getConnection();
-  await db.execute(sql`TRUNCATE TABLE bookings, users, sessions, email_verification_tokens RESTART IDENTITY CASCADE;`);
+  await db.execute(
+    sql`TRUNCATE TABLE bookings, users, sessions, email_verification_tokens, notifications RESTART IDENTITY CASCADE;`,
+  );
 }

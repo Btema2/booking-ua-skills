@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router';
 import { useLogoutMutation } from '../features/auth/useAuthMutations';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { getViewerZone } from '../features/rooms/timeUtils';
 
 /**
@@ -105,6 +106,7 @@ export function NavBar({ userName }: { userName: string }) {
             <span className="size-[6px] shrink-0 rounded-full bg-secondary" />
             <span>{getViewerZone()}</span>
           </span>
+          <NotificationBell />
           {/* Avatar + name pill — DESIGN-NOTES §4: 30px avatar, pill pad 5px 14px 5px 5px, surface-container-lowest fill, 1px border */}
           <span className="flex shrink-0 items-center gap-[9px] rounded-full border border-outline-variant bg-surface-container-lowest p-[5px] pr-[14px] max-desktop:gap-0 max-desktop:pr-[5px]">
             <span

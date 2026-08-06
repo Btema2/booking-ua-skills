@@ -52,6 +52,35 @@
 }
 
 /* ============================================================================
+   Notification bell menu and toast entrances — DESIGN-NOTES §4/§8, matched to
+   the handoff prototype's springIn/toastIn keyframes (both ride --ease-spring).
+   ========================================================================= */
+@keyframes notif-menu-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes notif-toast-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  70% {
+    transform: translateY(3px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================================
    Reduced motion — DESIGN-NOTES §8: "everything collapses to --dur-reduced".
    Collapsing the tokens themselves catches every token-driven transition; the
    universal rule catches anything that slipped through with a literal duration.

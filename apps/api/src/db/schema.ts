@@ -66,6 +66,26 @@ export const bookings = pgTable(
   ],
 );
 
+// `kind` only ever holds `'ending_soon'` for now (SPEC §1); the unique index on
+// (booking_id, kind) is what makes "arrives exactly once" true at the database
+// level rather than by trusting the scheduler not to double-fire.
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    bookingId: uuid('booking_id')
+      .notNull()
+      .references(() => bookings.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+  },
+  (table) => [uniqueIndex('notifications_once').on(table.bookingId, table.kind)],
+);
+
 export const emailVerificationTokens = pgTable('email_verification_tokens', {
   token: text('token').primaryKey(),
   userId: uuid('user_id')

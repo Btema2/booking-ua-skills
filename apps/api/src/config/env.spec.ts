@@ -23,6 +23,7 @@ describe('loadEnv', () => {
       POSTGRES_PASSWORD: 'booking',
       POSTGRES_DB: 'booking',
       COOKIE_SECURE: false,
+      NOTIFY_BEFORE_MINUTES: 10,
     });
   });
 
@@ -77,5 +78,17 @@ describe('loadEnv', () => {
 
   it('rejects a PORT above the valid TCP port range', () => {
     expect(() => loadEnv({ ...validSource, PORT: '99999999' })).toThrow(/PORT/);
+  });
+
+  it('defaults NOTIFY_BEFORE_MINUTES to 10 when omitted', () => {
+    expect(loadEnv(validSource).NOTIFY_BEFORE_MINUTES).toBe(10);
+  });
+
+  it('coerces a numeric NOTIFY_BEFORE_MINUTES string', () => {
+    expect(loadEnv({ ...validSource, NOTIFY_BEFORE_MINUTES: '5' }).NOTIFY_BEFORE_MINUTES).toBe(5);
+  });
+
+  it('rejects a non-positive NOTIFY_BEFORE_MINUTES instead of silently coercing it', () => {
+    expect(() => loadEnv({ ...validSource, NOTIFY_BEFORE_MINUTES: '0' })).toThrow(/NOTIFY_BEFORE_MINUTES/);
   });
 });

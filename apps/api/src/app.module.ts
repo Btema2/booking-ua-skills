@@ -3,12 +3,13 @@ import { type MiddlewareConsumer, Module, type NestModule, RequestMethod } from 
 import { AuthModule } from './auth/auth.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { HealthController } from './health/health.controller';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { PUBLIC_DIR } from './static/public-dir';
 import { SpaFallbackMiddleware } from './static/spa-fallback.middleware';
 
 @Module({
-  imports: [AuthModule, RoomsModule, BookingsModule],
+  imports: [AuthModule, RoomsModule, BookingsModule, NotificationsModule],
   controllers: [HealthController],
   providers: [{ provide: PUBLIC_DIR, useValue: join(__dirname, 'public') }],
 })
