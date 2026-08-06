@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slotsForWeek } from './week-slots';
+import { getKyivWeekParamForInstant, slotsForWeek } from './week-slots';
 
 describe('slotsForWeek', () => {
   it('produces 140 slots — 7 office days × 20 half-hour slots', () => {
@@ -63,3 +63,23 @@ describe('slotsForWeek', () => {
     },
   );
 });
+
+describe('getKyivWeekParamForInstant', () => {
+  it('returns Monday formatted as yyyy-MM-dd for 30 December dates', () => {
+    expect(getKyivWeekParamForInstant('2020-12-30T10:00:00Z')).toBe('2020-12-28');
+    expect(getKyivWeekParamForInstant(new Date('2025-12-30T10:00:00Z'))).toBe('2025-12-29');
+  });
+
+  it('handles a date where week starts in the previous year', () => {
+    // 2020-01-01 is a Wednesday; the Monday of that week is 2019-12-30
+    expect(getKyivWeekParamForInstant('2020-01-01T12:00:00Z')).toBe('2019-12-30');
+  });
+
+  it('handles a month boundary crossing', () => {
+    // 2026-03-01 is a Sunday; the Monday of that week is 2026-02-23 (February)
+    expect(getKyivWeekParamForInstant('2026-03-01T12:00:00Z')).toBe('2026-02-23');
+    // 2026-02-01 is a Sunday; the Monday of that week is 2026-01-26 (January)
+    expect(getKyivWeekParamForInstant(new Date('2026-02-01T12:00:00Z'))).toBe('2026-01-26');
+  });
+});
+

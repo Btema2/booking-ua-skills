@@ -53,6 +53,26 @@ export class RoomNotFoundError extends Error {
   }
 }
 
+export interface MyBookingRow {
+  id: string;
+  roomId: number;
+  roomName: string;
+  roomFloor: number;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  userId: string;
+  userName: string;
+}
+
+export interface PaginatedMyBookings {
+  bookings: MyBookingRow[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 /**
  * Persistence boundary for bookings. Abstract class so it doubles as a Nest DI
  * token: production binds the Drizzle implementation, specs bind a double and
@@ -69,4 +89,11 @@ export abstract class BookingsRepository {
   abstract cancelBooking(id: string): Promise<void>;
   /** Live bookings only, intersecting `[from, to)`, ordered by `startsAt`. */
   abstract listRoomBookings(roomId: number, from: Date, to: Date): Promise<BookingRow[]>;
+  abstract listMyBookings(
+    userId: string,
+    status: 'upcoming' | 'past',
+    page: number,
+    limit: number,
+  ): Promise<PaginatedMyBookings>;
 }
+

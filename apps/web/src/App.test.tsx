@@ -81,21 +81,16 @@ describe('app bar navigation', () => {
     expect(within(nav).getByRole('link', { name: 'Кімнати' }).getAttribute('href')).toBe('/');
   });
 
-  /**
-   * The Phase 6 screen does not exist yet. The tab has to be visible — it is part
-   * of the designed nav — but it must not offer navigation it cannot deliver.
-   */
-  it('shows Мої бронювання as unavailable rather than as a link that goes nowhere', async () => {
+  it('points the Мої бронювання tab at /my-bookings', async () => {
     renderApp('/', {
       'GET /api/auth/me': activeSession,
       'GET /api/rooms': emptyRoomList,
     });
 
     const nav = await screen.findByRole('navigation', { name: 'Головна навігація' });
-    const tab = within(nav).getByRole('button', { name: 'Мої бронювання' });
+    const tab = within(nav).getByRole('link', { name: 'Мої бронювання' });
 
-    expect(tab.hasAttribute('disabled')).toBe(true);
-    expect(within(nav).queryByRole('link', { name: 'Мої бронювання' })).toBeNull();
+    expect(tab.getAttribute('href')).toBe('/my-bookings');
   });
 });
 

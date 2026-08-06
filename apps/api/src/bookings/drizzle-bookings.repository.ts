@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNull, lt, lte, sql } from 'drizzle-orm';
 import { getConnection } from '../db/connection';
 import { EXCLUSION_VIOLATION, FOREIGN_KEY_VIOLATION, QueryFailedError, runQuery } from '../db/driver-errors';
-import { bookings, users } from '../db/schema';
+import { bookings, rooms, users } from '../db/schema';
 import {
   BookingsRepository,
   RoomNotFoundError,
   SlotTakenError,
   type BookingRow,
+  type MyBookingRow,
   type NewBooking,
   type OwnedBookingRow,
+  type PaginatedMyBookings,
 } from './bookings.repository';
 
 const BOOKING_COLUMNS = {
@@ -93,4 +95,58 @@ export class DrizzleBookingsRepository extends BookingsRepository {
         .orderBy(asc(bookings.startsAt)),
     );
   }
+
+  async listMyBookings(
+    userId: string,
+    status: 'upcoming' | 'past',
+    page: number,
+    limit: number,
+  ): Promise<PaginatedMyBookings> {
+    const statusCondition =
+      status === 'upcoming' ? gt(bookings.endsAt, sql`now()`) : lte(bookings.endsAt, sql`now()`);
+    const condition = and(eq(bookings.userId, userId), isNull(bookings.canceledAt), statusCondition);
+    const orderBy = status === 'upcoming' ? asc(bookings.startsAt) : desc(bookings.startsAt);
+
+    const [totalResult] = await runQuery('listMyBookingsCount', () =>
+      this.db
+        .select({ total: count() })
+        .from(bookings)
+        .innerJoin(rooms, eq(rooms.id, bookings.roomId))
+        .innerJoin(users, eq(users.id, bookings.userId))
+        .where(condition),
+    );
+    const total = Number(totalResult?.total ?? 0);
+
+    const offset = (page - 1) * limit;
+    const rows = await runQuery('listMyBookings', () =>
+      this.db
+        .select({
+          id: bookings.id,
+          roomId: bookings.roomId,
+          roomName: rooms.name,
+          roomFloor: rooms.floor,
+          title: bookings.title,
+          startsAt: bookings.startsAt,
+          endsAt: bookings.endsAt,
+          userId: bookings.userId,
+          userName: users.name,
+        })
+        .from(bookings)
+        .innerJoin(rooms, eq(rooms.id, bookings.roomId))
+        .innerJoin(users, eq(users.id, bookings.userId))
+        .where(condition)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset),
+    );
+
+    return {
+      bookings: rows,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    };
+  }
 }
+

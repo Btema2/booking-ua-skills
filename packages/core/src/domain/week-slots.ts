@@ -43,3 +43,12 @@ export function slotsForWeek(weekStart: Date, zone: string): Slot[] {
 
   return slots;
 }
+
+export function getKyivWeekParamForInstant(startsAt: Date | string): string {
+  const dt =
+    typeof startsAt === 'string'
+      ? DateTime.fromISO(startsAt, { zone: 'utc' })
+      : DateTime.fromJSDate(startsAt, { zone: 'utc' });
+  return dt.setZone(OFFICE_ZONE).startOf('week').toFormat('yyyy-MM-dd');
+}
+
