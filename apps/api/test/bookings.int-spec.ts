@@ -39,6 +39,9 @@ describe('API Integration Tests (Bookings & Auth)', () => {
 
     expect(res.status).toBe(201);
     const cookie = res.get('Set-Cookie');
+    if (!cookie) {
+      throw new Error('Register response is missing a Set-Cookie header');
+    }
     const user = res.body.user;
 
     if (verified) {
