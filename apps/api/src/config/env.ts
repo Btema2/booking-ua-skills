@@ -3,11 +3,11 @@ import { z } from 'zod';
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
-  POSTGRES_HOST: z.string().min(1),
+  POSTGRES_HOST: z.string().min(1).default('localhost'),
   POSTGRES_PORT: z.coerce.number().int().positive().max(65535).default(5432),
-  POSTGRES_USER: z.string().min(1),
-  POSTGRES_PASSWORD: z.string().min(1),
-  POSTGRES_DB: z.string().min(1),
+  POSTGRES_USER: z.string().min(1).default('booking'),
+  POSTGRES_PASSWORD: z.string().min(1).default('booking'),
+  POSTGRES_DB: z.string().min(1).default('booking'),
   // Adds the Secure flag to the session cookie; must be true when served over HTTPS.
   // Parsed as an explicit 'true' | 'false' literal because z.coerce.boolean() would
   // turn the string 'false' into true.

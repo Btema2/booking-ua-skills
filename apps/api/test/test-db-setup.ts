@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import { sql } from 'drizzle-orm';
 import { loadEnv } from '../src/config/env';
-import { getConnection } from '../src/db/connection';
+import { getConnection, closeConnection } from '../src/db/connection';
 import { runMigrations } from '../src/db/migrate';
 import { seedRooms } from '../src/db/seed';
 
@@ -16,9 +16,8 @@ export async function setupTestDb(): Promise<void> {
   try {
     const urlObj = new URL(testDbUrl);
     const dbName = urlObj.pathname.slice(1);
-    urlObj.pathname = '/postgres';
+    urlObj.pathname = `/${env.POSTGRES_DB || 'booking'}`;
     const adminUrl = urlObj.toString();
-
     const adminClient = new Client({ connectionString: adminUrl });
     await adminClient.connect();
     const res = await adminClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
@@ -26,9 +25,12 @@ export async function setupTestDb(): Promise<void> {
       await adminClient.query(`CREATE DATABASE "${dbName}"`);
     }
     await adminClient.end();
-  } catch {
-    // Fallback silently if admin DB is not directly accessible (e.g. custom credentials)
+  } catch (error) {
+    console.error('Failed to create test database:', error);
   }
+
+  // Ensure connection pool is reset if previously initialized
+  await closeConnection();
 
   // Run programmatic migrations against test database
   await runMigrations();

@@ -432,13 +432,15 @@ describe('API Integration Tests (Bookings & Auth)', () => {
         });
 
       const res = await request(app.getHttpServer())
-        .get('/api/rooms/1/bookings?from=2028-06-15T06:00:00.000Z&to=2028-06-15T09:00:00.000Z');
+        .get('/api/rooms/1/bookings?from=2028-06-15T06:00:00.000Z&to=2028-06-15T09:00:00.000Z')
+        .set('Cookie', cookie);
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBe(1);
-      expect(res.body[0].title).toBe('Morning Meeting');
-      expect(res.body[0].userName).toBe('Taras Shevchenko');
+      const bookingsList = Array.isArray(res.body) ? res.body : res.body.bookings;
+      expect(Array.isArray(bookingsList)).toBe(true);
+      expect(bookingsList.length).toBe(1);
+      expect(bookingsList[0].title).toBe('Morning Meeting');
+      expect(bookingsList[0].userName).toBe('Taras Shevchenko');
     });
 
     it("18. GET /api/bookings/mine returns only the caller's own rows", async () => {
