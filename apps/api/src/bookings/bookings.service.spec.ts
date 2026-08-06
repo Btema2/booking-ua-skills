@@ -237,4 +237,18 @@ describe('BookingsService', () => {
       expect(repository.listRoomBookings).toHaveBeenCalledWith(3, from, to);
     });
   });
+
+  describe('listMine', () => {
+    it('delegates straight to the repository', async () => {
+      const repository = createRepository();
+      const paginatedResult = { bookings: [], total: 0, page: 1, limit: 10, hasMore: false };
+      repository.listMyBookings.mockResolvedValue(paginatedResult);
+
+      const query = { status: 'upcoming' as const, page: 1, limit: 10 };
+      const result = await createService(repository).listMine(USER, query);
+
+      expect(result).toEqual(paginatedResult);
+      expect(repository.listMyBookings).toHaveBeenCalledWith(USER.id, 'upcoming', 1, 10);
+    });
+  });
 });

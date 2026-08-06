@@ -12,8 +12,10 @@ import {
   RoomNotFoundError,
   SlotTakenError,
   type BookingRow,
+  type MyBookingRow,
   type NewBooking,
   type OwnedBookingRow,
+  type PaginatedMyBookings,
 } from './bookings.repository';
 import { BookingsService } from './bookings.service';
 
@@ -37,7 +39,7 @@ const VALID_BODY = {
 
 /** Stands in for Postgres: enough state to exercise ownership and cancellation. */
 class RecordingBookingsRepository extends BookingsRepository {
-  private readonly byId = new Map<string, BookingRow & { canceledAt: Date | null }>();
+  private readonly byId = new Map<string, MyBookingRow & { canceledAt: Date | null }>();
   rejectNextCreateWithSlotTaken = false;
   rejectNextCreateWithRoomNotFound = false;
 
@@ -48,9 +50,21 @@ class RecordingBookingsRepository extends BookingsRepository {
     if (this.rejectNextCreateWithRoomNotFound) {
       throw new RoomNotFoundError();
     }
-    const row = { id: randomUUID(), ...input, canceledAt: null };
+    const row: MyBookingRow & { canceledAt: Date | null } = {
+      id: randomUUID(),
+      roomId: input.roomId,
+      roomName: `Room ${input.roomId}`,
+      roomFloor: 1,
+      title: input.title,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      userId: input.userId,
+      userName: input.userName,
+      canceledAt: null,
+    };
     this.byId.set(row.id, row);
-    return row;
+    const { roomName, roomFloor, canceledAt, ...bookingRow } = row;
+    return bookingRow;
   }
 
   async findBookingById(id: string): Promise<OwnedBookingRow | null> {
@@ -65,26 +79,63 @@ class RecordingBookingsRepository extends BookingsRepository {
     }
   }
 
-  async listMyBookings(): Promise<never> {
-    throw new Error('Not implemented');
-  }
+  async listMyBookings(
+    userId: string,
+    status: 'upcoming' | 'past',
+    page: number,
+    limit: number,
+  ): Promise<PaginatedMyBookings> {
+    const userBookings = Array.from(this.byId.values()).filter(
+      (b) => b.userId === userId && b.canceledAt === null,
+    );
 
+    const filtered = userBookings.filter((b) =>
+      status === 'upcoming' ? b.endsAt > NOW : b.endsAt <= NOW,
+    );
+
+    filtered.sort((a, b) =>
+      status === 'upcoming'
+        ? a.startsAt.getTime() - b.startsAt.getTime()
+        : b.startsAt.getTime() - a.startsAt.getTime(),
+    );
+
+    const total = filtered.length;
+    const offset = (page - 1) * limit;
+    const paginated = filtered.slice(offset, offset + limit);
+
+    const bookings = paginated.map(({ canceledAt, ...rest }) => rest);
+
+    return {
+      bookings,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    };
+  }
 
   async listRoomBookings(): Promise<BookingRow[]> {
-    return [...this.byId.values()];
+    return Array.from(this.byId.values()).map(
+      ({ roomName, roomFloor, canceledAt, ...rest }) => rest,
+    );
   }
 
-  seed(row: Omit<BookingRow, 'title' | 'roomId' | 'startsAt' | 'endsAt' | 'userName'> & { canceledAt: Date | null }): void {
-    this.byId.set(row.id, {
+  seed(
+    row: Partial<MyBookingRow> & { id: string; userId: string; canceledAt: Date | null },
+  ): void {
+    const fullRow: MyBookingRow & { canceledAt: Date | null } = {
       id: row.id,
-      roomId: 1,
-      title: 'Seed',
-      startsAt: new Date(),
-      endsAt: new Date(),
+      roomId: row.roomId ?? 1,
+      roomName: row.roomName ?? 'Переговорка 1',
+      roomFloor: row.roomFloor ?? 2,
+      title: row.title ?? 'Seed',
+      startsAt: row.startsAt ?? new Date(),
+      endsAt: row.endsAt ?? new Date(),
       userId: row.userId,
-      userName: 'Seed',
+      userName: row.userName ?? 'Seed',
       canceledAt: row.canceledAt,
-    });
+    };
+    this.byId.set(row.id, fullRow);
   }
 }
 
@@ -130,6 +181,181 @@ describe('BookingsController', () => {
   const cookie = `${SESSION_COOKIE_NAME}=${SESSION_ID}`;
   const postBooking = (body: object) => request(app.getHttpServer()).post('/api/bookings').set('Cookie', cookie).send(body);
   const deleteBooking = (id: string) => request(app.getHttpServer()).delete(`/api/bookings/${id}`).set('Cookie', cookie);
+  const getMyBookings = (query: string) =>
+    request(app.getHttpServer()).get(`/api/bookings/mine?${query}`).set('Cookie', cookie);
+
+  describe('GET /api/bookings/mine', () => {
+    it('upcoming status excludes past and cancelled bookings', async () => {
+      const upcomingId = randomUUID();
+      const pastId = randomUUID();
+      const cancelledId = randomUUID();
+
+      repository.seed({
+        id: upcomingId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-07T07:00:00Z'),
+        endsAt: new Date('2026-01-07T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      repository.seed({
+        id: pastId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-05T07:00:00Z'),
+        endsAt: new Date('2026-01-05T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      repository.seed({
+        id: cancelledId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-08T07:00:00Z'),
+        endsAt: new Date('2026-01-08T08:00:00Z'),
+        canceledAt: new Date('2026-01-05T12:00:00Z'),
+      });
+
+      const response = await getMyBookings('status=upcoming').expect(200);
+
+      expect(response.body.total).toBe(1);
+      expect(response.body.bookings).toHaveLength(1);
+      expect(response.body.bookings[0].id).toBe(upcomingId);
+    });
+
+    it('past status excludes upcoming and cancelled bookings', async () => {
+      const upcomingId = randomUUID();
+      const pastId = randomUUID();
+      const cancelledId = randomUUID();
+
+      repository.seed({
+        id: upcomingId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-07T07:00:00Z'),
+        endsAt: new Date('2026-01-07T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      repository.seed({
+        id: pastId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-05T07:00:00Z'),
+        endsAt: new Date('2026-01-05T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      repository.seed({
+        id: cancelledId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-04T07:00:00Z'),
+        endsAt: new Date('2026-01-04T08:00:00Z'),
+        canceledAt: new Date('2026-01-04T09:00:00Z'),
+      });
+
+      const response = await getMyBookings('status=past').expect(200);
+
+      expect(response.body.total).toBe(1);
+      expect(response.body.bookings).toHaveLength(1);
+      expect(response.body.bookings[0].id).toBe(pastId);
+    });
+
+    it('ordering is correct in both directions (asc for upcoming, desc for past)', async () => {
+      const upcomingEarlierId = randomUUID();
+      const upcomingLaterId = randomUUID();
+
+      repository.seed({
+        id: upcomingLaterId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-08T07:00:00Z'),
+        endsAt: new Date('2026-01-08T08:00:00Z'),
+        canceledAt: null,
+      });
+      repository.seed({
+        id: upcomingEarlierId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-07T07:00:00Z'),
+        endsAt: new Date('2026-01-07T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      const resUpcoming = await getMyBookings('status=upcoming').expect(200);
+      expect(resUpcoming.body.bookings.map((b: { id: string }) => b.id)).toEqual([
+        upcomingEarlierId,
+        upcomingLaterId,
+      ]);
+
+      const pastEarlierId = randomUUID();
+      const pastLaterId = randomUUID();
+
+      repository.seed({
+        id: pastEarlierId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-04T07:00:00Z'),
+        endsAt: new Date('2026-01-04T08:00:00Z'),
+        canceledAt: null,
+      });
+      repository.seed({
+        id: pastLaterId,
+        userId: USER.id,
+        startsAt: new Date('2026-01-05T07:00:00Z'),
+        endsAt: new Date('2026-01-05T08:00:00Z'),
+        canceledAt: null,
+      });
+
+      const resPast = await getMyBookings('status=past').expect(200);
+      expect(resPast.body.bookings.map((b: { id: string }) => b.id)).toEqual([
+        pastLaterId,
+        pastEarlierId,
+      ]);
+    });
+
+    it('pagination returns the right slice', async () => {
+      const id1 = randomUUID();
+      const id2 = randomUUID();
+      const id3 = randomUUID();
+
+      repository.seed({ id: id1, userId: USER.id, startsAt: new Date('2026-01-07T07:00:00Z'), endsAt: new Date('2026-01-07T08:00:00Z'), canceledAt: null });
+      repository.seed({ id: id2, userId: USER.id, startsAt: new Date('2026-01-08T07:00:00Z'), endsAt: new Date('2026-01-08T08:00:00Z'), canceledAt: null });
+      repository.seed({ id: id3, userId: USER.id, startsAt: new Date('2026-01-09T07:00:00Z'), endsAt: new Date('2026-01-09T08:00:00Z'), canceledAt: null });
+
+      const page1 = await getMyBookings('status=upcoming&page=1&limit=2').expect(200);
+      expect(page1.body).toMatchObject({
+        total: 3,
+        page: 1,
+        limit: 2,
+        hasMore: true,
+      });
+      expect(page1.body.bookings.map((b: { id: string }) => b.id)).toEqual([id1, id2]);
+
+      const page2 = await getMyBookings('status=upcoming&page=2&limit=2').expect(200);
+      expect(page2.body).toMatchObject({
+        total: 3,
+        page: 2,
+        limit: 2,
+        hasMore: false,
+      });
+      expect(page2.body.bookings.map((b: { id: string }) => b.id)).toEqual([id3]);
+    });
+
+    it("one user cannot see another user's rows", async () => {
+      const ownId = randomUUID();
+      const othersId = randomUUID();
+
+      repository.seed({ id: ownId, userId: USER.id, startsAt: new Date('2026-01-07T07:00:00Z'), endsAt: new Date('2026-01-07T08:00:00Z'), canceledAt: null });
+      repository.seed({ id: othersId, userId: OTHER_USER_ID, startsAt: new Date('2026-01-07T07:00:00Z'), endsAt: new Date('2026-01-07T08:00:00Z'), canceledAt: null });
+
+      const response = await getMyBookings('status=upcoming').expect(200);
+      expect(response.body.total).toBe(1);
+      expect(response.body.bookings[0].id).toBe(ownId);
+    });
+
+    it('requires a session', async () => {
+      await request(app.getHttpServer()).get('/api/bookings/mine?status=upcoming').expect(401);
+    });
+
+    it('rejects missing or invalid status with 400', async () => {
+      await getMyBookings('status=invalid').expect(400);
+      await getMyBookings('').expect(400);
+    });
+  });
 
   describe('POST /api/bookings', () => {
     it('creates the booking and returns 201 with { booking }', async () => {
