@@ -14,11 +14,18 @@ function createRepository(session: SessionRow | null): MockedRepository {
   return {
     createUser: jest.fn(),
     findUserByEmail: jest.fn(),
+    findUserById: jest.fn(),
     createSession: jest.fn(),
     findSessionWithUser: jest.fn(async () => session),
     deleteSession: jest.fn(async () => undefined),
+    createVerificationToken: jest.fn(),
+    findVerificationToken: jest.fn(),
+    deleteVerificationToken: jest.fn(),
+    deleteVerificationTokensForUser: jest.fn(),
+    markEmailVerified: jest.fn(),
   };
 }
+
 
 function createContext(cookies: Record<string, string>): { context: ExecutionContext; request: AuthenticatedRequest } {
   const request = { cookies } as unknown as AuthenticatedRequest;

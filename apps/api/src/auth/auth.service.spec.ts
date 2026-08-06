@@ -2,9 +2,20 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { QueryFailedError } from '../db/driver-errors';
 import { AuthService } from './auth.service';
-import { EmailAlreadyTakenError } from './auth.repository';
-import type { AuthRepository, NewSession, NewUser, SessionRow, UserWithPasswordRow } from './auth.repository';
+import {
+  AuthRepository,
+  EmailAlreadyTakenError,
+  NewSession,
+  NewUser,
+  SessionRow,
+  UserWithPasswordRow,
+  VerificationTokenRow,
+} from './auth.repository';
+
+
 import { SESSION_TTL_MS } from './session-cookie';
+
+
 
 // bcrypt's exports are non-configurable, so jest.spyOn cannot wrap them; this keeps
 // the real implementations and only makes `compare` observable.
@@ -28,9 +39,20 @@ function createRepository(): MockedRepository {
       emailVerifiedAt: null,
     })),
     findUserByEmail: jest.fn(async () => null),
+    findUserById: jest.fn(async () => ({
+      id: USER_ID,
+      name: 'Іван',
+      email: 'ivan@x.com',
+      emailVerifiedAt: null,
+    })),
     createSession: jest.fn(async () => undefined),
     findSessionWithUser: jest.fn(async () => null),
     deleteSession: jest.fn(async () => undefined),
+    createVerificationToken: jest.fn(async () => undefined),
+    findVerificationToken: jest.fn(async () => null),
+    deleteVerificationToken: jest.fn(async () => undefined),
+    deleteVerificationTokensForUser: jest.fn(async () => undefined),
+    markEmailVerified: jest.fn(async () => undefined),
   };
 }
 
@@ -80,6 +102,22 @@ describe('AuthService', () => {
       expect(session.expiresAt.getTime() - Date.now()).toBeLessThanOrEqual(SESSION_TTL_MS);
     });
 
+    it('creates a token and logs a URL containing no bcrypt hash and no email', async () => {
+      const repository = createRepository();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+      await createService(repository).register({ name: 'Іван', email: 'ivan@x.com', password: PASSWORD });
+
+      expect(repository.createVerificationToken).toHaveBeenCalledTimes(1);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      const logLine = consoleSpy.mock.calls[0][0] as string;
+      expect(logLine).toMatch(/^http:\/\/localhost:3000\/api\/auth\/verify\/[A-Za-z0-9_-]+$/);
+      expect(logLine).not.toContain('ivan@x.com');
+      expect(logLine).not.toContain('$2b$');
+
+      consoleSpy.mockRestore();
+    });
+
     it('turns a taken email into the 409 contract body without opening a session', async () => {
       const repository = createRepository();
       repository.createUser.mockRejectedValue(new EmailAlreadyTakenError());
@@ -102,6 +140,61 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(QueryFailedError);
     });
   });
+
+  describe('verifyEmail', () => {
+    it('verifies valid token and deletes the token', async () => {
+      const repository = createRepository();
+      repository.findVerificationToken.mockResolvedValue({
+        token: 'valid-token',
+        userId: USER_ID,
+        expiresAt: new Date(Date.now() + 100_000),
+      });
+
+      await createService(repository).verifyEmail('valid-token');
+
+      expect(repository.markEmailVerified).toHaveBeenCalledWith(USER_ID);
+      expect(repository.deleteVerificationToken).toHaveBeenCalledWith('valid-token');
+    });
+
+    it('returns 400 for unknown, expired, or second use of token', async () => {
+      const repository = createRepository();
+      // Unknown token
+      repository.findVerificationToken.mockResolvedValue(null);
+      await expect(createService(repository).verifyEmail('unknown-token')).rejects.toMatchObject({
+        response: { statusCode: 400, message: 'Токен підтвердження недійсний або прострочений' },
+      });
+
+      // Expired token
+      repository.findVerificationToken.mockResolvedValue({
+        token: 'expired-token',
+        userId: USER_ID,
+        expiresAt: new Date(Date.now() - 100),
+      });
+      await expect(createService(repository).verifyEmail('expired-token')).rejects.toMatchObject({
+        response: { statusCode: 400, message: 'Токен підтвердження недійсний або прострочений' },
+      });
+    });
+
+    it('treats already-verified user as success without error', async () => {
+      const repository = createRepository();
+      repository.findVerificationToken.mockResolvedValue({
+        token: 'valid-token',
+        userId: USER_ID,
+        expiresAt: new Date(Date.now() + 100_000),
+      });
+      repository.findUserById.mockResolvedValue({
+        id: USER_ID,
+        name: 'Іван',
+        email: 'ivan@x.com',
+        emailVerifiedAt: new Date(),
+      });
+
+      await expect(createService(repository).verifyEmail('valid-token')).resolves.toBeUndefined();
+      expect(repository.markEmailVerified).not.toHaveBeenCalled();
+      expect(repository.deleteVerificationToken).toHaveBeenCalledWith('valid-token');
+    });
+  });
+
 
   describe('login', () => {
     function withUser(repository: MockedRepository): void {

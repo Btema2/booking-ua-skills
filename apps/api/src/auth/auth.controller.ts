@@ -1,8 +1,10 @@
 import { LoginSchema, type PublicUser, RegisterSchema } from '@booking/core';
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { parseOrThrow } from '../common/parse-or-throw';
+import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { CurrentUser } from './current-user.decorator';
 import {
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
@@ -49,5 +51,20 @@ export class AuthController {
     const sessionId = readSessionCookie(request);
     const user = sessionId ? await this.authService.resolveSessionOrNull(sessionId) : null;
     return { user };
+  }
+
+  @Post('verify/resend')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@CurrentUser() user: PublicUser): Promise<{ success: boolean }> {
+    await this.authService.resendVerificationEmail(user.id);
+    return { success: true };
+  }
+
+  @Post('verify/:token')
+  @HttpCode(HttpStatus.OK)
+  async verify(@Param('token') token: string): Promise<{ success: boolean }> {
+    await this.authService.verifyEmail(token);
+    return { success: true };
   }
 }

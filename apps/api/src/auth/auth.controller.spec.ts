@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AuthController } from './auth.controller';
+import { AuthGuard } from './auth.guard';
 import {
   AuthRepository,
   EmailAlreadyTakenError,
@@ -28,6 +29,7 @@ class InMemoryAuthRepository extends AuthRepository {
   private readonly usersByEmail = new Map<string, UserWithPasswordRow>();
   private readonly usersById = new Map<string, UserWithPasswordRow>();
   private readonly sessions = new Map<string, NewSession>();
+  private readonly verificationTokens = new Map<string, { token: string; userId: string; expiresAt: Date }>();
 
   async createUser(user: NewUser): Promise<UserRow> {
     if (this.usersByEmail.has(user.email)) {
@@ -41,6 +43,11 @@ class InMemoryAuthRepository extends AuthRepository {
 
   async findUserByEmail(email: string): Promise<UserWithPasswordRow | null> {
     return this.usersByEmail.get(email) ?? null;
+  }
+
+  async findUserById(userId: string): Promise<UserRow | null> {
+    const user = this.usersById.get(userId);
+    return user ? withoutPassword(user) : null;
   }
 
   async createSession(session: NewSession): Promise<void> {
@@ -57,6 +64,34 @@ class InMemoryAuthRepository extends AuthRepository {
     this.sessions.delete(sessionId);
   }
 
+  async createVerificationToken(token: string, userId: string, expiresAt: Date): Promise<void> {
+    this.verificationTokens.set(token, { token, userId, expiresAt });
+  }
+
+  async findVerificationToken(token: string): Promise<{ token: string; userId: string; expiresAt: Date } | null> {
+    return this.verificationTokens.get(token) ?? null;
+  }
+
+  async deleteVerificationToken(token: string): Promise<void> {
+    this.verificationTokens.delete(token);
+  }
+
+  async deleteVerificationTokensForUser(userId: string): Promise<void> {
+    for (const [token, item] of this.verificationTokens.entries()) {
+      if (item.userId === userId) {
+        this.verificationTokens.delete(token);
+      }
+    }
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    const user = this.usersById.get(userId);
+    if (user) {
+      user.emailVerifiedAt = new Date();
+      this.usersByEmail.set(user.email, user);
+    }
+  }
+
   storedEmails(): string[] {
     return [...this.usersByEmail.keys()];
   }
@@ -66,13 +101,25 @@ class InMemoryAuthRepository extends AuthRepository {
       this.sessions.set(id, { ...session, expiresAt: new Date(Date.now() - 1) });
     }
   }
+
+  getVerificationTokens(): Array<{ token: string; userId: string; expiresAt: Date }> {
+    return Array.from(this.verificationTokens.values());
+  }
+
+  expireVerificationTokens(): void {
+    for (const [token, item] of this.verificationTokens) {
+      this.verificationTokens.set(token, { ...item, expiresAt: new Date(Date.now() - 1) });
+    }
+  }
 }
+
 
 async function createApp(repository: AuthRepository, cookieSecure: boolean): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
     controllers: [AuthController],
     providers: [
       AuthService,
+      AuthGuard,
       { provide: AuthRepository, useValue: repository },
       { provide: SESSION_COOKIE_SECURE, useValue: cookieSecure },
     ],
@@ -267,6 +314,73 @@ describe('AuthController', () => {
       const response = await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookie).expect(200);
 
       expect(response.body).toEqual({ user: null });
+    });
+  });
+
+  describe('POST /api/auth/verify/:token', () => {
+    it('returns 200 with { success: true } for a valid token', async () => {
+      await request(app.getHttpServer()).post('/api/auth/register').send(VALID_BODY).expect(201);
+      const tokens = repository.getVerificationTokens();
+      expect(tokens).toHaveLength(1);
+      const validToken = tokens[0].token;
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/auth/verify/${validToken}`)
+        .expect(200);
+
+      expect(response.body).toEqual({ success: true });
+    });
+
+    it('returns 400 for invalid or expired token', async () => {
+      // Invalid token
+      const invalidResponse = await request(app.getHttpServer())
+        .post('/api/auth/verify/invalid-token-123')
+        .expect(400);
+
+      expect(invalidResponse.body).toEqual({
+        statusCode: 400,
+        message: 'Токен підтвердження недійсний або прострочений',
+      });
+
+      // Expired token
+      await request(app.getHttpServer()).post('/api/auth/register').send(VALID_BODY).expect(201);
+      const tokens = repository.getVerificationTokens();
+      const token = tokens[0].token;
+      repository.expireVerificationTokens();
+
+      const expiredResponse = await request(app.getHttpServer())
+        .post(`/api/auth/verify/${token}`)
+        .expect(400);
+
+      expect(expiredResponse.body).toEqual({
+        statusCode: 400,
+        message: 'Токен підтвердження недійсний або прострочений',
+      });
+    });
+  });
+
+  describe('POST /api/auth/verify/resend', () => {
+    it('returns 200 with { success: true } and generates a new token when authenticated', async () => {
+      const registered = await request(app.getHttpServer()).post('/api/auth/register').send(VALID_BODY).expect(201);
+      const cookie = cookiePair(registered);
+      const initialToken = repository.getVerificationTokens()[0].token;
+
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/verify/resend')
+        .set('Cookie', cookie)
+        .expect(200);
+
+      expect(response.body).toEqual({ success: true });
+
+      const currentTokens = repository.getVerificationTokens();
+      expect(currentTokens).toHaveLength(1);
+      expect(currentTokens[0].token).not.toBe(initialToken);
+    });
+
+    it('returns 401 when unauthenticated', async () => {
+      await request(app.getHttpServer())
+        .post('/api/auth/verify/resend')
+        .expect(401);
     });
   });
 
