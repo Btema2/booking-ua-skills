@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { jsonResponse, resetHarness, renderApp } from '../../test/harness';
 import * as timeUtils from '../rooms/timeUtils';
+import { MyBookingsSkeleton } from './MyBookingsPage';
 
 const IVAN = {
   id: '1f2ac0d6-8d61-4a2f-9f5c-7b2b6c0a1d31',
@@ -295,5 +296,11 @@ describe('MyBookingsPage', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/rooms');
     });
+  });
+
+  it('renders MyBookingsSkeleton status region with row card placeholders', () => {
+    render(<MyBookingsSkeleton />);
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByLabelText('Завантаження')).toBeTruthy();
   });
 });

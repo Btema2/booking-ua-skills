@@ -27,19 +27,22 @@ export interface PaginatedMyBookings {
   hasMore: boolean;
 }
 
-function MyBookingsSkeleton() {
+export function MyBookingsSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label="Завантаження" className="flex flex-col gap-s3">
-      {[1, 2].map((i) => (
+      {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="flex items-center gap-s4 rounded-[var(--radius-md,16px)] border border-outline-variant bg-surface-container-lowest p-s4 max-[760px]:flex-col max-[760px]:items-start max-[760px]:p-[14px_16px]"
+          className="flex items-center justify-between gap-s4 rounded-[var(--radius-md,16px)] border border-outline-variant bg-surface-container-lowest p-s4 max-[760px]:flex-col max-[760px]:items-start max-[760px]:p-[14px_16px]"
         >
-          <span className="skeleton-bar size-[40px] shrink-0 rounded-[var(--radius-sm,8px)]" />
-          <div className="flex flex-1 flex-col gap-s2 w-full">
-            <span className="skeleton-bar h-4 w-48 rounded-full" />
-            <span className="skeleton-bar h-3 w-32 rounded-full" />
+          <div className="flex items-center gap-s4 w-full">
+            <span className="skeleton-bar block size-[40px] shrink-0 rounded-[var(--radius-sm,8px)]" />
+            <div className="flex flex-1 flex-col gap-s2">
+              <span className="skeleton-bar block h-4 w-44 rounded-md" />
+              <span className="skeleton-bar block h-3 w-32 rounded-sm" />
+            </div>
           </div>
+          <span className="skeleton-bar block h-7 w-32 shrink-0 rounded-full max-[760px]:w-full" />
         </div>
       ))}
     </div>
