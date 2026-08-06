@@ -248,4 +248,39 @@ describe('Phase 7 Mobile Tests', () => {
     // Signal 3: owner's first name ("Василь")
     expect(screen.getByText(/Василь ·/)).toBeTruthy();
   });
+
+  it('6. Navigating with week and day params selects the exact day on mobile without breaking desktop full week view', () => {
+    // On mobile (< 761px), day=2026-08-05 (Wednesday) is active tab
+    setViewportWidth(390);
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/rooms/1?week=2026-08-03&day=2026-08-05']}>
+          <Routes>
+            <Route path="/rooms/:roomId" element={<RoomSchedulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[2].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+
+    // On desktop (>= 761px), full week grid is rendered
+    setViewportWidth(761);
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/rooms/1?week=2026-08-03&day=2026-08-05']}>
+          <Routes>
+            <Route path="/rooms/:roomId" element={<RoomSchedulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByTestId('mobile-day-pager')).toBeNull();
+    expect(screen.getByTestId('week-grid-gutter')).toBeTruthy();
+  });
 });

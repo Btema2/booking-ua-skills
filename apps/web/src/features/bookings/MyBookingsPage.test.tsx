@@ -174,7 +174,7 @@ describe('MyBookingsPage', () => {
     expect(row1).toBeTruthy();
     fireEvent.click(row1!);
 
-    expect(window.location.pathname + window.location.search).toBe('/rooms/1?week=2020-12-28');
+    expect(window.location.pathname + window.location.search).toBe('/rooms/1?week=2020-12-28&day=2020-12-30');
 
     resetHarness();
 
@@ -199,7 +199,7 @@ describe('MyBookingsPage', () => {
     expect(row2).toBeTruthy();
     fireEvent.click(row2!);
 
-    expect(window.location.pathname + window.location.search).toBe('/rooms/2?week=2026-08-31');
+    expect(window.location.pathname + window.location.search).toBe('/rooms/2?week=2026-08-31&day=2026-09-01');
   });
 
   it('4. Cancel on upcoming row opens Phase 5 dialog, removes row optimistically, and rejected DELETE restores row', async () => {

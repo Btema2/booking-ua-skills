@@ -238,12 +238,19 @@ export function MyBookingsPage() {
             const dateStr = startsAtDt.setLocale('uk').toFormat('d MMMM yyyy');
             const timeRangeStr = `${startsAtDt.toFormat('HH:mm')}–${endsAtDt.toFormat('HH:mm')}`;
 
+            const startsAtKyiv =
+              typeof row.startsAt === 'string'
+                ? DateTime.fromISO(row.startsAt, { zone: 'utc' }).setZone('Europe/Kyiv')
+                : DateTime.fromJSDate(row.startsAt, { zone: 'utc' }).setZone('Europe/Kyiv');
+            const dayIso = startsAtKyiv.toISODate();
+            const weekParam = getKyivWeekParamForInstant(row.startsAt);
+
             return (
               <div
                 key={row.id}
                 onClick={() =>
                   navigate(
-                    `/rooms/${row.roomId}?week=${getKyivWeekParamForInstant(row.startsAt)}`,
+                    `/rooms/${row.roomId}?week=${weekParam}&day=${dayIso}`,
                   )
                 }
                 className={[
