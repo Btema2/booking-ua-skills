@@ -82,6 +82,7 @@ describe('Week Grid Requirements (Phase 4a)', () => {
       endsAt: monday.set({ hour: 10, minute: 0 }).toJSDate(),
       userId: 'user-123',
       userName: 'Іван Петренко',
+      seriesId: null,
     };
 
     const otherBooking = {
@@ -92,6 +93,7 @@ describe('Week Grid Requirements (Phase 4a)', () => {
       endsAt: monday.set({ hour: 12, minute: 0 }).toJSDate(),
       userId: 'user-456',
       userName: 'Тарас Шевченко',
+      seriesId: null,
     };
 
     const { rerender } = render(

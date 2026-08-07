@@ -11,6 +11,7 @@ const mockBooking: Booking = {
   endsAt: new Date('2026-08-05T11:00:00.000Z'),
   userId: 'u1111111-1111-1111-1111-111111111111',
   userName: 'Тарас Шевченко',
+  seriesId: null,
 };
 
 describe('BookingBlock', () => {

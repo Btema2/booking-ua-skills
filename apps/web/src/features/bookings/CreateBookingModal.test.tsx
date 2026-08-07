@@ -152,6 +152,7 @@ describe('CreateBookingModal', () => {
         endsAt: new Date('2026-08-10T08:30:00.000Z'),
         userId: 'user-2',
         userName: 'Олексій',
+        seriesId: null,
       },
     ];
 

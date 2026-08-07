@@ -24,6 +24,7 @@ const mockOwnBooking: Booking = {
   endsAt: new Date('2026-08-05T11:00:00.000Z'),
   userId: 'u1111111-1111-1111-1111-111111111111',
   userName: 'Оксана Сергієнко',
+  seriesId: null,
 };
 
 const mockOtherBooking: Booking = {
@@ -34,6 +35,7 @@ const mockOtherBooking: Booking = {
   endsAt: new Date('2026-08-05T13:00:00.000Z'),
   userId: 'u9999999-9999-9999-9999-999999999999',
   userName: 'Василь Петренко',
+  seriesId: null,
 };
 
 function setViewportWidth(width: number) {

@@ -39,6 +39,17 @@ export const sessions = pgTable('sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Deliberately thin: the recurrence rule itself is not stored, only a
+// grouping handle so "cancel the whole series" can be expressed. Individual
+// occurrences are ordinary rows in `bookings`, tagged via `series_id`.
+export const bookingSeries = pgTable('booking_series', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Overlap prevention lives in the hand-written `bookings_no_overlap` EXCLUDE
 // constraint (drizzle's schema DSL cannot express GiST exclusion constraints),
 // applied by a follow-up custom migration, not by anything below.
@@ -57,6 +68,11 @@ export const bookings = pgTable(
     endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
     // Soft delete: cancelling frees the room's slot without losing history.
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    // Null for a one-off booking. Set for every occurrence created as part of
+    // a weekly series; `on delete set null` so deleting a series row (never
+    // done by application code, but kept for schema-level safety) orphans
+    // occurrences rather than cascading their deletion.
+    seriesId: uuid('series_id').references(() => bookingSeries.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

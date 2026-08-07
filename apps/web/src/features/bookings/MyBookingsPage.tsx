@@ -344,6 +344,12 @@ export function MyBookingsPage() {
                     : bookingToCancel.endsAt,
                 userId: bookingToCancel.userId,
                 userName: bookingToCancel.userName,
+                // MyBookingRow doesn't carry series membership (listMyBookings
+                // is out of scope for Phase 8.4 — see the design doc), so the
+                // My Bookings page's cancel dialog never offers a
+                // whole-series choice; only the room week-grid does, where
+                // the booking comes from listRoomBookings and does carry it.
+                seriesId: null,
               }
             : null
         }
