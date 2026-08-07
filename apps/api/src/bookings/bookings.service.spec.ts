@@ -1,14 +1,14 @@
-import type { CreateBookingInput, CreateBookingSeriesInput, PublicUser } from '@booking/core';
-import { weeklyOccurrences } from '@booking/core';
+import { CreateBookingInput, CreateBookingSeriesInput, PublicUser, weeklyOccurrences } from '@booking/core';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotificationsRepository } from '../notifications/notifications.repository';
 import { BookingsService } from './bookings.service';
 import {
   BookingsRepository,
   RoomNotFoundError,
   SlotTakenError,
-  type BookingRow,
-  type NewBooking,
-  type OwnedBookingRow,
+  BookingRow,
+  NewBooking,
+  OwnedBookingRow,
 } from './bookings.repository';
 
 const USER: PublicUser = {
@@ -53,6 +53,7 @@ const VALID_ROW: BookingRow = {
 };
 
 type MockedRepository = { [K in keyof BookingsRepository]: jest.Mock };
+type MockedNotificationsRepository = { [K in keyof NotificationsRepository]: jest.Mock };
 
 function createRepository(): MockedRepository {
   return {
@@ -60,6 +61,7 @@ function createRepository(): MockedRepository {
     findBookingById: jest.fn(async () => null),
     cancelBooking: jest.fn(async () => undefined),
     listRoomBookings: jest.fn(async () => []),
+    findOverlappingBookings: jest.fn(async () => []),
     listMyBookings: jest.fn(async () => ({ bookings: [], total: 0, page: 1, limit: 10, hasMore: false })),
     createBookingSeries: jest.fn(async () => ({ id: 'series-1' })),
     deleteBookingSeries: jest.fn(async () => undefined),
@@ -68,8 +70,25 @@ function createRepository(): MockedRepository {
   };
 }
 
-function createService(repository: MockedRepository): BookingsService {
-  return new BookingsService(repository as unknown as BookingsRepository);
+function createNotificationsRepository(): MockedNotificationsRepository {
+  return {
+    findEndingSoonCandidates: jest.fn(async () => []),
+    isNextSlotTaken: jest.fn(async () => false),
+    createIfNotExists: jest.fn(async () => true),
+    createConflictNotification: jest.fn(async () => true),
+    listForUser: jest.fn(async () => []),
+    markRead: jest.fn(async () => true),
+  };
+}
+
+function createService(
+  repository: MockedRepository,
+  notificationsRepo: MockedNotificationsRepository = createNotificationsRepository(),
+): BookingsService {
+  return new BookingsService(
+    repository as unknown as BookingsRepository,
+    notificationsRepo as unknown as NotificationsRepository,
+  );
 }
 
 function bodyOf(error: unknown): unknown {
@@ -344,9 +363,10 @@ describe('BookingsService', () => {
       expect(repository.createBooking).not.toHaveBeenCalled();
     });
 
-    it('creates every occurrence, tags each with the new series id, and returns them all in `created`', async () => {
+    it('creates every occurrence, tags each with the new series id, and returns them all in `created` when 0 overlaps exist', async () => {
       useFixedNow();
       const repository = createRepository();
+      repository.findOverlappingBookings.mockResolvedValue([]);
       repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
       const occurrences = weeklyOccurrences(VALID_SERIES_INPUT.startsAt, VALID_SERIES_INPUT.endsAt, VALID_SERIES_INPUT.occurrenceCount);
       let call = 0;
@@ -365,7 +385,6 @@ describe('BookingsService', () => {
 
       expect(result.series).toEqual({ id: 'series-1' });
       expect(result.created).toHaveLength(3);
-      expect(result.skipped).toEqual([]);
       expect(repository.createBooking).toHaveBeenCalledTimes(3);
       for (const [i, occurrence] of occurrences.entries()) {
         const [insert] = repository.createBooking.mock.calls[i] as [NewBooking];
@@ -373,43 +392,83 @@ describe('BookingsService', () => {
       }
     });
 
-    it('collects a SlotTakenError per conflicting occurrence into `skipped`, and still creates the rest', async () => {
+    it('creates conflict notification and throws ConflictException with formatted message and conflictsCount=1 on single overlap', async () => {
       useFixedNow();
       const repository = createRepository();
-      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
-      let call = 0;
-      repository.createBooking.mockImplementation(async (input: NewBooking) => {
-        call += 1;
-        if (call === 2) throw new SlotTakenError();
-        return {
-          id: `booking-${call}`,
-          roomId: input.roomId,
-          title: input.title,
-          startsAt: input.startsAt,
-          endsAt: input.endsAt,
-          userId: input.userId,
-          userName: input.userName,
-          seriesId: input.seriesId ?? null,
-        };
-      });
+      const notificationsRepo = createNotificationsRepository();
+      repository.findOverlappingBookings.mockResolvedValue([
+        {
+          id: 'b1',
+          roomId: VALID_SERIES_INPUT.roomId,
+          title: 'Існуюча зустріч',
+          startsAt: new Date('2026-01-07T07:00:00Z'), // 09:00 Kyiv
+          endsAt: new Date('2026-01-07T08:00:00Z'),   // 10:00 Kyiv
+          userId: 'other-user',
+          userName: 'Petro',
+          seriesId: null,
+        },
+      ]);
 
-      const result = await createService(repository).createSeries(USER, VALID_SERIES_INPUT);
+      const error = await createService(repository, notificationsRepo)
+        .createSeries(USER, VALID_SERIES_INPUT)
+        .catch((caught: unknown) => caught);
 
-      expect(result.created).toHaveLength(2);
-      expect(result.skipped).toHaveLength(1);
-      expect(repository.deleteBookingSeries).not.toHaveBeenCalled();
-    });
-
-    it('deletes the series row and returns 409 when every occurrence conflicts', async () => {
-      useFixedNow();
-      const repository = createRepository();
-      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
-      repository.createBooking.mockRejectedValue(new SlotTakenError());
-
-      const error = await createService(repository).createSeries(USER, VALID_SERIES_INPUT).catch((caught: unknown) => caught);
+      const expectedMessage =
+        'Не вдалося створити повторювані зустрічі: конфліктує з зустріччю «Існуюча зустріч» (07.01.2026 09:00–10:00). Будь ласка виберіть інший час';
 
       expect(error).toBeInstanceOf(ConflictException);
-      expect(repository.deleteBookingSeries).toHaveBeenCalledWith('series-1');
+      expect(bodyOf(error)).toEqual({
+        statusCode: 409,
+        message: expectedMessage,
+        conflictsCount: 1,
+      });
+      expect(notificationsRepo.createConflictNotification).toHaveBeenCalledWith(USER.id, expectedMessage);
+      expect(repository.createBookingSeries).not.toHaveBeenCalled();
+      expect(repository.createBooking).not.toHaveBeenCalled();
+    });
+
+    it('creates conflict notification and throws ConflictException with count and conflictsCount=2 on multiple overlaps', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      const notificationsRepo = createNotificationsRepository();
+      repository.findOverlappingBookings.mockResolvedValue([
+        {
+          id: 'b1',
+          roomId: VALID_SERIES_INPUT.roomId,
+          title: 'Зустріч 1',
+          startsAt: new Date('2026-01-07T07:00:00Z'),
+          endsAt: new Date('2026-01-07T08:00:00Z'),
+          userId: 'other-user-1',
+          userName: 'Petro',
+          seriesId: null,
+        },
+        {
+          id: 'b2',
+          roomId: VALID_SERIES_INPUT.roomId,
+          title: 'Зустріч 2',
+          startsAt: new Date('2026-01-14T07:00:00Z'),
+          endsAt: new Date('2026-01-14T08:00:00Z'),
+          userId: 'other-user-2',
+          userName: 'Ivan',
+          seriesId: null,
+        },
+      ]);
+
+      const error = await createService(repository, notificationsRepo)
+        .createSeries(USER, VALID_SERIES_INPUT)
+        .catch((caught: unknown) => caught);
+
+      const expectedMessage = 'Не вдалося створити повторювані зустрічі: конфліктує з 2 зустрічами';
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect(bodyOf(error)).toEqual({
+        statusCode: 409,
+        message: expectedMessage,
+        conflictsCount: 2,
+      });
+      expect(notificationsRepo.createConflictNotification).toHaveBeenCalledWith(USER.id, expectedMessage);
+      expect(repository.createBookingSeries).not.toHaveBeenCalled();
+      expect(repository.createBooking).not.toHaveBeenCalled();
     });
 
     it('turns a RoomNotFoundError from the first insert into a 400 field error under roomId', async () => {

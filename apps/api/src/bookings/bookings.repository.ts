@@ -101,6 +101,7 @@ export abstract class BookingsRepository {
   abstract cancelBooking(id: string): Promise<void>;
   /** Live bookings only, intersecting `[from, to)`, ordered by `startsAt`. */
   abstract listRoomBookings(roomId: number, from: Date, to: Date): Promise<BookingRow[]>;
+  abstract findOverlappingBookings(roomId: number, occurrences: { startsAt: Date; endsAt: Date }[]): Promise<BookingRow[]>;
   abstract listMyBookings(
     userId: string,
     status: 'upcoming' | 'past',

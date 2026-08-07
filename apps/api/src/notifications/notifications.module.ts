@@ -17,5 +17,6 @@ import { NotificationsService } from './notifications.service';
     NotificationScheduler,
     { provide: NotificationsRepository, useClass: DrizzleNotificationsRepository },
   ],
+  exports: [NotificationsRepository],
 })
 export class NotificationsModule {}

@@ -5,6 +5,7 @@ import request from 'supertest';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { SESSION_COOKIE_NAME } from '../auth/session-cookie';
+import { NotificationsRepository } from '../notifications/notifications.repository';
 import { BookingsRepository, type BookingRow } from './bookings.repository';
 import { BookingsService } from './bookings.service';
 import { RoomBookingsController } from './room-bookings.controller';
@@ -60,6 +61,10 @@ class RecordingBookingsRepository extends BookingsRepository {
     throw new Error('not implemented in test');
   }
 
+  async findOverlappingBookings(): Promise<BookingRow[]> {
+    return [];
+  }
+
   async findBookingOwnershipAndSeries(): Promise<any> {
     throw new Error('not implemented in test');
   }
@@ -78,6 +83,10 @@ const authServiceDouble = {
   },
 };
 
+const notificationsRepositoryDouble = {
+  createConflictNotification: jest.fn(async () => true),
+};
+
 describe('GET /api/rooms/:roomId/bookings', () => {
   let app: INestApplication;
   let repository: RecordingBookingsRepository;
@@ -90,6 +99,7 @@ describe('GET /api/rooms/:roomId/bookings', () => {
         AuthGuard,
         BookingsService,
         { provide: BookingsRepository, useValue: repository },
+        { provide: NotificationsRepository, useValue: notificationsRepositoryDouble },
         { provide: AuthService, useValue: authServiceDouble },
       ],
     }).compile();

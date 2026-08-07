@@ -6,6 +6,7 @@ import request from 'supertest';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { SESSION_COOKIE_NAME } from '../auth/session-cookie';
+import { NotificationsRepository } from '../notifications/notifications.repository';
 import { BookingsController } from './bookings.controller';
 import {
   BookingsRepository,
@@ -125,10 +126,22 @@ class RecordingBookingsRepository extends BookingsRepository {
     };
   }
 
-  async listRoomBookings(): Promise<BookingRow[]> {
-    return Array.from(this.byId.values()).map(
-      ({ roomName, roomFloor, canceledAt, ...rest }) => rest,
-    );
+  async listRoomBookings(roomId: number, from: Date, to: Date): Promise<BookingRow[]> {
+    return Array.from(this.byId.values())
+      .filter((b) => b.roomId === roomId && b.canceledAt === null && b.startsAt < to && b.endsAt > from)
+      .map(({ roomName, roomFloor, canceledAt, ...bookingRow }) => bookingRow);
+  }
+
+  async findOverlappingBookings(roomId: number, occurrences: { startsAt: Date; endsAt: Date }[]): Promise<BookingRow[]> {
+    const live = Array.from(this.byId.values()).filter((b) => b.roomId === roomId && b.canceledAt === null);
+    const conflicts: BookingRow[] = [];
+    for (const b of live) {
+      if (occurrences.some((occ) => b.startsAt < occ.endsAt && b.endsAt > occ.startsAt)) {
+        const { roomName, roomFloor, canceledAt, ...bookingRow } = b;
+        conflicts.push(bookingRow);
+      }
+    }
+    return conflicts;
   }
 
   seed(
@@ -197,6 +210,7 @@ describe('BookingsController', () => {
         AuthGuard,
         BookingsService,
         { provide: BookingsRepository, useValue: repository },
+        { provide: NotificationsRepository, useValue: { createConflictNotification: jest.fn(async () => true) } },
         { provide: AuthService, useValue: authServiceDouble },
       ],
     }).compile();
@@ -484,12 +498,11 @@ describe('BookingsController', () => {
   });
 
   describe('POST /api/bookings/series', () => {
-    it('creates every occurrence and returns 201 with { series, created, skipped }', async () => {
+    it('creates every occurrence and returns 201 with { series, created }', async () => {
       const response = await postSeries(VALID_SERIES_BODY).expect(201);
 
       expect(response.body.series.id).toEqual(expect.any(String));
       expect(response.body.created).toHaveLength(3);
-      expect(response.body.skipped).toEqual([]);
       for (const created of response.body.created) {
         expect(created.roomId).toBe(VALID_SERIES_BODY.roomId);
       }

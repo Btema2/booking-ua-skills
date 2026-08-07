@@ -1,8 +1,9 @@
 import type { CreateBookingInput, CreateBookingSeriesInput, MyBookingsQuery, PublicUser } from '@booking/core';
 import { validateBookingTimes, weeklyOccurrences } from '@booking/core';
 import { Injectable } from '@nestjs/common';
+import { DateTime } from 'luxon';
+import { NotificationsRepository } from '../notifications/notifications.repository';
 import {
-  allOccurrencesTaken,
   bookingAlreadyCanceled,
   bookingNotFound,
   bookingTimeRejection,
@@ -10,6 +11,7 @@ import {
   emailVerificationRequired,
   notPartOfSeries,
   roomNotFound,
+  seriesConflict,
   slotTaken,
 } from './bookings.errors';
 import {
@@ -24,12 +26,14 @@ import {
 export interface CreateSeriesResult {
   series: { id: string };
   created: BookingRow[];
-  skipped: { startsAt: Date; endsAt: Date }[];
 }
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly bookingsRepo: BookingsRepository) {}
+  constructor(
+    private readonly bookingsRepo: BookingsRepository,
+    private readonly notificationsRepo: NotificationsRepository,
+  ) {}
 
   async create(user: PublicUser, input: CreateBookingInput): Promise<BookingRow> {
     if (!user.emailVerifiedAt) {
@@ -108,9 +112,28 @@ export class BookingsService {
       }
     }
 
+    const overlappingBookings = await this.bookingsRepo.findOverlappingBookings(input.roomId, occurrences);
+
+    if (overlappingBookings.length > 0) {
+      let errorMessage: string;
+      if (overlappingBookings.length === 1) {
+        const booking = overlappingBookings[0];
+        const startKyiv = DateTime.fromJSDate(booking.startsAt, { zone: 'utc' }).setZone('Europe/Kyiv');
+        const endKyiv = DateTime.fromJSDate(booking.endsAt, { zone: 'utc' }).setZone('Europe/Kyiv');
+        const formattedDate = startKyiv.toFormat('dd.MM.yyyy');
+        const formattedTimeRange = `${startKyiv.toFormat('HH:mm')}–${endKyiv.toFormat('HH:mm')}`;
+        const details = `«${booking.title}» (${formattedDate} ${formattedTimeRange})`;
+        errorMessage = `Не вдалося створити повторювані зустрічі: конфліктує з зустріччю ${details}. Будь ласка виберіть інший час`;
+      } else {
+        errorMessage = `Не вдалося створити повторювані зустрічі: конфліктує з ${overlappingBookings.length} зустрічами`;
+      }
+
+      await this.notificationsRepo.createConflictNotification(user.id, errorMessage);
+      throw seriesConflict(errorMessage, overlappingBookings.length);
+    }
+
     const series = await this.bookingsRepo.createBookingSeries(user.id);
     const created: BookingRow[] = [];
-    const skipped: { startsAt: Date; endsAt: Date }[] = [];
 
     for (const occurrence of occurrences) {
       try {
@@ -126,8 +149,8 @@ export class BookingsService {
         created.push(row);
       } catch (error) {
         if (error instanceof SlotTakenError) {
-          skipped.push(occurrence);
-          continue;
+          await this.bookingsRepo.deleteBookingSeries(series.id);
+          throw seriesConflict('Не вдалося створити повторювані зустрічі: слот вже зайнятий', 1);
         }
         if (error instanceof RoomNotFoundError) {
           await this.bookingsRepo.deleteBookingSeries(series.id);
@@ -137,14 +160,7 @@ export class BookingsService {
       }
     }
 
-    if (created.length === 0) {
-      // No occurrence made it in — leave no orphan booking_series row
-      // behind for a psql inspection to find.
-      await this.bookingsRepo.deleteBookingSeries(series.id);
-      throw allOccurrencesTaken();
-    }
-
-    return { series: { id: series.id }, created, skipped };
+    return { series: { id: series.id }, created };
   }
 
   async cancelSeries(user: PublicUser, bookingId: string): Promise<void> {

@@ -505,7 +505,6 @@ describe('API Integration Tests (Bookings & Auth)', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.created).toHaveLength(3);
-      expect(res.body.skipped).toEqual([]);
 
       const { db } = getConnection();
       const rows = await db.select().from(bookings).where(eq(bookings.seriesId, res.body.series.id));
@@ -516,7 +515,7 @@ describe('API Integration Tests (Bookings & Auth)', () => {
       expect(seriesRow).toBeDefined();
     });
 
-    it('20. Creating a series that partially conflicts creates only the non-conflicting occurrences and reports the rest as skipped', async () => {
+    it('20. Creating a series with 1 conflict returns 409, creates 0 bookings in DB, and creates a notification', async () => {
       const { cookie: existingCookie } = await createUser('Series Blocker', 'series-blocker@example.com');
       const { cookie: seriesCookie } = await createUser('Series Partial', 'series-partial@example.com');
 
@@ -544,16 +543,27 @@ describe('API Integration Tests (Bookings & Auth)', () => {
           occurrenceCount: 3,
         });
 
-      expect(res.status).toBe(201);
-      expect(res.body.created).toHaveLength(2);
-      expect(res.body.skipped).toHaveLength(1);
+      expect(res.status).toBe(409);
+      expect(res.body.conflictsCount).toBe(1);
+      expect(res.body.message).toContain('конфліктує з зустріччю «Pre-existing block»');
 
       const { db } = getConnection();
-      const rows = await db.select().from(bookings).where(eq(bookings.seriesId, res.body.series.id));
-      expect(rows.length).toBe(2);
+      const allSeriesRows = await db.select().from(bookingSeries);
+      expect(allSeriesRows.length).toBe(0);
+
+      const notificationsRes = await request(app.getHttpServer())
+        .get('/api/notifications')
+        .set('Cookie', seriesCookie);
+
+      expect(notificationsRes.status).toBe(200);
+      expect(notificationsRes.body.notifications).toHaveLength(1);
+      expect(notificationsRes.body.notifications[0]).toMatchObject({
+        kind: 'series_conflict',
+        message: res.body.message,
+      });
     });
 
-    it('21. Creating a series where every occurrence conflicts returns 409 and leaves no booking_series row behind', async () => {
+    it('21. Creating a series where multiple occurrences conflict returns 409, leaves no booking_series row, and creates a notification', async () => {
       const { cookie: existingCookie } = await createUser('Series AllBlock Owner', 'series-allblock-owner@example.com');
       const { cookie: seriesCookie } = await createUser('Series AllBlock', 'series-allblock@example.com');
 
@@ -582,9 +592,22 @@ describe('API Integration Tests (Bookings & Auth)', () => {
         });
 
       expect(res.status).toBe(409);
+      expect(res.body.conflictsCount).toBe(2);
+      expect(res.body.message).toBe('Не вдалося створити повторювані зустрічі: конфліктує з 2 зустрічами');
 
       const afterCount = (await getConnection().db.select().from(bookingSeries)).length;
       expect(afterCount).toBe(beforeCount);
+
+      const notificationsRes = await request(app.getHttpServer())
+        .get('/api/notifications')
+        .set('Cookie', seriesCookie);
+
+      expect(notificationsRes.status).toBe(200);
+      expect(notificationsRes.body.notifications).toHaveLength(1);
+      expect(notificationsRes.body.notifications[0]).toMatchObject({
+        kind: 'series_conflict',
+        message: res.body.message,
+      });
     });
 
     it('22. Cancelling one occurrence of a series leaves the rest of the series live', async () => {

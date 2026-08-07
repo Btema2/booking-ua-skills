@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, gt, isNull, lt, lte, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { getConnection } from '../db/connection';
 import { EXCLUSION_VIOLATION, FOREIGN_KEY_VIOLATION, QueryFailedError, runQuery } from '../db/driver-errors';
 import { bookings, bookingSeries, rooms, users } from '../db/schema';
@@ -98,6 +98,30 @@ export class DrizzleBookingsRepository extends BookingsRepository {
             // Half-open [from, to) intersection, mirroring the EXCLUDE constraint.
             lt(bookings.startsAt, to),
             gt(bookings.endsAt, from),
+          ),
+        )
+        .orderBy(asc(bookings.startsAt)),
+    );
+  }
+
+  async findOverlappingBookings(roomId: number, occurrences: { startsAt: Date; endsAt: Date }[]): Promise<BookingRow[]> {
+    if (occurrences.length === 0) {
+      return [];
+    }
+    const overlapConditions = occurrences.map((occ) =>
+      and(lt(bookings.startsAt, occ.endsAt), gt(bookings.endsAt, occ.startsAt)),
+    );
+
+    return runQuery('findOverlappingBookings', () =>
+      this.db
+        .select({ ...BOOKING_COLUMNS, userName: users.name })
+        .from(bookings)
+        .innerJoin(users, eq(users.id, bookings.userId))
+        .where(
+          and(
+            eq(bookings.roomId, roomId),
+            isNull(bookings.canceledAt),
+            or(...overlapConditions),
           ),
         )
         .orderBy(asc(bookings.startsAt)),
