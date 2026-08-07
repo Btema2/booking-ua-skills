@@ -48,6 +48,16 @@ export class DrizzleNotificationsRepository extends NotificationsRepository {
     return inserted.length > 0;
   }
 
+  async createConflictNotification(userId: string, message: string): Promise<boolean> {
+    const inserted = await runQuery('createConflictNotification', () =>
+      this.db
+        .insert(notifications)
+        .values({ userId, kind: 'series_conflict', message })
+        .returning({ id: notifications.id }),
+    );
+    return inserted.length > 0;
+  }
+
   async listForUser(userId: string, limit: number): Promise<NotificationRow[]> {
     return runQuery('listNotificationsForUser', () =>
       this.db
@@ -55,6 +65,7 @@ export class DrizzleNotificationsRepository extends NotificationsRepository {
           id: notifications.id,
           bookingId: notifications.bookingId,
           kind: notifications.kind,
+          message: notifications.message,
           createdAt: notifications.createdAt,
           readAt: notifications.readAt,
           bookingTitle: bookings.title,
@@ -63,8 +74,8 @@ export class DrizzleNotificationsRepository extends NotificationsRepository {
           roomName: rooms.name,
         })
         .from(notifications)
-        .innerJoin(bookings, eq(bookings.id, notifications.bookingId))
-        .innerJoin(rooms, eq(rooms.id, bookings.roomId))
+        .leftJoin(bookings, eq(bookings.id, notifications.bookingId))
+        .leftJoin(rooms, eq(rooms.id, bookings.roomId))
         .where(eq(notifications.userId, userId))
         // Unread first, then most recent — matches the "Unread + recent" contract in SPEC §4.
         .orderBy(desc(sql`${notifications.readAt} is null`), desc(notifications.createdAt))

@@ -17,14 +17,15 @@ export interface NewNotification {
 /** Enough to render the notification text without persisting it. */
 export interface NotificationRow {
   id: string;
-  bookingId: string;
+  bookingId: string | null;
   kind: string;
+  message: string | null;
   createdAt: Date;
   readAt: Date | null;
-  bookingTitle: string;
-  bookingEndsAt: Date;
-  roomId: number;
-  roomName: string;
+  bookingTitle: string | null;
+  bookingEndsAt: Date | null;
+  roomId: number | null;
+  roomName: string | null;
 }
 
 /**
@@ -38,6 +39,8 @@ export abstract class NotificationsRepository {
   abstract isNextSlotTaken(roomId: number, instant: Date): Promise<boolean>;
   /** Idempotent at the database level via the `notifications_once` unique index. Returns whether it inserted a new row. */
   abstract createIfNotExists(input: NewNotification): Promise<boolean>;
+  /** Inserts a notification for recurring series creation with skipped dates due to conflict. */
+  abstract createConflictNotification(userId: string, message: string): Promise<boolean>;
   /** Most recent notifications for a user, unread first. */
   abstract listForUser(userId: string, limit: number): Promise<NotificationRow[]>;
   /** Returns false if no notification with that id belongs to the user. */

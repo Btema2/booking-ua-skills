@@ -1,5 +1,5 @@
 import { and, gt, isNull, lte } from 'drizzle-orm';
-import { bookings, notifications } from '../db/schema';
+import { bookings, notifications, rooms } from '../db/schema';
 import { DrizzleNotificationsRepository } from './drizzle-notifications.repository';
 
 // Same rationale as drizzle-rooms.repository.spec.ts: the service spec's mocked
@@ -100,4 +100,58 @@ describe('DrizzleNotificationsRepository', () => {
       await expect(new DrizzleNotificationsRepository().markRead('n1', 'u1')).resolves.toBe(false);
     });
   });
+
+  describe('createConflictNotification', () => {
+    it('inserts a series_conflict notification with message and null bookingId', async () => {
+      const returning = jest.fn(() => Promise.resolve([{ id: 'n1' }]));
+      const values = jest.fn(() => ({ returning }));
+      getConnection.mockReturnValue({ db: { insert: () => ({ values }) } });
+
+      const repo = new DrizzleNotificationsRepository();
+      const result = await repo.createConflictNotification('u1', 'Some dates were skipped due to conflicts');
+
+      expect(result).toBe(true);
+      expect(values).toHaveBeenCalledWith({
+        userId: 'u1',
+        kind: 'series_conflict',
+        message: 'Some dates were skipped due to conflicts',
+      });
+    });
+  });
+
+  describe('listForUser', () => {
+    it('uses leftJoin for bookings and rooms and selects message', async () => {
+      const limit = jest.fn(() => Promise.resolve([]));
+      const orderBy = jest.fn(() => ({ limit }));
+      const where = jest.fn(() => ({ orderBy }));
+      const leftJoin2 = jest.fn(() => ({ where }));
+      const leftJoin1 = jest.fn(() => ({ leftJoin: leftJoin2 }));
+      const from = jest.fn(() => ({ leftJoin: leftJoin1 }));
+      const select = jest.fn(() => ({ from }));
+
+      getConnection.mockReturnValue({ db: { select } });
+
+      const repo = new DrizzleNotificationsRepository();
+      await repo.listForUser('u1', 10);
+
+      expect(select).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: notifications.id,
+          bookingId: notifications.bookingId,
+          kind: notifications.kind,
+          message: notifications.message,
+          createdAt: notifications.createdAt,
+          readAt: notifications.readAt,
+          bookingTitle: bookings.title,
+          bookingEndsAt: bookings.endsAt,
+          roomId: rooms.id,
+          roomName: rooms.name,
+        }),
+      );
+      expect(from).toHaveBeenCalledWith(notifications);
+      expect(leftJoin1).toHaveBeenCalledWith(bookings, expect.anything());
+      expect(leftJoin2).toHaveBeenCalledWith(rooms, expect.anything());
+    });
+  });
 });
+

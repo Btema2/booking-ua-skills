@@ -22,6 +22,7 @@ function createRepository(): MockedRepository {
     findEndingSoonCandidates: jest.fn(async () => [] as EndingSoonCandidate[]),
     isNextSlotTaken: jest.fn(async () => false),
     createIfNotExists: jest.fn(async () => true),
+    createConflictNotification: jest.fn(async () => true),
     listForUser: jest.fn(async () => []),
     markRead: jest.fn(async () => true),
   };

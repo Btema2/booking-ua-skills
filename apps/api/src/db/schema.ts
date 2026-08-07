@@ -93,9 +93,9 @@ export const notifications = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     bookingId: uuid('booking_id')
-      .notNull()
       .references(() => bookings.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull(),
+    message: text('message'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     readAt: timestamp('read_at', { withTimezone: true }),
   },
