@@ -543,5 +543,12 @@ describe('BookingsController', () => {
     it('returns 404 for an unknown id with scope=series', async () => {
       await deleteBookingScoped(randomUUID(), 'series').expect(404);
     });
+
+    it('rejects an unrecognized scope value with a 400', async () => {
+      const created = await postBooking(VALID_BODY).expect(201);
+      const { id } = (created.body as { booking: BookingRow }).booking;
+
+      await deleteBookingScoped(id, 'bogus').expect(400);
+    });
   });
 });
