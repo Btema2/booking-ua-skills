@@ -1,4 +1,5 @@
 import type { Booking } from '@booking/core';
+import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 import { FormError } from '../../components/FormError';
 
@@ -7,7 +8,7 @@ export interface CancelBookingDialogProps {
   booking: Booking | null;
   roomName: string;
   viewerZone: string;
-  onConfirm: () => Promise<void>;
+  onConfirm: (scope?: 'series') => Promise<void>;
   onClose: () => void;
   isDeleting: boolean;
   error: string | null;
@@ -23,6 +24,12 @@ export function CancelBookingDialog({
   isDeleting,
   error,
 }: CancelBookingDialogProps) {
+  const [scope, setScope] = useState<'this' | 'series'>('this');
+
+  useEffect(() => {
+    setScope('this');
+  }, [booking?.id]);
+
   if (!isOpen || !booking) {
     return null;
   }
@@ -73,6 +80,32 @@ export function CancelBookingDialog({
             <span className="font-semibold text-on-surface-variant">Дата й час: </span>
             <span>{dateStr} ({timeRangeStr})</span>
           </div>
+          {booking.seriesId && (
+            <div className="flex flex-col gap-s2 pt-s2 border-t border-outline-variant">
+              <label className="flex items-center gap-s2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="cancel-scope"
+                  value="this"
+                  checked={scope === 'this'}
+                  onChange={() => setScope('this')}
+                  aria-label="це бронювання"
+                />
+                <span>Тільки це бронювання</span>
+              </label>
+              <label className="flex items-center gap-s2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="cancel-scope"
+                  value="series"
+                  checked={scope === 'series'}
+                  onChange={() => setScope('series')}
+                  aria-label="уся серія"
+                />
+                <span>Уся серія</span>
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-s3 mt-s2">
@@ -86,7 +119,7 @@ export function CancelBookingDialog({
           </button>
           <button
             type="button"
-            onClick={() => void onConfirm()}
+            onClick={() => void onConfirm(booking.seriesId && scope === 'series' ? 'series' : undefined)}
             disabled={isDeleting}
             className="h-[40px] px-s4 rounded-full bg-error text-on-error hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-label-large font-semibold flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error"
           >
