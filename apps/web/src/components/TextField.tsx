@@ -14,11 +14,10 @@ export function TextField({ label, type, autoComplete, error, registration }: Te
   // unique id — and deriving it guarantees the label always points at the input.
   const id = registration.name;
   const errorId = `${id}-error`;
-  const borderClass = error ? 'border-red-500' : 'border-slate-300';
 
   return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-label-medium font-bold text-[var(--color-on-surface-variant)]">
         {label}
       </label>
       <input
@@ -27,14 +26,24 @@ export function TextField({ label, type, autoComplete, error, registration }: Te
         autoComplete={autoComplete}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`mt-1 block w-full rounded-md border ${borderClass} bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-300`}
+        placeholder={
+          type === 'email'
+            ? "ім'я@example.com"
+            : type === 'password'
+            ? 'Мінімум 8 символів'
+            : ''
+        }
+        className={`w-full rounded-full bg-[var(--auth-well-bg)] border border-[rgba(120,78,40,.22)] shadow-[var(--auth-well-shadow)] min-h-[var(--auth-well-min-h)] px-5 py-3 text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)] text-body-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/40 focus:border-[var(--color-primary)] transition-all ${
+          error ? 'border-2 border-[var(--color-error)] text-[var(--color-error)]' : ''
+        }`}
         {...registration}
       />
       {error ? (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-red-700">
+        <p id={errorId} role="alert" className="mt-1 text-body-small text-[var(--color-error)] font-medium px-3">
           {error}
         </p>
       ) : null}
     </div>
   );
 }
+

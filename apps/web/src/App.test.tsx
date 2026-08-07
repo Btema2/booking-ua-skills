@@ -27,13 +27,13 @@ describe('routing', () => {
     renderApp('/login', { 'GET /api/auth/me': pendingSession });
 
     expect(await screen.findByRole('status', { name: 'Завантаження' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Вхід' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Забронюйте кімнату' })).toBeNull();
   });
 
   it('sends an unauthenticated visitor from / to the login screen', async () => {
     renderApp('/', { 'GET /api/auth/me': anonymousSession });
 
-    expect(await screen.findByRole('heading', { name: 'Вхід' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Забронюйте кімнату' })).toBeTruthy();
     expect(window.location.pathname).toBe('/login');
   });
 
@@ -54,7 +54,7 @@ describe('routing', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Переговорні' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Вхід' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Забронюйте кімнату' })).toBeNull();
   });
 });
 
@@ -104,7 +104,7 @@ describe('session lifecycle', () => {
       'GET /api/rooms': emptyRoomList,
     });
 
-    fireEvent.change(await screen.findByLabelText('Email'), {
+    fireEvent.change(await screen.findByLabelText(/Email|Електронна пошта/i), {
       target: { value: 'ivan@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'super-secret' } });
@@ -123,7 +123,8 @@ describe('session lifecycle', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Вийти' }));
 
-    expect(await screen.findByRole('heading', { name: 'Вхід' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Забронюйте кімнату' })).toBeTruthy();
     expect(window.location.pathname).toBe('/login');
   });
 });
+
