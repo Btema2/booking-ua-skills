@@ -639,6 +639,7 @@ describe('API Integration Tests (Bookings & Auth)', () => {
 
       const { db } = getConnection();
       const rows = await db.select().from(bookings).where(eq(bookings.seriesId, seriesId));
+      expect(rows.length).toBe(3);
       expect(rows.every((r) => r.canceledAt !== null)).toBe(true);
 
       const [seriesRow] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId));
@@ -671,6 +672,7 @@ describe('API Integration Tests (Bookings & Auth)', () => {
 
       const { db } = getConnection();
       const rows = await db.select().from(bookings).where(eq(bookings.seriesId, seriesId));
+      expect(rows.length).toBe(2);
       expect(rows.every((r) => r.canceledAt === null)).toBe(true);
     });
   });
