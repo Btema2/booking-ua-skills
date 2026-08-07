@@ -140,4 +140,41 @@ describe('CreateBookingModal', () => {
     expect(titleInput.value).toBe('Моя подія');
     expect(screen.getByText('Серверна помилка')).toBeTruthy();
   });
+
+  it('shows error and blocks submit when selected time range overlaps an existing booking', async () => {
+    const handleSubmit = vi.fn();
+    const existingBookings = [
+      {
+        id: 'b-existing-1',
+        roomId: 1,
+        title: 'Існуюче бронювання',
+        startsAt: new Date('2026-08-10T07:30:00.000Z'),
+        endsAt: new Date('2026-08-10T08:30:00.000Z'),
+        userId: 'user-2',
+        userName: 'Олексій',
+      },
+    ];
+
+    render(
+      <CreateBookingModal
+        {...defaultProps}
+        roomId={1}
+        existingBookings={existingBookings}
+        initialStartISO="2026-08-10T07:00:00.000Z" // 10:00 Kyiv
+        initialEndISO="2026-08-10T08:00:00.000Z" // 11:00 Kyiv — overlaps 10:30-11:30
+        onSubmit={handleSubmit}
+      />,
+    );
+
+    const titleInput = screen.getByLabelText('Назва події');
+    fireEvent.change(titleInput, { target: { value: 'Тестова подія' } });
+
+    const submitBtn = screen.getByRole('button', { name: 'Забронювати' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Слот зайнятий')).toBeTruthy();
+      expect(handleSubmit).not.toHaveBeenCalled();
+    });
+  });
 });

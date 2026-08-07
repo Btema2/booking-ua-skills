@@ -58,7 +58,7 @@ export function BookingBlock({
   onFocus,
   onClick,
 }: BookingBlockProps) {
-  const gridRowStyle = { gridRow: `${startRow} / span ${span}` };
+  const gridRowStyle = { gridRow: `${startRow} / span ${span}`, gridColumn: '1 / -1' };
 
   const cellPadClass = isMobile ? 'py-[3px] px-[8px]' : 'py-[1.5px] px-[3px]';
   const blockRadiusClass = isMobile ? 'rounded-[10px]' : 'rounded-[9px]';

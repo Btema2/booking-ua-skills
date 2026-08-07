@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DateTime } from 'luxon';
-import { CreateBookingSchema } from '@booking/core';
+import { CreateBookingSchema, overlaps, BOOKING_REJECTION_MESSAGES, type Booking } from '@booking/core';
 
 export interface CreateBookingModalProps {
   isOpen: boolean;
@@ -16,6 +16,8 @@ export interface CreateBookingModalProps {
   isSubmitting: boolean;
   serverFormError: string | null;
   serverFieldErrors: { title?: string; time?: string };
+  roomId?: number;
+  existingBookings?: Booking[];
 }
 
 interface FormValues {
@@ -84,6 +86,8 @@ export function CreateBookingModal({
   isSubmitting,
   serverFormError,
   serverFieldErrors,
+  roomId,
+  existingBookings,
 }: CreateBookingModalProps) {
   const {
     register,
@@ -111,6 +115,29 @@ export function CreateBookingModal({
     }
   }, [isOpen, initialStartISO, initialEndISO, reset]);
 
+  const watchStartsAt = watch('startsAt');
+  const watchEndsAt = watch('endsAt');
+
+  const isOverlapping = useMemo(() => {
+    if (!existingBookings || existingBookings.length === 0 || !roomId || !watchStartsAt || !watchEndsAt) {
+      return false;
+    }
+    const startsAt = new Date(watchStartsAt);
+    const endsAt = new Date(watchEndsAt);
+    if (isNaN(startsAt.getTime()) || isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+      return false;
+    }
+
+    return existingBookings.some(
+      (b) =>
+        !('canceledAt' in b && (b as { canceledAt?: unknown }).canceledAt) &&
+        overlaps(
+          { roomId, startsAt, endsAt },
+          { roomId: b.roomId, startsAt: new Date(b.startsAt), endsAt: new Date(b.endsAt) },
+        ),
+    );
+  }, [existingBookings, roomId, watchStartsAt, watchEndsAt]);
+
   if (!isOpen) return null;
 
   const { startOptions, endOptions } = getTimeOptions(initialStartISO, viewerZone);
@@ -120,7 +147,10 @@ export function CreateBookingModal({
 
   const titleError = serverFieldErrors?.title || errors.title?.message;
   const timeError =
-    serverFieldErrors?.time || errors.startsAt?.message || errors.endsAt?.message;
+    serverFieldErrors?.time ||
+    errors.startsAt?.message ||
+    errors.endsAt?.message ||
+    (isOverlapping ? BOOKING_REJECTION_MESSAGES.slotTaken : undefined);
 
   const handleStartChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStart = e.target.value;
@@ -130,6 +160,7 @@ export function CreateBookingModal({
   };
 
   const handleFormSubmit = handleSubmit(async (data) => {
+    if (isOverlapping) return;
     const startsAtStr =
       typeof data.startsAt === 'string'
         ? data.startsAt

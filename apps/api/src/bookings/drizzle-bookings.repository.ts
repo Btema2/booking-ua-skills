@@ -31,6 +31,11 @@ export class DrizzleBookingsRepository extends BookingsRepository {
   }
 
   async createBooking(input: NewBooking): Promise<BookingRow> {
+    const conflicting = await this.listRoomBookings(input.roomId, input.startsAt, input.endsAt);
+    if (conflicting.length > 0) {
+      throw new SlotTakenError();
+    }
+
     try {
       const [created] = await runQuery('createBooking', () =>
         this.db

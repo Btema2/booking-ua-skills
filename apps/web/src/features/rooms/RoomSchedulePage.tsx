@@ -437,6 +437,8 @@ export function RoomSchedulePage() {
         isSubmitting={createMutation.isPending}
         serverFormError={serverFormError}
         serverFieldErrors={serverFieldErrors}
+        roomId={Number(validRoomId)}
+        existingBookings={bookings}
       />
 
       <CancelBookingDialog
