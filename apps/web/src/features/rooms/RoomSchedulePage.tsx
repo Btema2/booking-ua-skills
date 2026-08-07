@@ -184,11 +184,11 @@ export function RoomSchedulePage() {
     }
   };
 
-  const handleCancelConfirm = async () => {
+  const handleCancelConfirm = async (scope?: 'series') => {
     if (!bookingToCancel) return;
     setCancelError(null);
     try {
-      await cancelMutation.mutateAsync(bookingToCancel.id);
+      await cancelMutation.mutateAsync({ bookingId: bookingToCancel.id, scope });
       setIsCancelOpen(false);
       setBookingToCancel(null);
     } catch (err) {
