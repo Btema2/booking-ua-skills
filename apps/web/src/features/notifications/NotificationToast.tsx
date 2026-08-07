@@ -76,17 +76,17 @@ export function NotificationToast() {
       aria-live="polite"
       className={[
         'fixed z-[var(--z-toast)] top-[70px] right-4 flex w-[min(380px,calc(100vw-32px))] items-start gap-[13px]',
-        'rounded-[var(--radius-lg,20px)] p-[15px_18px] bg-[var(--glass-toast)]',
-        'supports-[backdrop-filter]:backdrop-blur-[var(--blur-toast)] supports-[backdrop-filter]:backdrop-saturate-[1.2]',
-        'shadow-[var(--shadow-el-3)] border',
-        isConflict ? 'border-error/40' : 'border-outline-variant',
+        'rounded-[var(--radius-lg,20px)] p-[15px_18px] shadow-[var(--shadow-el-3)] border',
+        isConflict
+          ? 'bg-error-container text-on-error-container border-error/30'
+          : 'bg-[var(--glass-toast)] text-on-surface border-outline-variant supports-[backdrop-filter]:backdrop-blur-[var(--blur-toast)] supports-[backdrop-filter]:backdrop-saturate-[1.2]',
         '[animation:notif-toast-in_var(--dur-toast)_var(--ease-spring)_both]',
       ].join(' ')}
     >
       <span
         aria-hidden="true"
         className={`grid size-[30px] shrink-0 place-items-center rounded-full ${
-          isConflict ? 'bg-error-container text-on-error-container' : 'bg-primary-container text-on-primary-container'
+          isConflict ? 'bg-error text-on-error' : 'bg-primary-container text-on-primary-container'
         }`}
       >
         {isConflict ? (
@@ -100,14 +100,20 @@ export function NotificationToast() {
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="m-0 mb-[2px] text-[14.5px] font-semibold leading-[1.35] text-on-surface">{toast.title}</p>
-        <p className="m-0 text-body-small text-on-surface-variant">{toast.body}</p>
+        <p className={`m-0 mb-[2px] text-[14.5px] font-semibold leading-[1.35] ${isConflict ? 'text-on-error-container' : 'text-on-surface'}`}>
+          {toast.title}
+        </p>
+        <p className={`m-0 text-body-small ${isConflict ? 'text-on-error-container/85' : 'text-on-surface-variant'}`}>
+          {toast.body}
+        </p>
       </div>
       <button
         type="button"
         onClick={dismiss}
         aria-label="Закрити"
-        className="grid size-[28px] shrink-0 place-items-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-highest"
+        className={`grid size-[28px] shrink-0 place-items-center rounded-full transition-colors ${
+          isConflict ? 'text-on-error-container hover:bg-error/20' : 'text-on-surface-variant hover:bg-surface-container-highest'
+        }`}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 6 6 18M6 6l12 12" />
