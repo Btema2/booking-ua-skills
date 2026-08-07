@@ -88,7 +88,6 @@ export function RoomSchedulePage() {
   });
   const [serverFormError, setServerFormError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<{ title?: string; time?: string }>({});
-  const [seriesPartialMessage, setSeriesPartialMessage] = useState<string | null>(null);
 
   // Modal states for Cancel Booking
   const [isCancelOpen, setIsCancelOpen] = useState(false);
@@ -157,7 +156,6 @@ export function RoomSchedulePage() {
     setSelectedSlotInfo({ initialStartISO, initialEndISO, dateDisplayStr });
     setServerFormError(null);
     setServerFieldErrors({});
-    setSeriesPartialMessage(null);
     setIsCreateOpen(true);
   };
 
@@ -183,16 +181,13 @@ export function RoomSchedulePage() {
     setServerFormError(null);
     setServerFieldErrors({});
     try {
-      const result = await createSeriesMutation.mutateAsync({
+      await createSeriesMutation.mutateAsync({
         roomId: Number(validRoomId),
         title: values.title,
         startsAt: values.startsAt,
         endsAt: values.endsAt,
         occurrenceCount: values.occurrenceCount,
       });
-      if (result.skipped.length > 0) {
-        setSeriesPartialMessage(`Створено ${result.created.length} з ${result.created.length + result.skipped.length} повторень — решта збігається з наявними бронюваннями.`);
-      }
       setIsCreateOpen(false);
     } catch (err) {
       const mapped = mapApiErrorToForm(err);
@@ -377,23 +372,6 @@ export function RoomSchedulePage() {
       </header>
 
       <EmailVerificationBanner highlighted={isBannerHighlighted} />
-
-      {seriesPartialMessage && (
-        <div
-          role="alert"
-          className="flex items-center justify-between gap-s3 p-3 rounded-[var(--radius-md)] bg-error-container text-on-error-container text-[14px]"
-        >
-          <span>{seriesPartialMessage}</span>
-          <button
-            type="button"
-            onClick={() => setSeriesPartialMessage(null)}
-            aria-label="Закрити"
-            className="shrink-0 text-on-error-container hover:opacity-70 text-[16px] font-bold px-1 cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* Legend & Timezone Banner Container */}
       <div className="flex flex-wrap items-center gap-s4 p-s3 px-s4 rounded-[var(--radius-md)] bg-surface-container-low border border-outline-variant text-body-small text-on-surface-variant">

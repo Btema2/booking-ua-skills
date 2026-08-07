@@ -6,7 +6,6 @@ import { useCurrentUser } from '../auth/useCurrentUser';
 export interface BookingSeriesResult {
   series: { id: string };
   created: Booking[];
-  skipped: { startsAt: string; endsAt: string }[];
 }
 
 export function useCreateBooking(roomId: string, weekStartISO: string) {
@@ -78,6 +77,9 @@ export function useCreateBookingSeries(roomId: string, _weekStartISO: string) {
       // No optimistic update here — a series can partially conflict, so the
       // only correct post-state is whatever the server actually persisted.
       void queryClient.invalidateQueries({ queryKey: roomBookingsPrefix });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

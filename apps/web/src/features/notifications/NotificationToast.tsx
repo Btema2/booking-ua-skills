@@ -12,9 +12,18 @@ interface ToastContent {
 }
 
 function toContent(n: NotificationDTO, notifyBeforeMinutes: number, viewerZone: string): ToastContent {
+  if (n.kind === 'series_conflict') {
+    return {
+      title: 'Не вдалося створити повторювані зустрічі',
+      body: n.message ?? '',
+    };
+  }
+  const titleStr = n.bookingTitle ?? '';
+  const roomStr = n.roomName ?? '';
+  const endsAtStr = n.bookingEndsAt ? formatInstantTime(n.bookingEndsAt, viewerZone) : '';
   return {
     title: `Зустріч завершується за ${notifyBeforeMinutes} хв`,
-    body: `«${n.bookingTitle}» · ${n.roomName} · до ${formatInstantTime(n.bookingEndsAt, viewerZone)}`,
+    body: `«${titleStr}» · ${roomStr} · до ${endsAtStr}`,
   };
 }
 

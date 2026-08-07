@@ -3,12 +3,12 @@ import { ApiError } from '../../lib/api';
 import { mapApiErrorToForm } from './errorMapping';
 
 describe('mapApiErrorToForm', () => {
-  it('maps 409 status to formError "Слот зайнятий"', () => {
-    const apiErr = new ApiError(409, 'Conflict');
+  it('maps 409 status to ApiError message or fallback "Слот зайнятий"', () => {
+    const apiErr = new ApiError(409, 'Жодне з повторюваних бронювань не було створено через конфлікт слотів.');
     const result = mapApiErrorToForm(apiErr);
     expect(result).toEqual({
       fieldErrors: {},
-      formError: 'Слот зайнятий',
+      formError: 'Жодне з повторюваних бронювань не було створено через конфлікт слотів.',
     });
 
     const rawErr = { statusCode: 409 };

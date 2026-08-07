@@ -12,7 +12,10 @@ function endingSoonTitle(notifyBeforeMinutes: number): string {
 }
 
 function endingSoonBody(n: NotificationDTO, viewerZone: string): string {
-  return `«${n.bookingTitle}» · ${n.roomName} · до ${formatInstantTime(n.bookingEndsAt, viewerZone)}`;
+  const title = n.bookingTitle ?? '';
+  const room = n.roomName ?? '';
+  const endsAt = n.bookingEndsAt ? formatInstantTime(n.bookingEndsAt, viewerZone) : '';
+  return `«${title}» · ${room} · до ${endsAt}`;
 }
 
 /** Bell icon + trigger + dropdown menu — markup and copy per DESIGN-NOTES §4/§8. */
@@ -108,28 +111,50 @@ export function NotificationBell() {
             </div>
           ) : (
             <ul className="m-0 list-none p-0">
-              {notifications.map((n) => (
-                <li
-                  key={n.id}
-                  className="mb-s1 flex gap-[11px] rounded-[var(--radius-md,14px)] bg-surface-container-lowest p-[11px_10px] last:mb-0"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="grid size-[30px] shrink-0 place-items-center rounded-full bg-primary-container text-on-primary-container"
+              {notifications.map((n) => {
+                const isSeriesConflict = n.kind === 'series_conflict';
+                const title = isSeriesConflict
+                  ? 'Не вдалося створити повторювані зустрічі'
+                  : endingSoonTitle(notifyBeforeMinutes);
+                const body = isSeriesConflict
+                  ? (n.message ?? '')
+                  : endingSoonBody(n, viewerZone);
+
+                return (
+                  <li
+                    key={n.id}
+                    className="mb-s1 flex gap-[11px] rounded-[var(--radius-md,14px)] bg-surface-container-lowest p-[11px_10px] last:mb-0"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="M12 7v5l3 2" />
-                    </svg>
-                  </span>
-                  <div className="min-w-0">
-                    <p className="m-0 mb-[2px] text-body-medium font-semibold text-on-surface">
-                      {endingSoonTitle(notifyBeforeMinutes)}
-                    </p>
-                    <p className="m-0 text-body-small text-on-surface-variant">{endingSoonBody(n, viewerZone)}</p>
-                  </div>
-                </li>
-              ))}
+                    <span
+                      aria-hidden="true"
+                      className={`grid size-[30px] shrink-0 place-items-center rounded-full ${
+                        isSeriesConflict
+                          ? 'bg-error-container text-on-error-container'
+                          : 'bg-primary-container text-on-primary-container'
+                      }`}
+                    >
+                      {isSeriesConflict ? (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                      ) : (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 2" />
+                        </svg>
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="m-0 mb-[2px] text-body-medium font-semibold text-on-surface">
+                        {title}
+                      </p>
+                      <p className="m-0 text-body-small text-on-surface-variant">{body}</p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

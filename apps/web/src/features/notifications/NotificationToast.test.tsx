@@ -11,6 +11,7 @@ const ENDING_SOON: NotificationDTO = {
   id: 'n1',
   bookingId: 'b1',
   kind: 'ending_soon',
+  message: null,
   createdAt: '2026-08-06T10:50:00.000Z',
   readAt: null,
   bookingTitle: 'Синк по Q4',

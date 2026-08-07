@@ -180,6 +180,16 @@ describe('CreateBookingModal', () => {
     expect(submitBtn.className).toContain('opacity-72');
   });
 
+  it('renders submitting state with locked inputs and spinner when isSubmittingSeries is true', () => {
+    render(<CreateBookingModal {...defaultProps} isSubmittingSeries={true} />);
+
+    const titleInput = screen.getByLabelText('Назва події') as HTMLInputElement;
+    expect(titleInput.disabled).toBe(true);
+
+    const submitBtn = screen.getByRole('button', { name: /Бронюємо…/ }) as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(true);
+  });
+
   it('preserves typed values in fields when server error occurs', () => {
     const { rerender } = render(<CreateBookingModal {...defaultProps} />);
 

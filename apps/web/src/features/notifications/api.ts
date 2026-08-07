@@ -2,14 +2,15 @@ import { apiRequest } from '../../lib/api';
 
 export interface NotificationDTO {
   id: string;
-  bookingId: string;
+  bookingId: string | null;
   kind: string;
+  message: string | null;
   createdAt: string;
   readAt: string | null;
-  bookingTitle: string;
-  bookingEndsAt: string;
-  roomId: number;
-  roomName: string;
+  bookingTitle: string | null;
+  bookingEndsAt: string | null;
+  roomId: number | null;
+  roomName: string | null;
 }
 
 export interface NotificationsResponse {

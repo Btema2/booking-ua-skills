@@ -1,3 +1,4 @@
+import { BOOKING_REJECTION_MESSAGES } from '@booking/core';
 import { ApiError } from '../../lib/api';
 
 export type FormErrorMappingResult = {
@@ -53,7 +54,7 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
   if (status === 409) {
     return {
       fieldErrors: {},
-      formError: 'Слот зайнятий',
+      formError: err instanceof ApiError ? err.message : BOOKING_REJECTION_MESSAGES.slotTaken,
     };
   }
 
