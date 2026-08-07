@@ -2,11 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { and, asc, count, desc, eq, gt, isNull, lt, lte, sql } from 'drizzle-orm';
 import { getConnection } from '../db/connection';
 import { EXCLUSION_VIOLATION, FOREIGN_KEY_VIOLATION, QueryFailedError, runQuery } from '../db/driver-errors';
-import { bookings, rooms, users } from '../db/schema';
+import { bookings, bookingSeries, rooms, users } from '../db/schema';
 import {
   BookingsRepository,
   RoomNotFoundError,
   SlotTakenError,
+  type BookingOwnershipAndSeries,
   type BookingRow,
   type MyBookingRow,
   type NewBooking,
@@ -21,6 +22,7 @@ const BOOKING_COLUMNS = {
   startsAt: bookings.startsAt,
   endsAt: bookings.endsAt,
   userId: bookings.userId,
+  seriesId: bookings.seriesId,
 } as const;
 
 @Injectable()
@@ -46,6 +48,7 @@ export class DrizzleBookingsRepository extends BookingsRepository {
             title: input.title,
             startsAt: input.startsAt,
             endsAt: input.endsAt,
+            seriesId: input.seriesId ?? null,
           })
           .returning(BOOKING_COLUMNS),
       );
@@ -152,6 +155,40 @@ export class DrizzleBookingsRepository extends BookingsRepository {
       limit,
       hasMore: page * limit < total,
     };
+  }
+
+  async createBookingSeries(userId: string): Promise<{ id: string }> {
+    const [created] = await runQuery('createBookingSeries', () =>
+      this.db.insert(bookingSeries).values({ userId }).returning({ id: bookingSeries.id }),
+    );
+    return created;
+  }
+
+  async deleteBookingSeries(id: string): Promise<void> {
+    await runQuery('deleteBookingSeries', () => this.db.delete(bookingSeries).where(eq(bookingSeries.id, id)));
+  }
+
+  async findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null> {
+    const [found] = await runQuery('findBookingOwnershipAndSeries', () =>
+      this.db
+        .select({ id: bookings.id, userId: bookings.userId, seriesId: bookings.seriesId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .limit(1),
+    );
+    return found ?? null;
+  }
+
+  async cancelBookingSeries(seriesId: string): Promise<void> {
+    // Same soft-delete stamp as cancelBooking, applied to every still-live
+    // occurrence in the series at once. Idempotent: re-running it after
+    // every occurrence is already cancelled updates zero rows, not an error.
+    await runQuery('cancelBookingSeries', () =>
+      this.db
+        .update(bookings)
+        .set({ canceledAt: sql`now()` })
+        .where(and(eq(bookings.seriesId, seriesId), isNull(bookings.canceledAt))),
+    );
   }
 }
 

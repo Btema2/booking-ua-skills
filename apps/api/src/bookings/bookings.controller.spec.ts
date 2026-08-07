@@ -39,7 +39,7 @@ const VALID_BODY = {
 
 /** Stands in for Postgres: enough state to exercise ownership and cancellation. */
 class RecordingBookingsRepository extends BookingsRepository {
-  private readonly byId = new Map<string, MyBookingRow & { canceledAt: Date | null }>();
+  private readonly byId = new Map<string, MyBookingRow & { canceledAt: Date | null; seriesId: string | null }>();
   rejectNextCreateWithSlotTaken = false;
   rejectNextCreateWithRoomNotFound = false;
 
@@ -50,7 +50,7 @@ class RecordingBookingsRepository extends BookingsRepository {
     if (this.rejectNextCreateWithRoomNotFound) {
       throw new RoomNotFoundError();
     }
-    const row: MyBookingRow & { canceledAt: Date | null } = {
+    const row: MyBookingRow & { canceledAt: Date | null; seriesId: string | null } = {
       id: randomUUID(),
       roomId: input.roomId,
       roomName: `Room ${input.roomId}`,
@@ -61,6 +61,7 @@ class RecordingBookingsRepository extends BookingsRepository {
       userId: input.userId,
       userName: input.userName,
       canceledAt: null,
+      seriesId: input.seriesId ?? null,
     };
     this.byId.set(row.id, row);
     const { roomName, roomFloor, canceledAt, ...bookingRow } = row;
@@ -121,9 +122,9 @@ class RecordingBookingsRepository extends BookingsRepository {
   }
 
   seed(
-    row: Partial<MyBookingRow> & { id: string; userId: string; canceledAt: Date | null },
+    row: Partial<MyBookingRow> & { id: string; userId: string; canceledAt: Date | null; seriesId?: string | null },
   ): void {
-    const fullRow: MyBookingRow & { canceledAt: Date | null } = {
+    const fullRow: MyBookingRow & { canceledAt: Date | null; seriesId: string | null } = {
       id: row.id,
       roomId: row.roomId ?? 1,
       roomName: row.roomName ?? 'Переговорка 1',
@@ -134,8 +135,25 @@ class RecordingBookingsRepository extends BookingsRepository {
       userId: row.userId,
       userName: row.userName ?? 'Seed',
       canceledAt: row.canceledAt,
+      seriesId: row.seriesId ?? null,
     };
     this.byId.set(row.id, fullRow);
+  }
+
+  async createBookingSeries(): Promise<{ id: string }> {
+    throw new Error('not implemented in test');
+  }
+
+  async deleteBookingSeries(): Promise<void> {
+    throw new Error('not implemented in test');
+  }
+
+  async findBookingOwnershipAndSeries(): Promise<any> {
+    throw new Error('not implemented in test');
+  }
+
+  async cancelBookingSeries(): Promise<void> {
+    throw new Error('not implemented in test');
   }
 }
 

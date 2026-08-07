@@ -21,6 +21,7 @@ const ROWS: BookingRow[] = [
     endsAt: new Date('2027-01-06T08:00:00.000Z'),
     userId: 'user-1',
     userName: 'Іван',
+    seriesId: null,
   },
 ];
 
@@ -51,6 +52,21 @@ class RecordingBookingsRepository extends BookingsRepository {
     throw new Error('Not implemented');
   }
 
+  async createBookingSeries(): Promise<{ id: string }> {
+    throw new Error('not implemented in test');
+  }
+
+  async deleteBookingSeries(): Promise<void> {
+    throw new Error('not implemented in test');
+  }
+
+  async findBookingOwnershipAndSeries(): Promise<any> {
+    throw new Error('not implemented in test');
+  }
+
+  async cancelBookingSeries(): Promise<void> {
+    throw new Error('not implemented in test');
+  }
 }
 
 const authServiceDouble = {

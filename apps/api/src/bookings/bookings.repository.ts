@@ -6,6 +6,7 @@ export interface BookingRow {
   endsAt: Date;
   userId: string;
   userName: string;
+  seriesId: string | null;
 }
 
 /** Just enough to authorize a cancel: who owns it, and whether it's already gone. */
@@ -24,6 +25,10 @@ export interface NewBooking {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  // Set only when this occurrence belongs to a weekly series (see
+  // BookingsService.createSeries). Every existing caller omits it, which
+  // inserts NULL — the single-booking create path is unaffected.
+  seriesId?: string;
 }
 
 /**
@@ -51,6 +56,13 @@ export class RoomNotFoundError extends Error {
     super('Room does not exist');
     this.name = 'RoomNotFoundError';
   }
+}
+
+/** Just enough to authorize a series cancel: who owns the booking, and which series (if any) it belongs to. */
+export interface BookingOwnershipAndSeries {
+  id: string;
+  userId: string;
+  seriesId: string | null;
 }
 
 export interface MyBookingRow {
@@ -95,5 +107,12 @@ export abstract class BookingsRepository {
     page: number,
     limit: number,
   ): Promise<PaginatedMyBookings>;
+  /** Creates the thin grouping row for a new series. The recurrence rule itself is never stored. */
+  abstract createBookingSeries(userId: string): Promise<{ id: string }>;
+  /** Used only to roll back a series whose every occurrence conflicted — see BookingsService.createSeries. */
+  abstract deleteBookingSeries(id: string): Promise<void>;
+  abstract findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null>;
+  /** Soft-cancels every still-live occurrence in the series; idempotent, never touches the booking_series row itself. */
+  abstract cancelBookingSeries(seriesId: string): Promise<void>;
 }
 

@@ -104,3 +104,70 @@ describe('DrizzleBookingsRepository.createBooking', () => {
     expect(error).toMatchObject({ operation: 'createBooking', code: '23502' });
   });
 });
+
+describe('DrizzleBookingsRepository series methods', () => {
+  afterEach(() => {
+    getConnection.mockReset();
+  });
+
+  it('createBookingSeries inserts a row scoped to the given user and returns its id', async () => {
+    const returning = jest.fn(() => Promise.resolve([{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }]));
+    const values = jest.fn(() => ({ returning }));
+    const insert = jest.fn(() => ({ values }));
+    getConnection.mockReturnValue({ db: { insert } });
+
+    const result = await new DrizzleBookingsRepository().createBookingSeries('user-id-1');
+
+    expect(result).toEqual({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    expect(values).toHaveBeenCalledWith({ userId: 'user-id-1' });
+  });
+
+  it('deleteBookingSeries deletes by id', async () => {
+    const where = jest.fn(() => Promise.resolve(undefined));
+    const del = jest.fn(() => ({ where }));
+    getConnection.mockReturnValue({ db: { delete: del } });
+
+    await new DrizzleBookingsRepository().deleteBookingSeries('series-id-1');
+
+    expect(del).toHaveBeenCalled();
+    expect(where).toHaveBeenCalled();
+  });
+
+  it('findBookingOwnershipAndSeries returns null when the booking does not exist', async () => {
+    const limit = jest.fn(() => Promise.resolve([]));
+    const where = jest.fn(() => ({ limit }));
+    const from = jest.fn(() => ({ where }));
+    const select = jest.fn(() => ({ from }));
+    getConnection.mockReturnValue({ db: { select } });
+
+    const result = await new DrizzleBookingsRepository().findBookingOwnershipAndSeries('missing-id');
+
+    expect(result).toBeNull();
+  });
+
+  it('findBookingOwnershipAndSeries returns the ownership row when found', async () => {
+    const row = { id: 'booking-1', userId: 'user-1', seriesId: 'series-1' };
+    const limit = jest.fn(() => Promise.resolve([row]));
+    const where = jest.fn(() => ({ limit }));
+    const from = jest.fn(() => ({ where }));
+    const select = jest.fn(() => ({ from }));
+    getConnection.mockReturnValue({ db: { select } });
+
+    const result = await new DrizzleBookingsRepository().findBookingOwnershipAndSeries('booking-1');
+
+    expect(result).toEqual(row);
+  });
+
+  it('cancelBookingSeries stamps canceled_at on every live occurrence in the series', async () => {
+    const where = jest.fn(() => Promise.resolve(undefined));
+    const set = jest.fn(() => ({ where }));
+    const update = jest.fn(() => ({ set }));
+    getConnection.mockReturnValue({ db: { update } });
+
+    await new DrizzleBookingsRepository().cancelBookingSeries('series-1');
+
+    expect(update).toHaveBeenCalled();
+    expect(set).toHaveBeenCalled();
+    expect(where).toHaveBeenCalled();
+  });
+});

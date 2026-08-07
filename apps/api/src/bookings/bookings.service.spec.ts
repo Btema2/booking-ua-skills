@@ -40,6 +40,7 @@ const VALID_ROW: BookingRow = {
   endsAt: VALID_INPUT.endsAt,
   userId: USER.id,
   userName: USER.name,
+  seriesId: null,
 };
 
 type MockedRepository = { [K in keyof BookingsRepository]: jest.Mock };
@@ -51,6 +52,10 @@ function createRepository(): MockedRepository {
     cancelBooking: jest.fn(async () => undefined),
     listRoomBookings: jest.fn(async () => []),
     listMyBookings: jest.fn(async () => ({ bookings: [], total: 0, page: 1, limit: 10, hasMore: false })),
+    createBookingSeries: jest.fn(async () => ({ id: 'series-id' })),
+    deleteBookingSeries: jest.fn(async () => undefined),
+    findBookingOwnershipAndSeries: jest.fn(async () => null),
+    cancelBookingSeries: jest.fn(async () => undefined),
   };
 }
 
