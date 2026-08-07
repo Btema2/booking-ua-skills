@@ -55,3 +55,14 @@ export function bookingTimeRejection(rejection: BookingRejection): BadRequestExc
     errors: { [BOOKING_TIME_FIELD]: [BOOKING_REJECTION_MESSAGES[rejection]] },
   });
 }
+
+const NOT_PART_OF_SERIES_MESSAGE = 'Це бронювання не є частиною серії';
+const ALL_OCCURRENCES_TAKEN_MESSAGE = 'Усі повторення серії зайняті';
+
+export function notPartOfSeries(): BadRequestException {
+  return new BadRequestException({ statusCode: HttpStatus.BAD_REQUEST, message: NOT_PART_OF_SERIES_MESSAGE });
+}
+
+export function allOccurrencesTaken(): ConflictException {
+  return new ConflictException({ statusCode: HttpStatus.CONFLICT, message: ALL_OCCURRENCES_TAKEN_MESSAGE });
+}

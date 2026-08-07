@@ -1,4 +1,5 @@
-import type { CreateBookingInput, PublicUser } from '@booking/core';
+import type { CreateBookingInput, CreateBookingSeriesInput, PublicUser } from '@booking/core';
+import { weeklyOccurrences } from '@booking/core';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import {
@@ -32,6 +33,14 @@ const VALID_INPUT: CreateBookingInput = {
   endsAt: new Date('2026-01-07T08:00:00Z'),
 };
 
+const VALID_SERIES_INPUT: CreateBookingSeriesInput = {
+  roomId: 3,
+  title: 'Щотижневий синк',
+  startsAt: new Date('2026-01-07T07:00:00Z'), // Wednesday 09:00 Kyiv
+  endsAt: new Date('2026-01-07T08:00:00Z'),
+  occurrenceCount: 3,
+};
+
 const VALID_ROW: BookingRow = {
   id: BOOKING_ID,
   roomId: VALID_INPUT.roomId,
@@ -52,7 +61,7 @@ function createRepository(): MockedRepository {
     cancelBooking: jest.fn(async () => undefined),
     listRoomBookings: jest.fn(async () => []),
     listMyBookings: jest.fn(async () => ({ bookings: [], total: 0, page: 1, limit: 10, hasMore: false })),
-    createBookingSeries: jest.fn(async () => ({ id: 'series-id' })),
+    createBookingSeries: jest.fn(async () => ({ id: 'series-1' })),
     deleteBookingSeries: jest.fn(async () => undefined),
     findBookingOwnershipAndSeries: jest.fn(async () => null),
     cancelBookingSeries: jest.fn(async () => undefined),
@@ -287,6 +296,173 @@ describe('BookingsService', () => {
 
       expect(result).toEqual(paginatedResult);
       expect(repository.listMyBookings).toHaveBeenCalledWith(USER.id, 'upcoming', 1, 10);
+    });
+  });
+
+  describe('createSeries', () => {
+    it('returns 403 for an unverified user, and never creates the series row', async () => {
+      useFixedNow();
+      const repository = createRepository();
+
+      const error = await createService(repository)
+        .createSeries(UNVERIFIED_USER, VALID_SERIES_INPUT)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(repository.createBookingSeries).not.toHaveBeenCalled();
+    });
+
+    it('rejects the request with 400 when the first occurrence fails input validation, before any insert', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      // This only proves occurrence 1 is checked before any insert — it does
+      // NOT prove a *later* occurrence is checked too. That case is
+      // deliberately not tested here: given weeklyOccurrences' Kyiv-wall-clock
+      // anchoring (Task 1), a later occurrence cannot fail validation if
+      // occurrence 1 passes — wall-clock time (and so alignment/office-hours)
+      // is preserved across DST by construction, duration is preserved
+      // because Kyiv's DST transitions land at ~03:00, never inside a
+      // 09:00–19:00 booking, and `past` only gets easier to satisfy for
+      // later occurrences. The per-occurrence loop below is still worth
+      // keeping as cheap defense-in-depth — it's what makes this property
+      // true rather than merely assumed — but there is no reachable input
+      // that exercises its "occurrence 2+ fails" branch, so no test claims
+      // to cover one.
+      const outOfHoursInput: CreateBookingSeriesInput = {
+        ...VALID_SERIES_INPUT,
+        startsAt: new Date('2026-01-06T18:00:00Z'), // 20:00 Kyiv
+        endsAt: new Date('2026-01-06T19:00:00Z'),
+      };
+
+      const error = await createService(repository)
+        .createSeries(USER, outOfHoursInput)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(bodyOf(error)).toEqual({ statusCode: 400, errors: { startsAt: ['Поза робочими годинами'] } });
+      expect(repository.createBookingSeries).not.toHaveBeenCalled();
+      expect(repository.createBooking).not.toHaveBeenCalled();
+    });
+
+    it('creates every occurrence, tags each with the new series id, and returns them all in `created`', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
+      const occurrences = weeklyOccurrences(VALID_SERIES_INPUT.startsAt, VALID_SERIES_INPUT.endsAt, VALID_SERIES_INPUT.occurrenceCount);
+      let call = 0;
+      repository.createBooking.mockImplementation(async (input: NewBooking) => ({
+        id: `booking-${call++}`,
+        roomId: input.roomId,
+        title: input.title,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        userId: input.userId,
+        userName: input.userName,
+        seriesId: input.seriesId ?? null,
+      }));
+
+      const result = await createService(repository).createSeries(USER, VALID_SERIES_INPUT);
+
+      expect(result.series).toEqual({ id: 'series-1' });
+      expect(result.created).toHaveLength(3);
+      expect(result.skipped).toEqual([]);
+      expect(repository.createBooking).toHaveBeenCalledTimes(3);
+      for (const [i, occurrence] of occurrences.entries()) {
+        const [insert] = repository.createBooking.mock.calls[i] as [NewBooking];
+        expect(insert).toMatchObject({ seriesId: 'series-1', startsAt: occurrence.startsAt, endsAt: occurrence.endsAt });
+      }
+    });
+
+    it('collects a SlotTakenError per conflicting occurrence into `skipped`, and still creates the rest', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
+      let call = 0;
+      repository.createBooking.mockImplementation(async (input: NewBooking) => {
+        call += 1;
+        if (call === 2) throw new SlotTakenError();
+        return {
+          id: `booking-${call}`,
+          roomId: input.roomId,
+          title: input.title,
+          startsAt: input.startsAt,
+          endsAt: input.endsAt,
+          userId: input.userId,
+          userName: input.userName,
+          seriesId: input.seriesId ?? null,
+        };
+      });
+
+      const result = await createService(repository).createSeries(USER, VALID_SERIES_INPUT);
+
+      expect(result.created).toHaveLength(2);
+      expect(result.skipped).toHaveLength(1);
+      expect(repository.deleteBookingSeries).not.toHaveBeenCalled();
+    });
+
+    it('deletes the series row and returns 409 when every occurrence conflicts', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
+      repository.createBooking.mockRejectedValue(new SlotTakenError());
+
+      const error = await createService(repository).createSeries(USER, VALID_SERIES_INPUT).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect(repository.deleteBookingSeries).toHaveBeenCalledWith('series-1');
+    });
+
+    it('turns a RoomNotFoundError from the first insert into a 400 field error under roomId', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      repository.createBookingSeries.mockResolvedValue({ id: 'series-1' });
+      repository.createBooking.mockRejectedValue(new RoomNotFoundError());
+
+      const error = await createService(repository).createSeries(USER, VALID_SERIES_INPUT).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(bodyOf(error)).toEqual({ statusCode: 400, errors: { roomId: ['Обраної кімнати не існує'] } });
+    });
+  });
+
+  describe('cancelSeries', () => {
+    it('throws 404 when the booking does not exist', async () => {
+      const repository = createRepository();
+      repository.findBookingOwnershipAndSeries.mockResolvedValue(null);
+
+      const error = await createService(repository).cancelSeries(USER, BOOKING_ID).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(NotFoundException);
+      expect(repository.cancelBookingSeries).not.toHaveBeenCalled();
+    });
+
+    it("throws 403 for someone else's booking, before ever checking series membership", async () => {
+      const repository = createRepository();
+      repository.findBookingOwnershipAndSeries.mockResolvedValue({ id: BOOKING_ID, userId: OTHER_USER_ID, seriesId: null });
+
+      const error = await createService(repository).cancelSeries(USER, BOOKING_ID).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(repository.cancelBookingSeries).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 when the booking exists, is owned by the caller, but is not part of any series', async () => {
+      const repository = createRepository();
+      repository.findBookingOwnershipAndSeries.mockResolvedValue({ id: BOOKING_ID, userId: USER.id, seriesId: null });
+
+      const error = await createService(repository).cancelSeries(USER, BOOKING_ID).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(repository.cancelBookingSeries).not.toHaveBeenCalled();
+    });
+
+    it('cancels the whole series for its own booking', async () => {
+      const repository = createRepository();
+      repository.findBookingOwnershipAndSeries.mockResolvedValue({ id: BOOKING_ID, userId: USER.id, seriesId: 'series-1' });
+
+      await createService(repository).cancelSeries(USER, BOOKING_ID);
+
+      expect(repository.cancelBookingSeries).toHaveBeenCalledWith('series-1');
     });
   });
 });
