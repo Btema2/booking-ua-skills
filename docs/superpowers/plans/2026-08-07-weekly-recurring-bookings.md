@@ -939,13 +939,22 @@ Add two new `describe` blocks after the existing `describe('cancel', ...)` block
       expect(repository.createBookingSeries).not.toHaveBeenCalled();
     });
 
-    it('rejects the whole request with 400 when any occurrence fails input validation, before any insert', async () => {
+    it('rejects the request with 400 when the first occurrence fails input validation, before any insert', async () => {
       useFixedNow();
       const repository = createRepository();
-      // 18:00-19:00 Kyiv is in office hours for occurrence 1, but every
-      // occurrence here is identical week over week, so this is really
-      // testing that validateBookingTimes runs for every occurrence up
-      // front — use an out-of-hours start so occurrence 1 itself fails.
+      // This only proves occurrence 1 is checked before any insert — it does
+      // NOT prove a *later* occurrence is checked too. That case is
+      // deliberately not tested here: given weeklyOccurrences' Kyiv-wall-clock
+      // anchoring (Task 1), a later occurrence cannot fail validation if
+      // occurrence 1 passes — wall-clock time (and so alignment/office-hours)
+      // is preserved across DST by construction, duration is preserved
+      // because Kyiv's DST transitions land at ~03:00, never inside a
+      // 09:00–19:00 booking, and `past` only gets easier to satisfy for
+      // later occurrences. The per-occurrence loop below is still worth
+      // keeping as cheap defense-in-depth — it's what makes this property
+      // true rather than merely assumed — but there is no reachable input
+      // that exercises its "occurrence 2+ fails" branch, so no test claims
+      // to cover one.
       const outOfHoursInput: CreateBookingSeriesInput = {
         ...VALID_SERIES_INPUT,
         startsAt: new Date('2026-01-06T18:00:00Z'), // 20:00 Kyiv
@@ -1703,13 +1712,12 @@ Update the file's imports at the top to add `bookingSeries`:
 import { bookings, bookingSeries, users } from '../src/db/schema';
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 2: Run the tests — this is a verification step, not a red/green cycle**
+
+By this point in the plan Tasks 1–6 are already committed, so the API surface these tests exercise already exists — the unit tests in Tasks 4–6 already carried this feature's TDD cycle. What this step actually proves is different: it's the only place in the plan that runs the new code against a *real* Postgres, exercising the real `bookings_no_overlap` EXCLUDE constraint and the real `bookings_series_id_booking_series_id_fk` foreign key together — neither of which any mocked-`db` unit test can prove.
 
 Run (Docker running, from Task 3): `npm run test:integration`
-Expected: FAIL on the 6 new tests (19–24) with 404s from the not-yet-existing routes — wait, Task 6 already implemented the routes, so if this task runs after Task 6 is committed, these should already pass. If executing this plan strictly task-by-task with a fresh worker per task (per `subagent-driven-development`), run this step **before** assuming Task 6 landed in the same context — the expected red state is only meaningful if Tasks 1–6 are already merged into the branch, which they are by this point in the plan's sequence. Confirm the suite fails only if some detail (route path, response shape) doesn't match — if it fails with 404, re-check Task 6 is actually on this branch (`git log --oneline`) before treating it as a real red step.
-
-Run: `npm run test:integration`
-Expected at this point in the plan (Tasks 1–6 already committed): the 6 new tests should already PASS, since the implementation exists. This step exists to prove the integration suite — the only thing that touches a real Postgres and the real EXCLUDE constraint together with the new FK — actually passes, not to chase a contrived red state for already-implemented code.
+Expected: PASS, all 6 new tests (19–24). If any of them fails, that is a real finding — either this task's test code has a mistake, or (more seriously) the Drizzle schema/migration from Task 3 doesn't match what the service layer assumes. Do not proceed to Step 3 until this is green.
 
 - [ ] **Step 3: Run the full integration suite and confirm the count only grew**
 
@@ -1729,10 +1737,13 @@ git commit -m "test(api): add integration coverage for weekly recurring bookings
 
 **Files:**
 - Modify: `apps/web/src/features/bookings/useBookingMutations.ts`
+- Modify: `apps/web/src/features/rooms/RoomSchedulePage.tsx` (only its `handleCancelConfirm` call site — folded in here rather than left for Task 11, so this commit never leaves the web workspace in a non-compiling state; see the note at the end of this task)
 
 **Interfaces:**
 - Consumes: `postJson`, `apiRequest` from `../../lib/api` (unchanged); `CreateSeriesResult`-shaped response (structurally, not imported — the web app has no dependency on `apps/api`, so this is inferred from the JSON shape, matching how `useCreateBooking` already treats `Booking` as the response type without importing API-side types).
 - Produces: `useCreateBookingSeries(roomId, weekStartISO)`, and `useCancelBooking(roomId, weekStartISO)` gains an optional `scope` argument on its `mutate`/`mutateAsync` call.
+
+**A cache-scoping note before writing this:** a series spans 2–52 *future* weeks, each cached under its own `['room', roomId, 'bookings', <thatWeek'sStartISO>]` key. `useCreateBooking` (single-booking) correctly invalidates only the current week's exact key. `useCreateBookingSeries` and the `scope === 'series'` branch of `useCancelBooking` must instead invalidate the **prefix** `['room', roomId, 'bookings']` — TanStack Query matches query keys by prefix, so this refetches every cached week at once. Getting this wrong means: create an 8-week series, page to "next week," see a stale grid; cancel the whole series, other weeks keep showing the cancelled occurrences as live until something else happens to refetch them.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1753,27 +1764,33 @@ export interface BookingSeriesResult {
 Add a new hook, after `useCreateBooking`:
 
 ```ts
-export function useCreateBookingSeries(roomId: string, weekStartISO: string) {
+// `_weekStartISO` is unused: unlike the other two hooks, this one invalidates
+// every cached week (a series spans many), not just the current one. Kept as
+// a parameter anyway so the call site reads the same as its two siblings.
+export function useCreateBookingSeries(roomId: string, _weekStartISO: string) {
   const queryClient = useQueryClient();
-  const queryKey = ['room', roomId, 'bookings', weekStartISO];
+  // Prefix key, not the current week's exact key — a series can create
+  // occurrences across many future weeks, each cached separately.
+  const roomBookingsPrefix = ['room', roomId, 'bookings'];
 
   return useMutation({
     mutationFn: (data: unknown) => postJson<BookingSeriesResult>('/bookings/series', data),
     onSuccess: () => {
       // No optimistic update here — a series can partially conflict, so the
       // only correct post-state is whatever the server actually persisted.
-      void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({ queryKey: roomBookingsPrefix });
     },
   });
 }
 ```
 
-Update `useCancelBooking` to accept an optional scope, changing its `mutationFn` input shape from a bare `bookingId: string` to an object (backward compatible for the mutation's call sites once Task 11 updates them):
+Update `useCancelBooking` to accept an optional scope, changing its `mutationFn` input shape from a bare `bookingId: string` to an object (the call site is fixed in the same commit — see Step 2's continuation below):
 
 ```ts
 export function useCancelBooking(roomId: string, weekStartISO: string) {
   const queryClient = useQueryClient();
   const queryKey = ['room', roomId, 'bookings', weekStartISO];
+  const roomBookingsPrefix = ['room', roomId, 'bookings'];
 
   return useMutation({
     mutationFn: ({ bookingId, scope }: { bookingId: string; scope?: 'series' }) =>
@@ -1784,14 +1801,18 @@ export function useCancelBooking(roomId: string, weekStartISO: string) {
       const previousData = queryClient.getQueryData<{ bookings: Booking[] }>(queryKey);
 
       if (previousData) {
+        // Look up the target's seriesId once, outside the filter callback —
+        // filtering is O(n), and re-running `.find` per item made this O(n^2)
+        // for no reason. If the target isn't in this week's cache at all
+        // (e.g. cancelling an occurrence from a week the grid hasn't loaded
+        // yet), this optimistic step is a no-op and `onSettled` below still
+        // invalidates for correctness.
+        const target = previousData.bookings.find((b) => b.id === bookingId);
         queryClient.setQueryData<{ bookings: Booking[] }>(queryKey, {
           ...previousData,
           bookings:
-            scope === 'series'
-              ? previousData.bookings.filter((booking) => {
-                  const target = previousData.bookings.find((b) => b.id === bookingId);
-                  return !(target?.seriesId && booking.seriesId === target.seriesId);
-                })
+            scope === 'series' && target?.seriesId
+              ? previousData.bookings.filter((booking) => booking.seriesId !== target.seriesId)
               : previousData.bookings.filter((booking) => booking.id !== bookingId),
         });
       }
@@ -1803,26 +1824,65 @@ export function useCancelBooking(roomId: string, weekStartISO: string) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+    onSettled: (_data, _error, { scope }) => {
+      // scope=series can touch occurrences in other cached weeks besides
+      // this one — invalidate the whole room's prefix in that case, not
+      // just the exact key this mutation happened to be constructed with.
+      void queryClient.invalidateQueries({ queryKey: scope === 'series' ? roomBookingsPrefix : queryKey });
     },
   });
 }
 ```
 
-- [ ] **Step 3: Run the web unit suite to confirm nothing that references the old `mutateAsync(bookingId)` shape broke yet**
+- [ ] **Step 3: Fix the `RoomSchedulePage.tsx` call site in the same commit**
 
-Run: `cd apps/web && npx vitest run`
-Expected: FAIL — `RoomSchedulePage.tsx`'s existing `cancelMutation.mutateAsync(bookingToCancel.id)` call now passes a bare string where an object is expected. This is intentional; Task 11 fixes the call site. Confirm the failure is exactly that (a type error surfaced at the call site, or a runtime `bookingId` being `undefined` inside the mutation if the test suite doesn't typecheck web code at test time — check which by running `cd apps/web && npx tsc --noEmit` too) before moving on.
+`useCancelBooking`'s `mutateAsync` now expects `{ bookingId, scope? }` instead of a bare string. Edit `apps/web/src/features/rooms/RoomSchedulePage.tsx`'s existing `handleCancelConfirm`, replacing:
 
-- [ ] **Step 4: Commit**
-
-```bash
-git add apps/web/src/features/bookings/useBookingMutations.ts
-git commit -m "feat(web): add useCreateBookingSeries and scope param on useCancelBooking"
+```ts
+  const handleCancelConfirm = async () => {
+    if (!bookingToCancel) return;
+    setCancelError(null);
+    try {
+      await cancelMutation.mutateAsync(bookingToCancel.id);
+      setIsCancelOpen(false);
+      setBookingToCancel(null);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Ви не можете скасувати це бронювання';
+      setCancelError(msg);
+    }
+  };
 ```
 
-(This intentionally lands in a state where `RoomSchedulePage.tsx` doesn't yet compile against the new `useCancelBooking` signature — Task 11 fixes it two tasks later. If working from a single continuous session rather than fully independent per-task subagents, it is acceptable to fold Task 11's `RoomSchedulePage.tsx` fix into this commit instead of leaving the tree red between commits; do not push/merge with the tree in a broken state.)
+with:
+
+```ts
+  const handleCancelConfirm = async (scope?: 'series') => {
+    if (!bookingToCancel) return;
+    setCancelError(null);
+    try {
+      await cancelMutation.mutateAsync({ bookingId: bookingToCancel.id, scope });
+      setIsCancelOpen(false);
+      setBookingToCancel(null);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Ви не можете скасувати це бронювання';
+      setCancelError(msg);
+    }
+  };
+```
+
+This signature, `(scope?: 'series') => Promise<void>`, is also exactly what `CancelBookingDialog`'s `onConfirm` prop will require once Task 10 changes it — so this fix does not need to be revisited there. It's a no-op for `CancelBookingDialog`'s current (pre-Task-10) prop type, since a function typed to accept an optional parameter is assignable wherever a zero-argument callback is expected.
+
+- [ ] **Step 4: Run the web unit suite**
+
+Run: `cd apps/web && npx tsc --noEmit && npx vitest run`
+Expected: PASS — no broken intermediate state. Every existing test (including `Phase5.test.tsx`, which exercises the cancel flow) stays green.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/features/bookings/useBookingMutations.ts apps/web/src/features/rooms/RoomSchedulePage.tsx
+git commit -m "feat(web): add useCreateBookingSeries and scope param on useCancelBooking"
+```
 
 ---
 
@@ -2193,17 +2253,15 @@ git commit -m "feat(web): add this-vs-series cancel choice to CancelBookingDialo
 
 ---
 
-### Task 11: Wire it up — `RoomSchedulePage.tsx`, `Booking` type, `listRoomBookings` `seriesId`
+### Task 11: Wire it up — series creation into `RoomSchedulePage.tsx`
 
 **Files:**
 - Modify: `apps/web/src/features/rooms/RoomSchedulePage.tsx`
 
 **Interfaces:**
-- Consumes: `useCreateBookingSeries` (Task 8), `CreateBookingModal`'s `onSubmitSeries`/`isSubmittingSeries` (Task 9), `CancelBookingDialog`'s scoped `onConfirm` (Task 10).
+- Consumes: `useCreateBookingSeries` (Task 8), `CreateBookingModal`'s `onSubmitSeries`/`isSubmittingSeries` (Task 9). `CancelBookingDialog`'s scoped `onConfirm` (Task 10) needs no wiring change here — `handleCancelConfirm` already matches its `(scope?: 'series') => Promise<void>` signature, fixed back in Task 8 Step 3.
 
-This task also closes the loop opened in Task 8 Step 3 (the `useCancelBooking` call site).
-
-- [ ] **Step 1: There is no new automated test for this task** — `RoomSchedulePage.tsx` has no existing dedicated unit test file (verify: `find apps/web/src/features/rooms -iname '*RoomSchedulePage*'`), and the components it wires together are already covered individually in Tasks 9–10. This wiring is proven by Task 12's manual live-stack proof (screenshot + psql). Note this explicitly in the commit message, consistent with Task 8's same narrow exception.
+- [ ] **Step 1: There is no new automated test for this task** — `RoomSchedulePage.tsx` has no existing dedicated unit test file (verify: `find apps/web/src/features/rooms -iname '*RoomSchedulePage*'`), and the components it wires together are already covered individually in Tasks 9–10. This wiring is proven by Task 12's live-stack proof (screenshot + psql). Note this explicitly in the commit message, consistent with Task 8's same narrow exception.
 
 - [ ] **Step 2: Implement**
 
@@ -2244,23 +2302,6 @@ Add a series submit handler, after `handleCreateSubmit`:
       const mapped = mapApiErrorToForm(err);
       setServerFieldErrors(mapped.fieldErrors);
       setServerFormError(mapped.formError);
-    }
-  };
-```
-
-Update `handleCancelConfirm` to accept and forward the scope:
-
-```ts
-  const handleCancelConfirm = async (scope?: 'series') => {
-    if (!bookingToCancel) return;
-    setCancelError(null);
-    try {
-      await cancelMutation.mutateAsync({ bookingId: bookingToCancel.id, scope });
-      setIsCancelOpen(false);
-      setBookingToCancel(null);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Ви не можете скасувати це бронювання';
-      setCancelError(msg);
     }
   };
 ```
@@ -2414,9 +2455,11 @@ docker compose exec postgres psql -U booking -d booking -c \
 
 Expected: all 3 `created` rows now have a non-null `canceled_at`; the `booking_series` row from the earlier query still exists (never deleted).
 
-- [ ] **Step 5: Screenshot the UI reflecting the same state**
+- [ ] **Step 5: Screenshot the UI reflecting the same state — including a cross-week cache check**
 
-Open `http://localhost:5173` (or wherever `npm run dev:web` serves, or the built SPA on `http://localhost:3000` if testing the production build), log in as `proof@example.com`, navigate to room 1's schedule for the relevant week, and capture a screenshot showing the (now-cancelled) series slots as free again. If any series occurrence was left live for the screenshot instead (recommended, so the screenshot shows something more interesting than an empty grid) — repeat Steps 4's series-creation call with a fresh title, cancel *only one* occurrence, and screenshot the week grid showing the remaining live occurrences plus the freed slot from the one cancelled occurrence, then separately screenshot the "cancel" dialog's this-vs-series radio choice open on one of the remaining occurrences.
+Open `http://localhost:5173` (or wherever `npm run dev:web` serves, or the built SPA on `http://localhost:3000` if testing the production build), log in as `proof@example.com`, navigate to room 1's schedule for the relevant week, and capture a screenshot showing the (now-cancelled) series slots as free again. If any series occurrence was left live for the screenshot instead (recommended, so the screenshot shows something more interesting than an empty grid) — repeat Step 4's series-creation call with a fresh title, cancel *only one* occurrence, and screenshot the week grid showing the remaining live occurrences plus the freed slot from the one cancelled occurrence, then separately screenshot the "cancel" dialog's this-vs-series radio choice open on one of the remaining occurrences.
+
+Then specifically verify Task 8's cache-invalidation fix: create one more series with `occurrenceCount` at least 3, note which weeks its occurrences fall in (a 3-occurrence weekly series spans 3 different Monday-start weeks unless the anchor day is a Monday), cancel the whole series via `?scope=series` while the grid is showing week 1, then click "next week" in the UI (no manual page reload) and confirm week 2's occurrence is shown as cancelled/free without a refresh — this is the exact bug the prefix-based `invalidateQueries` fix in Task 8 exists to prevent, and it is the one thing in this plan that only a real browser session can prove.
 
 - [ ] **Step 6: Tear down**
 
