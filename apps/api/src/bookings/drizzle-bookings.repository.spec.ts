@@ -19,7 +19,16 @@ const NEW_BOOKING = {
   endsAt: new Date('2026-08-10T10:00:00.000Z'),
 };
 
-/** Minimal stand-in for `db.insert(...).values(...).returning(...)`. */
+/**
+ * Minimal stand-in for `db.insert(...).values(...).returning(...)`, plus a
+ * `select` chain that resolves to no conflicts. `createBooking` runs its own
+ * `listRoomBookings` pre-check before the insert (see
+ * `drizzle-bookings.repository.ts`), so a `db` double that stubs only
+ * `insert` never reaches the mocked rejection below — the pre-check's
+ * `select` call throws "not a function" first, and that unrelated failure is
+ * what a caller sees instead of the translated error this suite exists to
+ * verify.
+ */
 function insertRejectingWith(cause: Error): void {
   const returning = jest.fn(() =>
     Promise.reject(
@@ -30,8 +39,12 @@ function insertRejectingWith(cause: Error): void {
       ),
     ),
   );
+  const orderBy = jest.fn(() => Promise.resolve([]));
   getConnection.mockReturnValue({
-    db: { insert: () => ({ values: () => ({ returning }) }) },
+    db: {
+      insert: () => ({ values: () => ({ returning }) }),
+      select: () => ({ from: () => ({ innerJoin: () => ({ where: () => ({ orderBy }) }) }) }),
+    },
   });
 }
 
