@@ -79,6 +79,62 @@ describe('CreateBookingModal', () => {
     });
   });
 
+  it('shows a weekly-repeat toggle and occurrence count, and calls onSubmitSeries with the count when checked', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onSubmitSeries = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CreateBookingModal
+        {...defaultProps}
+        onSubmit={onSubmit}
+        onSubmitSeries={onSubmitSeries}
+      />,
+    );
+
+    const titleInput = screen.getByLabelText('Назва події');
+    fireEvent.change(titleInput, { target: { value: 'Щотижневий синк' } });
+
+    const toggleCheckbox = screen.getByLabelText('Повторювати щотижня') as HTMLInputElement;
+    fireEvent.click(toggleCheckbox);
+
+    const countInput = screen.getByLabelText('Кількість повторень') as HTMLInputElement;
+    fireEvent.change(countInput, { target: { value: '8' } });
+
+    const submitBtn = screen.getByRole('button', { name: 'Забронювати' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onSubmitSeries).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Щотижневий синк', occurrenceCount: 8 }),
+      );
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
+  it('defaults to the single-booking submit path when the repeat toggle is off', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onSubmitSeries = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CreateBookingModal
+        {...defaultProps}
+        onSubmit={onSubmit}
+        onSubmitSeries={onSubmitSeries}
+      />,
+    );
+
+    const titleInput = screen.getByLabelText('Назва події');
+    fireEvent.change(titleInput, { target: { value: 'Одноразова подія' } });
+
+    const submitBtn = screen.getByRole('button', { name: 'Забронювати' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+      expect(onSubmitSeries).not.toHaveBeenCalled();
+    });
+  });
+
   it('shows client error when submitting empty title', async () => {
     const handleSubmit = vi.fn();
     render(<CreateBookingModal {...defaultProps} onSubmit={handleSubmit} />);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DateTime } from 'luxon';
@@ -18,6 +18,8 @@ export interface CreateBookingModalProps {
   serverFieldErrors: { title?: string; time?: string };
   roomId?: number;
   existingBookings?: Booking[];
+  onSubmitSeries?: (values: { title: string; startsAt: string; endsAt: string; occurrenceCount: number }) => Promise<void>;
+  isSubmittingSeries?: boolean;
 }
 
 interface FormValues {
@@ -88,6 +90,8 @@ export function CreateBookingModal({
   serverFieldErrors,
   roomId,
   existingBookings,
+  onSubmitSeries,
+  isSubmittingSeries,
 }: CreateBookingModalProps) {
   const {
     register,
@@ -104,6 +108,9 @@ export function CreateBookingModal({
       endsAt: computeInitialEndISO(initialStartISO, initialEndISO),
     },
   });
+
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [occurrenceCount, setOccurrenceCount] = useState(8);
 
   useEffect(() => {
     if (isOpen) {
@@ -169,6 +176,17 @@ export function CreateBookingModal({
       typeof data.endsAt === 'string'
         ? data.endsAt
         : (data.endsAt as Date).toISOString();
+
+    if (isRepeating && onSubmitSeries) {
+      await onSubmitSeries({
+        title: data.title,
+        startsAt: startsAtStr,
+        endsAt: endsAtStr,
+        occurrenceCount,
+      });
+      return;
+    }
+
     await onSubmit({
       title: data.title,
       startsAt: startsAtStr,
@@ -310,6 +328,43 @@ export function CreateBookingModal({
             <p role="alert" className="mt-0.5 text-error text-[13px]">
               {timeError}
             </p>
+          )}
+
+          {onSubmitSeries && (
+            <div className="space-y-3 pt-1 border-t border-outline-variant/30">
+              <label className="flex items-center gap-2 cursor-pointer text-body-medium text-on-surface" htmlFor="repeat-toggle">
+                <input
+                  type="checkbox"
+                  id="repeat-toggle"
+                  checked={isRepeating}
+                  onChange={(e) => setIsRepeating(e.target.checked)}
+                  disabled={isSubmitting || isSubmittingSeries}
+                  className="rounded text-primary focus:ring-primary h-4 w-4"
+                />
+                <span>Повторювати щотижня</span>
+              </label>
+
+              {isRepeating && (
+                <div>
+                  <label
+                    htmlFor="occurrence-count-input"
+                    className="block text-label-medium text-on-surface-variant font-bold mb-1"
+                  >
+                    Кількість повторень
+                  </label>
+                  <input
+                    id="occurrence-count-input"
+                    type="number"
+                    min={2}
+                    max={52}
+                    value={occurrenceCount}
+                    onChange={(e) => setOccurrenceCount(Number(e.target.value))}
+                    disabled={isSubmitting || isSubmittingSeries}
+                    className="w-full px-3 py-2 rounded-[var(--radius-sm)] outline-none transition-colors border border-outline-variant focus:border-primary bg-surface-container-lowest text-on-surface"
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-2">
