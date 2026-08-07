@@ -11,6 +11,7 @@ import {
   BookingsRepository,
   RoomNotFoundError,
   SlotTakenError,
+  type BookingOwnershipAndSeries,
   type BookingRow,
   type MyBookingRow,
   type NewBooking,
@@ -37,9 +38,18 @@ const VALID_BODY = {
   endsAt: '2027-01-06T08:00:00.000Z',
 };
 
+const VALID_SERIES_BODY = {
+  roomId: 3,
+  title: 'Щотижневий синк',
+  startsAt: '2027-01-05T07:00:00.000Z', // Tuesday 09:00 Kyiv, safely in the future relative to NOW
+  endsAt: '2027-01-05T08:00:00.000Z',
+  occurrenceCount: 3,
+};
+
 /** Stands in for Postgres: enough state to exercise ownership and cancellation. */
 class RecordingBookingsRepository extends BookingsRepository {
   private readonly byId = new Map<string, MyBookingRow & { canceledAt: Date | null; seriesId: string | null }>();
+  private readonly seriesOwners = new Map<string, string>();
   rejectNextCreateWithSlotTaken = false;
   rejectNextCreateWithRoomNotFound = false;
 
@@ -140,20 +150,27 @@ class RecordingBookingsRepository extends BookingsRepository {
     this.byId.set(row.id, fullRow);
   }
 
-  async createBookingSeries(): Promise<{ id: string }> {
-    throw new Error('not implemented in test');
+  async createBookingSeries(userId: string): Promise<{ id: string }> {
+    const id = randomUUID();
+    this.seriesOwners.set(id, userId);
+    return { id };
   }
 
-  async deleteBookingSeries(): Promise<void> {
-    throw new Error('not implemented in test');
+  async deleteBookingSeries(id: string): Promise<void> {
+    this.seriesOwners.delete(id);
   }
 
-  async findBookingOwnershipAndSeries(): Promise<any> {
-    throw new Error('not implemented in test');
+  async findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null> {
+    const found = this.byId.get(bookingId);
+    return found ? { id: found.id, userId: found.userId, seriesId: found.seriesId } : null;
   }
 
-  async cancelBookingSeries(): Promise<void> {
-    throw new Error('not implemented in test');
+  async cancelBookingSeries(seriesId: string): Promise<void> {
+    for (const row of this.byId.values()) {
+      if (row.seriesId === seriesId && row.canceledAt === null) {
+        row.canceledAt = new Date();
+      }
+    }
   }
 }
 
@@ -201,6 +218,9 @@ describe('BookingsController', () => {
   const deleteBooking = (id: string) => request(app.getHttpServer()).delete(`/api/bookings/${id}`).set('Cookie', cookie);
   const getMyBookings = (query: string) =>
     request(app.getHttpServer()).get(`/api/bookings/mine?${query}`).set('Cookie', cookie);
+  const postSeries = (body: object) => request(app.getHttpServer()).post('/api/bookings/series').set('Cookie', cookie).send(body);
+  const deleteBookingScoped = (id: string, scope: string) =>
+    request(app.getHttpServer()).delete(`/api/bookings/${id}?scope=${scope}`).set('Cookie', cookie);
 
   describe('GET /api/bookings/mine', () => {
     it('upcoming status excludes past and cancelled bookings', async () => {
@@ -460,6 +480,68 @@ describe('BookingsController', () => {
 
     it('requires a session', async () => {
       await request(app.getHttpServer()).delete(`/api/bookings/${randomUUID()}`).expect(401);
+    });
+  });
+
+  describe('POST /api/bookings/series', () => {
+    it('creates every occurrence and returns 201 with { series, created, skipped }', async () => {
+      const response = await postSeries(VALID_SERIES_BODY).expect(201);
+
+      expect(response.body.series.id).toEqual(expect.any(String));
+      expect(response.body.created).toHaveLength(3);
+      expect(response.body.skipped).toEqual([]);
+      for (const created of response.body.created) {
+        expect(created.roomId).toBe(VALID_SERIES_BODY.roomId);
+      }
+    });
+
+    it('rejects an occurrence count below the minimum with a 400', async () => {
+      const response = await postSeries({ ...VALID_SERIES_BODY, occurrenceCount: 1 }).expect(400);
+
+      expect(response.body.errors.occurrenceCount).toBeDefined();
+    });
+
+    it('turns an all-occurrences-conflict into 409', async () => {
+      repository.rejectNextCreateWithSlotTaken = true;
+
+      await postSeries(VALID_SERIES_BODY).expect(409);
+    });
+
+    it('requires a session', async () => {
+      await request(app.getHttpServer()).post('/api/bookings/series').send(VALID_SERIES_BODY).expect(401);
+    });
+  });
+
+  describe('DELETE /api/bookings/:id?scope=series', () => {
+    it('cancels every occurrence sharing the series and returns 204', async () => {
+      const created = await postSeries(VALID_SERIES_BODY).expect(201);
+      const firstOccurrenceId = created.body.created[0].id;
+
+      await deleteBookingScoped(firstOccurrenceId, 'series').expect(204);
+
+      for (const occurrence of created.body.created) {
+        await expect(repository.findBookingById(occurrence.id)).resolves.toMatchObject({ canceledAt: expect.any(Date) });
+      }
+    });
+
+    it('returns 400 when the target booking is not part of any series', async () => {
+      const created = await postBooking(VALID_BODY).expect(201);
+      const { id } = (created.body as { booking: BookingRow }).booking;
+
+      await deleteBookingScoped(id, 'series').expect(400);
+    });
+
+    it("returns 403 for someone else's series booking, without cancelling it", async () => {
+      const othersId = randomUUID();
+      repository.seed({ id: othersId, userId: OTHER_USER_ID, canceledAt: null, seriesId: 'series-x' });
+
+      await deleteBookingScoped(othersId, 'series').expect(403);
+
+      await expect(repository.findBookingById(othersId)).resolves.toMatchObject({ canceledAt: null });
+    });
+
+    it('returns 404 for an unknown id with scope=series', async () => {
+      await deleteBookingScoped(randomUUID(), 'series').expect(404);
     });
   });
 });
