@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Change recurring booking creation to be fully atomic (deny all if ANY occurrence overlaps), return a clear 409 Conflict error with formatted Ukrainian details, save a notification to the bell menu, and display the error in the booking modal prompt.
+**Goal:** Change recurring booking creation to be fully atomic (deny all if ANY occurrence overlaps), return a clear 409 Conflict error with formatted Ukrainian details and `conflictsCount`, save a notification to the bell menu, and display the exact error in the booking modal prompt.
 
-**Architecture:** Update database schema migration to allow `notifications.booking_id` to be nullable and add a `message` column. Update `BookingsService.createSeries` to check for overlaps within a single DB transaction, formatting the 409 error message (`1 overlap` vs `>1 overlaps`) and persisting a `series_conflict` notification. Update `NotificationBell` and `CreateBookingModal` on the frontend to render the new notification and error prompt.
+**Architecture:** Update database schema migration to allow `notifications.booking_id` to be nullable and add a `message` column. Update `BookingsService.createSeries` to check for overlaps, format the 409 error message (`1 overlap` vs `>1 overlaps`), persist a `series_conflict` notification outside the booking transaction, and throw a `409 ConflictException` with `conflictsCount`. Update `errorMapping.ts`, `NotificationBell`, and `CreateBookingModal` on the frontend.
 
 **Tech Stack:** NestJS 11, Drizzle ORM (PostgreSQL), Zod, Luxon 3, React 19, React Query 5.
 
@@ -12,7 +12,7 @@
 
 - Never use `drizzle-kit push`. Use `drizzle-kit generate` or hand-crafted migration SQL applied via `migrate()`.
 - Store timestamps in UTC; format in `Europe/Kyiv` zone or viewer timezone using Luxon 3.
-- No partial series creation allowed — 0 created if any conflict exists.
+- No partial series creation allowed — 0 created if any conflict exists. Remove `skipped` from `CreateSeriesResult` and `BookingSeriesResult`.
 
 ---
 
@@ -82,7 +82,8 @@ export interface NotificationRow {
   roomName: string | null;
 }
 ```
-Add `createConflictNotification(userId: string, message: string): Promise<boolean>` method to `NotificationsRepository`.
+Add `createConflictNotification(userId: string, message: string): Promise<boolean>` method to `NotificationsRepository` and implement in `DrizzleNotificationsRepository` using `runQuery('createConflictNotification', ...)` with `kind: 'series_conflict'`.
+
 Update `DrizzleNotificationsRepository.listForUser` to use `leftJoin` on `bookings` and `rooms`:
 ```ts
   async listForUser(userId: string, limit: number): Promise<NotificationRow[]> {
@@ -136,26 +137,48 @@ git commit -m "feat(db): update notifications schema to support series conflict 
 
 **Interfaces:**
 - Consumes: `NotificationsRepository.createConflictNotification`, `BookingsRepository.findOverlappingBookings`
-- Produces: Atomic `BookingsService.createSeries` throwing `409 Conflict` with Ukrainian conflict message on ANY overlap.
+- Produces: `CreateSeriesResult` (`{ series: { id }, created: BookingRow[] }`), `seriesConflict(message, conflictsCount)` helper, atomic `BookingsService.createSeries` throwing `409 ConflictException` with `message` and `conflictsCount` on ANY overlap.
 
-- [ ] **Step 1: Write failing unit test in `bookings.service.spec.ts` for atomic creation & conflict error message**
+- [ ] **Step 1: Update `bookings.errors.ts` and `CreateSeriesResult` interface**
 
-Add tests for:
-1. Single overlap -> throws ConflictException with `"Не вдалося створити повторювані зустрічі: конфліктує з зустріччю «...» (...). Будь ласка виберіть інший час"`.
-2. Multiple overlaps -> throws ConflictException with `"Не вдалося створити повторювані зустрічі: конфліктує з N зустрічами"`.
+In `apps/api/src/bookings/bookings.errors.ts`:
+Remove `allOccurrencesTaken`. Add `seriesConflict`:
+```ts
+export function seriesConflict(message: string, conflictsCount: number): ConflictException {
+  return new ConflictException({
+    statusCode: HttpStatus.CONFLICT,
+    message,
+    conflictsCount,
+  });
+}
+```
+In `apps/api/src/bookings/bookings.service.ts`:
+Update `CreateSeriesResult` to remove `skipped`:
+```ts
+export interface CreateSeriesResult {
+  series: { id: string };
+  created: BookingRow[];
+}
+```
+
+- [ ] **Step 2: Write failing unit test in `bookings.service.spec.ts` for atomic creation & conflict error message**
+
+Add unit tests in `bookings.service.spec.ts`:
+1. Single overlap -> calls `createConflictNotification`, throws ConflictException with `message: "Не вдалося створити повторювані зустрічі: конфліктує з зустріччю «...» (dd.MM.yyyy HH:mm–HH:mm). Будь ласка виберіть інший час"` and `conflictsCount: 1`. No bookings created.
+2. Multiple overlaps -> calls `createConflictNotification`, throws ConflictException with `message: "Не вдалося створити повторювані зустрічі: конфліктує з 2 зустрічами"` and `conflictsCount: 2`. No bookings created.
 3. 0 overlaps -> creates all N bookings.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx jest apps/api/src/bookings/bookings.service.spec.ts`
-Expected: FAIL (currently skips overlaps and creates partial series).
+Expected: FAIL
 
-- [ ] **Step 3: Implement `findOverlappingBookings` in Repository and atomic `createSeries` in Service**
+- [ ] **Step 4: Implement `findOverlappingBookings` in Repository and atomic `createSeries` in Service**
 
 In `BookingsRepository`:
 Add method `findOverlappingBookings(roomId: number, occurrences: { startsAt: Date; endsAt: Date }[])`.
 In `DrizzleBookingsRepository`:
-Query DB for active bookings in `roomId` overlapping any occurrence: `isNull(canceledAt) AND (startsAt < occ.endsAt AND endsAt > occ.startsAt)`.
+Use `runQuery('findOverlappingBookings', ...)` to query active bookings in `roomId` overlapping any occurrence: `isNull(canceledAt) AND roomId = roomId AND (startsAt < occ.endsAt AND endsAt > occ.startsAt)`.
 
 In `BookingsService`:
 Inject `NotificationsRepository`.
@@ -164,24 +187,36 @@ Update `createSeries`:
 - Query overlapping bookings for all occurrences.
 - If `overlappingBookings.length > 0`:
   - Format conflict error message:
-    - 1 overlap: `"Не вдалося створити повторювані зустрічі: конфліктує з зустріччю «" + title + "» (" + formattedDate + " " + formattedTimeRange + "). Будь ласка виберіть інший час"`
-    - >1 overlaps: `"Не вдалося створити повторювані зустрічі: конфліктує з " + count + " зустрічами"`
-  - Create conflict notification: `this.notificationsRepo.createConflictNotification(user.id, errorMessage)`
-  - Throw `seriesConflict(errorMessage)` (409 ConflictException).
+    - If `overlappingBookings.length === 1`:
+      - Use Luxon to convert `overlappingBookings[0].startsAt` and `endsAt` to `Europe/Kyiv`:
+        - `formattedDate`: `dd.MM.yyyy`
+        - `formattedTimeRange`: `HH:mm–HH:mm`
+      - `details`: `«${booking.title}» (${formattedDate} ${formattedTimeRange})`
+      - `errorMessage`: `"Не вдалося створити повторювані зустрічі: конфліктує з зустріччю " + details + ". Будь ласка виберіть інший час"`
+    - If `overlappingBookings.length > 1`:
+      - `errorMessage`: `"Не вдалося створити повторювані зустрічі: конфліктує з " + count + " зустрічами"`
+  - Create conflict notification **outside/before** any booking creation:
+    `await this.notificationsRepo.createConflictNotification(user.id, errorMessage)`
+  - Throw `seriesConflict(errorMessage, overlappingBookings.length)`.
 - If 0 overlaps:
   - Create `booking_series` and all N bookings inside transaction.
   - Return `{ series: { id }, created }`.
 
-- [ ] **Step 4: Run tests to verify pass**
+- [ ] **Step 5: Run unit tests to verify pass**
 
 Run: `npx jest apps/api/src/bookings/bookings.service.spec.ts`
 Expected: PASS
 
-- [ ] **Step 5: Update Integration Tests in `apps/api/test/bookings.int-spec.ts`**
+- [ ] **Step 6: Update Integration Tests in `apps/api/test/bookings.int-spec.ts`**
 
-Update `bookings.int-spec.ts` series creation tests to assert that partial creation returns 409 Conflict, 0 bookings are saved in DB, and a `series_conflict` notification is present in `/api/notifications`.
+Update `bookings.int-spec.ts` series creation tests to assert that overlapping creation returns 409 Conflict with `conflictsCount` and `message`, 0 bookings are saved in DB, and a `series_conflict` notification is returned by GET `/api/notifications`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Run integration tests to verify pass**
+
+Run: `npx jest apps/api/test/bookings.int-spec.ts`
+Expected: PASS
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/bookings apps/api/test/bookings.int-spec.ts
@@ -190,9 +225,10 @@ git commit -m "feat(api): enforce atomic series creation and conflict notificati
 
 ---
 
-### Task 3: Web Frontend Notification Bell & Booking Modal Prompt
+### Task 3: Web Frontend Error Mapping, Notification Bell & Booking Modal Prompt
 
 **Files:**
+- Modify: `apps/web/src/features/bookings/errorMapping.ts`
 - Modify: `apps/web/src/features/notifications/api.ts`
 - Modify: `apps/web/src/features/notifications/NotificationBell.tsx`
 - Modify: `apps/web/src/features/notifications/NotificationBell.test.tsx`
@@ -203,18 +239,31 @@ git commit -m "feat(api): enforce atomic series creation and conflict notificati
 
 **Interfaces:**
 - Consumes: `NotificationDTO` with optional `message` and `kind = 'series_conflict'`, `POST /api/bookings/series` returning 409 error message.
-- Produces: Bell rendering `series_conflict` notifications, modal displaying 409 error prompt, invalidating notification queries on mutation completion.
+- Produces: `errorMapping.ts` forwarding custom 409 message to `formError`, `NotificationBell` rendering `series_conflict` notifications, `useCreateBookingSeries` invalidating `['notifications']` query key.
 
-- [ ] **Step 1: Write failing test in `NotificationBell.test.tsx` for `series_conflict` notification**
+- [ ] **Step 1: Update `errorMapping.ts` to preserve custom 409 messages**
 
-Add test checking that a notification with `kind: 'series_conflict'` renders title `"Не вдалося створити повторювані зустрічі"` and the detailed message body.
+In `apps/web/src/features/bookings/errorMapping.ts`:
+Update `mapApiErrorToForm`:
+```ts
+if (status === 409) {
+  return {
+    fieldErrors: {},
+    formError: err instanceof ApiError ? err.message : BOOKING_REJECTION_MESSAGES.slotTaken,
+  };
+}
+```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Write failing test in `NotificationBell.test.tsx` for `series_conflict` notification**
+
+Add test checking that a notification with `kind: 'series_conflict'`, `bookingId: null`, and `message` renders title `"Не вдалося створити повторювані зустрічі"` and the detailed message body, without crashing on missing booking fields.
+
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run apps/web/src/features/notifications/NotificationBell.test.tsx`
 Expected: FAIL
 
-- [ ] **Step 3: Update `NotificationBell.tsx` and `api.ts`**
+- [ ] **Step 4: Update `NotificationBell.tsx` and `api.ts`**
 
 Update `NotificationDTO`:
 ```ts
@@ -232,28 +281,41 @@ export interface NotificationDTO {
 }
 ```
 In `NotificationBell.tsx`:
-Handle `n.kind === 'series_conflict'`:
-- Title: `"Не вдалося створити повторювані зустрічі"`
-- Body: `n.message ?? ''`
-- Icon: Warning icon (alert circle / triangle).
+Conditionally check `n.kind`:
+- If `n.kind === 'series_conflict'`:
+  - Title: `"Не вдалося створити повторювані зустрічі"`
+  - Body: `n.message ?? ''`
+  - Icon: Warning icon (alert triangle / circle with exclamation mark).
+- Else (`ending_soon`):
+  - Render existing title and `endingSoonBody(n, viewerZone)`.
 
-- [ ] **Step 4: Update `useBookingMutations.ts`, `CreateBookingModal.tsx`, and `RoomSchedulePage.tsx`**
+- [ ] **Step 5: Update `useBookingMutations.ts`, `CreateBookingModal.tsx`, and `RoomSchedulePage.tsx`**
 
 In `useBookingMutations.ts`:
-In `useCreateBookingSeries`, add `onSettled`:
-`queryClient.invalidateQueries({ queryKey: ['notifications', 'mine'] })`.
+Remove `skipped` from `BookingSeriesResult`.
+In `useCreateBookingSeries`, add `onSettled` callback:
+```ts
+onSettled: () => {
+  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+}
+```
 
 In `RoomSchedulePage.tsx`:
-Remove `seriesPartialMessage` state and banner rendering (since partial creation is replaced with atomic rejection).
+Remove `seriesPartialMessage` state and banner element since partial series creation is completely removed.
 
-- [ ] **Step 5: Run frontend tests to verify pass**
+- [ ] **Step 6: Run frontend tests to verify pass**
 
-Run: `npm test` at workspace root or `npx vitest run` in `apps/web`.
+Run: `npx vitest run` in `apps/web`.
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Run full test suite across monorepo**
+
+Run: `npm test` at repo root.
+Expected: PASS
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/web
-git commit -m "feat(web): update notification bell and create booking modal for atomic series conflicts"
+git commit -m "feat(web): update error mapping, notification bell, and modal for atomic series conflicts"
 ```
