@@ -8,7 +8,7 @@ import { useLoginMutation } from './useAuthMutations';
 import { useAuthFormErrors } from './useAuthFormErrors';
 
 const LOGIN_FIELDS = [
-  { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+  { name: 'email', label: 'Електронна пошта', type: 'email', autoComplete: 'email' },
   { name: 'password', label: 'Пароль', type: 'password', autoComplete: 'current-password' },
 ] as const;
 
@@ -38,7 +38,7 @@ function LoginForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+    <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4">
       <FormError message={formError} />
       {LOGIN_FIELDS.map(({ name, ...field }) => (
         <TextField
@@ -48,7 +48,9 @@ function LoginForm() {
           registration={register(name)}
         />
       ))}
-      <AuthSubmitButton pending={login.isPending} label="Увійти" pendingLabel="Входимо…" />
+      <div className="pt-2">
+        <AuthSubmitButton pending={login.isPending} label="Увійти" pendingLabel="Входимо…" />
+      </div>
     </form>
   );
 }
@@ -56,10 +58,12 @@ function LoginForm() {
 export function LoginPage() {
   return (
     <AuthCard
-      title="Вхід"
-      footer={<AuthFooterLink question="Немає акаунта?" to="/register" label="Зареєструватися" />}
+      title="Забронюйте кімнату"
+      subtitle="Увійдіть, щоб побачити розклад переговорних."
+      footer={<AuthFooterLink question="Немає облікового запису?" to="/register" label="Зареєструватися" />}
     >
       <LoginForm />
     </AuthCard>
   );
 }
+
