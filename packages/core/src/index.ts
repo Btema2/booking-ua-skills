@@ -43,6 +43,7 @@ export {
   OFFICE_CLOSE_HOUR,
   slotsForWeek,
   getKyivWeekParamForInstant,
+  weeklyOccurrences,
   BOOKING_REJECTION_MESSAGES,
   MIN_BOOKING_MINUTES,
   MAX_BOOKING_MINUTES,
