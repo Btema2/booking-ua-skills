@@ -130,6 +130,7 @@ export class BookingsService {
           continue;
         }
         if (error instanceof RoomNotFoundError) {
+          await this.bookingsRepo.deleteBookingSeries(series.id);
           throw roomNotFound();
         }
         throw error;

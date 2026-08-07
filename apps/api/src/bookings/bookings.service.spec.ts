@@ -422,6 +422,7 @@ describe('BookingsService', () => {
 
       expect(error).toBeInstanceOf(BadRequestException);
       expect(bodyOf(error)).toEqual({ statusCode: 400, errors: { roomId: ['Обраної кімнати не існує'] } });
+      expect(repository.deleteBookingSeries).toHaveBeenCalledWith('series-1');
     });
   });
 
