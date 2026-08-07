@@ -76,17 +76,21 @@ export function NotificationToast() {
       aria-live="polite"
       className={[
         'fixed z-[var(--z-toast)] top-[70px] right-4 flex w-[min(380px,calc(100vw-32px))] items-start gap-[13px]',
-        'rounded-[var(--radius-lg,20px)] p-[15px_18px] shadow-[var(--shadow-el-3)] border',
+        'rounded-[var(--radius-lg,20px)] p-[15px_18px]',
+        'supports-[backdrop-filter]:backdrop-blur-[var(--blur-toast)] supports-[backdrop-filter]:backdrop-saturate-[1.2]',
+        'shadow-[var(--shadow-el-3)] border',
         isConflict
-          ? 'bg-error-container text-on-error-container border-error/30'
-          : 'bg-[var(--glass-toast)] text-on-surface border-outline-variant supports-[backdrop-filter]:backdrop-blur-[var(--blur-toast)] supports-[backdrop-filter]:backdrop-saturate-[1.2]',
+          ? 'bg-[var(--glass-toast-error)] text-on-error-container border-error/35'
+          : 'bg-[var(--glass-toast)] text-on-surface border-outline-variant',
         '[animation:notif-toast-in_var(--dur-toast)_var(--ease-spring)_both]',
       ].join(' ')}
     >
       <span
         aria-hidden="true"
         className={`grid size-[30px] shrink-0 place-items-center rounded-full ${
-          isConflict ? 'bg-error text-on-error' : 'bg-primary-container text-on-primary-container'
+          isConflict
+            ? 'bg-error-container text-error border border-error/20'
+            : 'bg-primary-container text-on-primary-container'
         }`}
       >
         {isConflict ? (

@@ -345,6 +345,7 @@
   --glass-gridhead-fallback: #f2e7d2;
   --glass-gridhead-saturate: 1.2;
   --glass-toast: color-mix(in srgb,#e2d2b5 92%,transparent);
+  --glass-toast-error: color-mix(in srgb,#fadfd8 92%,transparent);
   --glass-toast-fallback: #e2d2b5;
   --glass-toast-saturate: 1.2;
   --glass-menu: color-mix(in srgb,#f2e7d2 92%,transparent);
