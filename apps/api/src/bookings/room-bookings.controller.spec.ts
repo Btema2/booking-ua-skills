@@ -61,6 +61,10 @@ class RecordingBookingsRepository extends BookingsRepository {
     throw new Error('not implemented in test');
   }
 
+  async deleteBookingsBySeriesId(): Promise<void> {
+    throw new Error('not implemented in test');
+  }
+
   async findOverlappingBookings(): Promise<BookingRow[]> {
     return [];
   }

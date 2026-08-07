@@ -148,12 +148,16 @@ export class BookingsService {
         });
         created.push(row);
       } catch (error) {
+        await this.bookingsRepo.deleteBookingsBySeriesId(series.id);
+        await this.bookingsRepo.deleteBookingSeries(series.id);
+
         if (error instanceof SlotTakenError) {
-          await this.bookingsRepo.deleteBookingSeries(series.id);
-          throw seriesConflict('Не вдалося створити повторювані зустрічі: слот вже зайнятий', 1);
+          const errorMessage =
+            'Не вдалося створити повторювані зустрічі: конфліктує з іншим бронюванням. Будь ласка виберіть інший час';
+          await this.notificationsRepo.createConflictNotification(user.id, errorMessage);
+          throw seriesConflict(errorMessage, 1);
         }
         if (error instanceof RoomNotFoundError) {
-          await this.bookingsRepo.deleteBookingSeries(series.id);
           throw roomNotFound();
         }
         throw error;

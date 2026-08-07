@@ -65,6 +65,7 @@ function createRepository(): MockedRepository {
     listMyBookings: jest.fn(async () => ({ bookings: [], total: 0, page: 1, limit: 10, hasMore: false })),
     createBookingSeries: jest.fn(async () => ({ id: 'series-1' })),
     deleteBookingSeries: jest.fn(async () => undefined),
+    deleteBookingsBySeriesId: jest.fn(async () => undefined),
     findBookingOwnershipAndSeries: jest.fn(async () => null),
     cancelBookingSeries: jest.fn(async () => undefined),
   };
@@ -481,7 +482,29 @@ describe('BookingsService', () => {
 
       expect(error).toBeInstanceOf(BadRequestException);
       expect(bodyOf(error)).toEqual({ statusCode: 400, errors: { roomId: ['Обраної кімнати не існує'] } });
+      expect(repository.deleteBookingsBySeriesId).toHaveBeenCalledWith('series-1');
       expect(repository.deleteBookingSeries).toHaveBeenCalledWith('series-1');
+    });
+
+    it('deletes created occurrences, series row, creates notification, and throws 409 when SlotTakenError occurs mid-loop', async () => {
+      useFixedNow();
+      const repository = createRepository();
+      const notificationsRepo = createNotificationsRepository();
+      repository.findOverlappingBookings.mockResolvedValue([]);
+      repository.createBooking
+        .mockResolvedValueOnce(VALID_ROW)
+        .mockRejectedValueOnce(new SlotTakenError());
+
+      const service = createService(repository, notificationsRepo);
+      const error = await service.createSeries(USER, VALID_SERIES_INPUT).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect(repository.deleteBookingsBySeriesId).toHaveBeenCalledWith('series-1');
+      expect(repository.deleteBookingSeries).toHaveBeenCalledWith('series-1');
+      expect(notificationsRepo.createConflictNotification).toHaveBeenCalledWith(
+        USER.id,
+        expect.stringContaining('конфліктує з іншим бронюванням'),
+      );
     });
   });
 

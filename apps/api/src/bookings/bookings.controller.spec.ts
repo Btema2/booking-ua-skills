@@ -173,6 +173,14 @@ class RecordingBookingsRepository extends BookingsRepository {
     this.seriesOwners.delete(id);
   }
 
+  async deleteBookingsBySeriesId(seriesId: string): Promise<void> {
+    for (const [id, row] of Array.from(this.byId.entries())) {
+      if (row.seriesId === seriesId) {
+        this.byId.delete(id);
+      }
+    }
+  }
+
   async findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null> {
     const found = this.byId.get(bookingId);
     return found ? { id: found.id, userId: found.userId, seriesId: found.seriesId } : null;

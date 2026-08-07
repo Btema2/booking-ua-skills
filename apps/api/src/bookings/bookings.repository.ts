@@ -112,6 +112,7 @@ export abstract class BookingsRepository {
   abstract createBookingSeries(userId: string): Promise<{ id: string }>;
   /** Used only to roll back a series whose every occurrence conflicted — see BookingsService.createSeries. */
   abstract deleteBookingSeries(id: string): Promise<void>;
+  abstract deleteBookingsBySeriesId(seriesId: string): Promise<void>;
   abstract findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null>;
   /** Soft-cancels every still-live occurrence in the series; idempotent, never touches the booking_series row itself. */
   abstract cancelBookingSeries(seriesId: string): Promise<void>;

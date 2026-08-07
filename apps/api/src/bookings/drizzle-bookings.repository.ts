@@ -192,6 +192,10 @@ export class DrizzleBookingsRepository extends BookingsRepository {
     await runQuery('deleteBookingSeries', () => this.db.delete(bookingSeries).where(eq(bookingSeries.id, id)));
   }
 
+  async deleteBookingsBySeriesId(seriesId: string): Promise<void> {
+    await runQuery('deleteBookingsBySeriesId', () => this.db.delete(bookings).where(eq(bookings.seriesId, seriesId)));
+  }
+
   async findBookingOwnershipAndSeries(bookingId: string): Promise<BookingOwnershipAndSeries | null> {
     const [found] = await runQuery('findBookingOwnershipAndSeries', () =>
       this.db
