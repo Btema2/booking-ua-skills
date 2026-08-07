@@ -94,4 +94,27 @@ describe('NotificationToast', () => {
 
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
   });
+
+  it('pops a red conflict error toast for series_conflict notifications', async () => {
+    const { setPolledData, waitForInitialLoad } = setup([]);
+    await waitForInitialLoad();
+
+    const conflict: NotificationDTO = {
+      id: 'n2',
+      bookingId: null,
+      kind: 'series_conflict',
+      message: 'Не вдалося створити повторювані зустрічі: конфліктує з 7 зустрічами',
+      createdAt: '2026-08-06T10:50:00.000Z',
+      readAt: null,
+      bookingTitle: null,
+      bookingEndsAt: null,
+      roomId: null,
+      roomName: null,
+    };
+
+    setPolledData([conflict]);
+
+    expect(await screen.findByText('Не вдалося створити повторювані зустрічі')).toBeTruthy();
+    expect(screen.getByText('Не вдалося створити повторювані зустрічі: конфліктує з 7 зустрічами')).toBeTruthy();
+  });
 });

@@ -9,6 +9,7 @@ const TOAST_DURATION_MS = 5200;
 interface ToastContent {
   title: string;
   body: string;
+  kind: string;
 }
 
 function toContent(n: NotificationDTO, notifyBeforeMinutes: number, viewerZone: string): ToastContent {
@@ -16,6 +17,7 @@ function toContent(n: NotificationDTO, notifyBeforeMinutes: number, viewerZone: 
     return {
       title: 'Не вдалося створити повторювані зустрічі',
       body: n.message ?? '',
+      kind: n.kind,
     };
   }
   const titleStr = n.bookingTitle ?? '';
@@ -24,6 +26,7 @@ function toContent(n: NotificationDTO, notifyBeforeMinutes: number, viewerZone: 
   return {
     title: `Зустріч завершується за ${notifyBeforeMinutes} хв`,
     body: `«${titleStr}» · ${roomStr} · до ${endsAtStr}`,
+    kind: n.kind,
   };
 }
 
@@ -65,6 +68,8 @@ export function NotificationToast() {
 
   if (!toast) return null;
 
+  const isConflict = toast.kind === 'series_conflict';
+
   return (
     <div
       role="status"
@@ -73,17 +78,26 @@ export function NotificationToast() {
         'fixed z-[var(--z-toast)] top-[70px] right-4 flex w-[min(380px,calc(100vw-32px))] items-start gap-[13px]',
         'rounded-[var(--radius-lg,20px)] p-[15px_18px] bg-[var(--glass-toast)]',
         'supports-[backdrop-filter]:backdrop-blur-[var(--blur-toast)] supports-[backdrop-filter]:backdrop-saturate-[1.2]',
-        'shadow-[var(--shadow-el-3)] border border-outline-variant',
+        'shadow-[var(--shadow-el-3)] border',
+        isConflict ? 'border-error/40' : 'border-outline-variant',
         '[animation:notif-toast-in_var(--dur-toast)_var(--ease-spring)_both]',
       ].join(' ')}
     >
       <span
         aria-hidden="true"
-        className="grid size-[30px] shrink-0 place-items-center rounded-full bg-primary-container text-on-primary-container"
+        className={`grid size-[30px] shrink-0 place-items-center rounded-full ${
+          isConflict ? 'bg-error-container text-on-error-container' : 'bg-primary-container text-on-primary-container'
+        }`}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        {isConflict ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        )}
       </span>
       <div className="min-w-0 flex-1">
         <p className="m-0 mb-[2px] text-[14.5px] font-semibold leading-[1.35] text-on-surface">{toast.title}</p>
