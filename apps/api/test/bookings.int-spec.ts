@@ -5,7 +5,7 @@ import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { AppModule } from '../src/app.module';
 import { getConnection, closeConnection } from '../src/db/connection';
-import { bookings, users } from '../src/db/schema';
+import { bookings, bookingSeries, users } from '../src/db/schema';
 import { setupTestDb, truncateTables } from './test-db-setup';
 
 describe('API Integration Tests (Bookings & Auth)', () => {
@@ -485,6 +485,193 @@ describe('API Integration Tests (Bookings & Auth)', () => {
       expect(res2.status).toBe(200);
       expect(res2.body.bookings.length).toBe(1);
       expect(res2.body.bookings[0].title).toBe('Beta Booking');
+    });
+  });
+
+  describe('Weekly recurring bookings (Phase 8.4)', () => {
+    it('19. Creating a series with no conflicts inserts one row per occurrence, all sharing one series_id', async () => {
+      const { cookie } = await createUser('Series Clean', 'series-clean@example.com');
+
+      const res = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', cookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync',
+          startsAt: '2028-06-16T07:00:00.000Z', // Tuesday 10:00 Kyiv (EEST)
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 3,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.created).toHaveLength(3);
+      expect(res.body.skipped).toEqual([]);
+
+      const { db } = getConnection();
+      const rows = await db.select().from(bookings).where(eq(bookings.seriesId, res.body.series.id));
+      expect(rows.length).toBe(3);
+      expect(rows.every((r) => r.seriesId === res.body.series.id)).toBe(true);
+
+      const [seriesRow] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, res.body.series.id));
+      expect(seriesRow).toBeDefined();
+    });
+
+    it('20. Creating a series that partially conflicts creates only the non-conflicting occurrences and reports the rest as skipped', async () => {
+      const { cookie: existingCookie } = await createUser('Series Blocker', 'series-blocker@example.com');
+      const { cookie: seriesCookie } = await createUser('Series Partial', 'series-partial@example.com');
+
+      // Occupies what would otherwise be occurrence 2 of the series below
+      // (Tuesday 2028-06-23, 10:00-11:00 Kyiv).
+      await request(app.getHttpServer())
+        .post('/api/bookings')
+        .set('Cookie', existingCookie)
+        .send({
+          roomId: 1,
+          title: 'Pre-existing block',
+          startsAt: '2028-06-23T07:00:00.000Z',
+          endsAt: '2028-06-23T08:00:00.000Z',
+        })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', seriesCookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync Partial',
+          startsAt: '2028-06-16T07:00:00.000Z',
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 3,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.created).toHaveLength(2);
+      expect(res.body.skipped).toHaveLength(1);
+
+      const { db } = getConnection();
+      const rows = await db.select().from(bookings).where(eq(bookings.seriesId, res.body.series.id));
+      expect(rows.length).toBe(2);
+    });
+
+    it('21. Creating a series where every occurrence conflicts returns 409 and leaves no booking_series row behind', async () => {
+      const { cookie: existingCookie } = await createUser('Series AllBlock Owner', 'series-allblock-owner@example.com');
+      const { cookie: seriesCookie } = await createUser('Series AllBlock', 'series-allblock@example.com');
+
+      for (const [start, end] of [
+        ['2028-06-16T07:00:00.000Z', '2028-06-16T08:00:00.000Z'],
+        ['2028-06-23T07:00:00.000Z', '2028-06-23T08:00:00.000Z'],
+      ]) {
+        await request(app.getHttpServer())
+          .post('/api/bookings')
+          .set('Cookie', existingCookie)
+          .send({ roomId: 1, title: 'Blocker', startsAt: start, endsAt: end })
+          .expect(201);
+      }
+
+      const beforeCount = (await getConnection().db.select().from(bookingSeries)).length;
+
+      const res = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', seriesCookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync Blocked',
+          startsAt: '2028-06-16T07:00:00.000Z',
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 2,
+        });
+
+      expect(res.status).toBe(409);
+
+      const afterCount = (await getConnection().db.select().from(bookingSeries)).length;
+      expect(afterCount).toBe(beforeCount);
+    });
+
+    it('22. Cancelling one occurrence of a series leaves the rest of the series live', async () => {
+      const { cookie } = await createUser('Series CancelOne', 'series-cancelone@example.com');
+
+      const created = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', cookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync CancelOne',
+          startsAt: '2028-06-16T07:00:00.000Z',
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 3,
+        })
+        .expect(201);
+
+      const firstId = created.body.created[0].id;
+      const secondId = created.body.created[1].id;
+
+      await request(app.getHttpServer()).delete(`/api/bookings/${firstId}`).set('Cookie', cookie).expect(204);
+
+      const { db } = getConnection();
+      const [firstRow] = await db.select().from(bookings).where(eq(bookings.id, firstId));
+      const [secondRow] = await db.select().from(bookings).where(eq(bookings.id, secondId));
+      expect(firstRow.canceledAt).not.toBeNull();
+      expect(secondRow.canceledAt).toBeNull();
+    });
+
+    it('23. Cancelling scope=series cancels every remaining occurrence and leaves the booking_series row in place', async () => {
+      const { cookie } = await createUser('Series CancelAll', 'series-cancelall@example.com');
+
+      const created = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', cookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync CancelAll',
+          startsAt: '2028-06-16T07:00:00.000Z',
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 3,
+        })
+        .expect(201);
+
+      const seriesId = created.body.series.id;
+      const anyOccurrenceId = created.body.created[0].id;
+
+      await request(app.getHttpServer())
+        .delete(`/api/bookings/${anyOccurrenceId}?scope=series`)
+        .set('Cookie', cookie)
+        .expect(204);
+
+      const { db } = getConnection();
+      const rows = await db.select().from(bookings).where(eq(bookings.seriesId, seriesId));
+      expect(rows.every((r) => r.canceledAt !== null)).toBe(true);
+
+      const [seriesRow] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId));
+      expect(seriesRow).toBeDefined();
+    });
+
+    it("24. Cancelling scope=series on another user's booking returns 403 and cancels nothing", async () => {
+      const { cookie: ownerCookie } = await createUser('Series Owner', 'series-owner-403@example.com');
+      const { cookie: strangerCookie } = await createUser('Series Stranger', 'series-stranger-403@example.com');
+
+      const created = await request(app.getHttpServer())
+        .post('/api/bookings/series')
+        .set('Cookie', ownerCookie)
+        .send({
+          roomId: 1,
+          title: 'Weekly Sync Protected',
+          startsAt: '2028-06-16T07:00:00.000Z',
+          endsAt: '2028-06-16T08:00:00.000Z',
+          occurrenceCount: 2,
+        })
+        .expect(201);
+
+      const seriesId = created.body.series.id;
+      const anyOccurrenceId = created.body.created[0].id;
+
+      await request(app.getHttpServer())
+        .delete(`/api/bookings/${anyOccurrenceId}?scope=series`)
+        .set('Cookie', strangerCookie)
+        .expect(403);
+
+      const { db } = getConnection();
+      const rows = await db.select().from(bookings).where(eq(bookings.seriesId, seriesId));
+      expect(rows.every((r) => r.canceledAt === null)).toBe(true);
     });
   });
 });
