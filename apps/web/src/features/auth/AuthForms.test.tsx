@@ -6,7 +6,7 @@ const anonymousSession = () =>
   jsonResponse(401, { statusCode: 401, message: 'Необхідна автентифікація' });
 
 async function fillLoginForm() {
-  fireEvent.change(await screen.findByLabelText('Email'), {
+  fireEvent.change(await screen.findByLabelText(/Email|Електронна пошта/i), {
     target: { value: 'ivan@example.com' },
   });
   fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'super-secret' } });
@@ -18,11 +18,11 @@ describe('client-side validation', () => {
 
   it('rejects a 7-character password without sending a request', async () => {
     const { fetchMock } = renderApp('/register', { 'GET /api/auth/me': anonymousSession });
-    await screen.findByRole('heading', { name: 'Реєстрація' });
+    await screen.findByRole('heading', { name: 'Створіть акаунт' });
     const callsBeforeSubmit = fetchMock.mock.calls.length;
 
     fireEvent.change(screen.getByLabelText('Імʼя'), { target: { value: 'Іван' } });
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ivan@example.com' } });
+    fireEvent.change(screen.getByLabelText(/Email|Електронна пошта/i), { target: { value: 'ivan@example.com' } });
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: '1234567' } });
     fireEvent.click(screen.getByRole('button', { name: 'Зареєструватися' }));
 
@@ -51,9 +51,9 @@ describe('server-side errors', () => {
     await fillLoginForm();
 
     await waitFor(() =>
-      expectFieldError(screen.getByLabelText('Email'), 'Цей email заблоковано'),
+      expectFieldError(screen.getByLabelText(/Email|Електронна пошта/i), 'Цей email заблоковано'),
     );
-    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('ivan@example.com');
+    expect((screen.getByLabelText(/Email|Електронна пошта/i) as HTMLInputElement).value).toBe('ivan@example.com');
     expect((screen.getByLabelText('Пароль') as HTMLInputElement).value).toBe('super-secret');
   });
 
@@ -67,6 +67,7 @@ describe('server-side errors', () => {
 
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByRole('alert').textContent).toBe('Невірний email або пароль');
-    expect(screen.getByLabelText('Email').getAttribute('aria-invalid')).toBeNull();
+    expect(screen.getByLabelText(/Email|Електронна пошта/i).getAttribute('aria-invalid')).toBeNull();
   });
 });
+

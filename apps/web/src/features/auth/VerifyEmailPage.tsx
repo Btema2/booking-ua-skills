@@ -5,18 +5,18 @@ import { useVerifyEmailMutation } from './useAuthMutations';
 import { useCurrentUser } from './useCurrentUser';
 import { ApiError } from '../../lib/api';
 
-const ICON_CIRCLE = 'flex size-[48px] items-center justify-center rounded-full';
+const ICON_CIRCLE = 'flex size-[52px] items-center justify-center rounded-full shadow-sm';
 
 function SuccessIcon() {
   return (
-    <span className={`${ICON_CIRCLE} bg-primary-container text-on-primary-container`}>
+    <span className={`${ICON_CIRCLE} bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)]`}>
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
-        className="size-[22px]"
+        className="size-[24px]"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -29,8 +29,8 @@ function SuccessIcon() {
 
 function ErrorIcon() {
   return (
-    <span className={`${ICON_CIRCLE} bg-error-container text-on-error-container`}>
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[22px]" fill="none">
+    <span className={`${ICON_CIRCLE} bg-[var(--color-error-container)] text-[var(--color-on-error-container)]`}>
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[24px]" fill="none">
         <path
           d="M12 4.5l8.5 15h-17l8.5-15z"
           stroke="currentColor"
@@ -64,36 +64,44 @@ export function VerifyEmailPage() {
   return (
     <AuthCard
       title="Підтвердження email"
+      subtitle="Перевіряємо ваш поштовий ящик для доступу до бронювань."
       footer={
-        <Link to={continueTo} className="font-medium text-slate-900 underline hover:text-slate-600">
+        <Link
+          to={continueTo}
+          style={{ background: 'var(--auth-glaze-primary)' }}
+          className="inline-flex w-full items-center justify-center rounded-full shadow-[var(--auth-glaze-primary-shadow)] text-[var(--auth-glaze-primary-ink)] min-h-[var(--auth-glaze-primary-min-h)] px-6 py-3 text-label-large font-semibold hover:brightness-105 transition-all"
+        >
           {continueLabel}
         </Link>
       }
     >
-      <div className="mt-6 flex flex-col items-center gap-3 text-center">
+      <div className="py-4 flex flex-col items-center gap-4 text-center">
         {verify.isPending || verify.isIdle ? (
-          <p className="text-sm text-on-surface-variant">Підтверджуємо пошту…</p>
+          <p className="text-body-medium text-[var(--color-on-surface-variant)] animate-pulse">Підтверджуємо пошту…</p>
         ) : verify.isSuccess ? (
           <>
             <SuccessIcon />
-            <p className="text-sm text-on-surface">
+            <p className="text-body-medium font-medium text-[var(--color-on-surface)]">
               Пошту підтверджено. Тепер можна створювати бронювання.
             </p>
           </>
         ) : (
           <>
             <ErrorIcon />
-            <p className="text-sm text-on-surface">
-              {verify.error instanceof ApiError
-                ? verify.error.message
-                : 'Не вдалося підтвердити пошту.'}
-            </p>
-            <p className="text-sm text-on-surface-variant">
-              Увійдіть в акаунт і надішліть нове посилання.
-            </p>
+            <div className="space-y-1">
+              <p className="text-body-medium font-medium text-[var(--color-on-surface)]">
+                {verify.error instanceof ApiError
+                  ? verify.error.message
+                  : 'Не вдалося підтвердити пошту.'}
+              </p>
+              <p className="text-body-small text-[var(--color-on-surface-variant)]">
+                Увійдіть в акаунт і надішліть нове посилання.
+              </p>
+            </div>
           </>
         )}
       </div>
     </AuthCard>
   );
 }
+

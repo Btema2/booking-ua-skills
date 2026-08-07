@@ -9,7 +9,7 @@ import { useAuthFormErrors } from './useAuthFormErrors';
 
 const REGISTER_FIELDS = [
   { name: 'name', label: 'Імʼя', type: 'text', autoComplete: 'name' },
-  { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+  { name: 'email', label: 'Електронна пошта', type: 'email', autoComplete: 'email' },
   { name: 'password', label: 'Пароль', type: 'password', autoComplete: 'new-password' },
 ] as const;
 
@@ -39,7 +39,7 @@ function RegisterForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+    <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4">
       <FormError message={formError} />
       {REGISTER_FIELDS.map(({ name, ...field }) => (
         <TextField
@@ -49,11 +49,13 @@ function RegisterForm() {
           registration={register(name)}
         />
       ))}
-      <AuthSubmitButton
-        pending={registerUser.isPending}
-        label="Зареєструватися"
-        pendingLabel="Реєструємо…"
-      />
+      <div className="pt-2">
+        <AuthSubmitButton
+          pending={registerUser.isPending}
+          label="Зареєструватися"
+          pendingLabel="Реєструємо…"
+        />
+      </div>
     </form>
   );
 }
@@ -61,10 +63,12 @@ function RegisterForm() {
 export function RegisterPage() {
   return (
     <AuthCard
-      title="Реєстрація"
+      title="Створіть акаунт"
+      subtitle="Зареєструйтеся, щоб бронювати кімнати для зустрічей."
       footer={<AuthFooterLink question="Вже маєте акаунт?" to="/login" label="Увійти" />}
     >
       <RegisterForm />
     </AuthCard>
   );
 }
+

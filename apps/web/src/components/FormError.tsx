@@ -6,9 +6,10 @@ export function FormError({ message }: { message: string | null }) {
   return (
     <p
       role="alert"
-      className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+      className="rounded-2xl border border-[var(--color-error)]/20 bg-[var(--color-error-container)] px-4 py-3 text-body-medium font-medium text-[var(--color-on-error-container)] shadow-sm"
     >
       {message}
     </p>
   );
 }
+
