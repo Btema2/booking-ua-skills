@@ -119,6 +119,8 @@ export function CreateBookingModal({
         startsAt: initialStartISO,
         endsAt: computeInitialEndISO(initialStartISO, initialEndISO),
       });
+      setIsRepeating(false);
+      setOccurrenceCount(8);
     }
   }, [isOpen, initialStartISO, initialEndISO, reset]);
 
@@ -194,7 +196,7 @@ export function CreateBookingModal({
     });
   });
 
-  const inputStateClass = isSubmitting
+  const inputStateClass = isSubmitting || isSubmittingSeries
     ? 'opacity-55 bg-surface-container-high cursor-not-allowed'
     : 'bg-surface-container-lowest text-on-surface';
 
@@ -204,7 +206,7 @@ export function CreateBookingModal({
       ? 'border border-dashed border-outline-variant'
       : 'border border-outline-variant focus:border-primary';
 
-  const submitButtonText = isSubmitting
+  const submitButtonText = isSubmitting || isSubmittingSeries
     ? 'Бронюємо…'
     : serverFormError
       ? 'Повторити'
@@ -264,7 +266,7 @@ export function CreateBookingModal({
               id="title-input"
               type="text"
               placeholder="Наприклад, Планування спринту"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSubmittingSeries}
               className={`w-full px-3 py-2 rounded-[var(--radius-sm)] outline-none transition-colors ${inputStateClass} ${titleBorderClass}`}
               {...register('title')}
             />
@@ -285,7 +287,7 @@ export function CreateBookingModal({
               </label>
               <select
                 id="starts-at-select"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSubmittingSeries}
                 value={watch('startsAt')}
                 onChange={handleStartChange}
                 className={`w-full px-3 py-2 rounded-[var(--radius-sm)] outline-none transition-colors border border-outline-variant focus:border-primary ${inputStateClass} ${
@@ -309,7 +311,7 @@ export function CreateBookingModal({
               </label>
               <select
                 id="ends-at-select"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSubmittingSeries}
                 {...register('endsAt')}
                 className={`w-full px-3 py-2 rounded-[var(--radius-sm)] outline-none transition-colors border border-outline-variant focus:border-primary ${inputStateClass} ${
                   timeError ? 'border-2 border-error' : ''
@@ -378,12 +380,12 @@ export function CreateBookingModal({
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSubmittingSeries}
               className={`px-5 py-2.5 rounded-full font-medium transition-opacity flex items-center justify-center gap-2 bg-primary text-on-primary hover:opacity-90 ${
-                isSubmitting ? 'opacity-72 cursor-not-allowed' : 'cursor-pointer'
+                isSubmitting || isSubmittingSeries ? 'opacity-72 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
-              {isSubmitting && (
+              {(isSubmitting || isSubmittingSeries) && (
                 <span
                   className="w-[15px] h-[15px] border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
                   aria-hidden="true"

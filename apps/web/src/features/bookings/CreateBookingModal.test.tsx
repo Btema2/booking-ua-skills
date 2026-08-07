@@ -98,14 +98,14 @@ describe('CreateBookingModal', () => {
     fireEvent.click(toggleCheckbox);
 
     const countInput = screen.getByLabelText('Кількість повторень') as HTMLInputElement;
-    fireEvent.change(countInput, { target: { value: '8' } });
+    fireEvent.change(countInput, { target: { value: '3' } });
 
     const submitBtn = screen.getByRole('button', { name: 'Забронювати' });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(onSubmitSeries).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Щотижневий синк', occurrenceCount: 8 }),
+        expect.objectContaining({ title: 'Щотижневий синк', occurrenceCount: 3 }),
       );
       expect(onSubmit).not.toHaveBeenCalled();
     });
