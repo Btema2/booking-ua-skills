@@ -23,10 +23,10 @@ export function EmailVerificationBanner({
   }
 
   const baseStyles =
-    'flex flex-wrap items-center justify-between gap-s3 rounded-lg border p-s4 text-body-medium transition-all duration-300';
+    'flex flex-wrap items-center justify-between gap-s3 rounded-2xl border p-s4 text-body-medium transition-all duration-300 shadow-sm';
   const stateStyles = highlighted
-    ? 'border-primary bg-surface-container-high ring-2 ring-primary scale-[1.01]'
-    : 'border-outline bg-surface-container text-on-surface';
+    ? 'border-[var(--color-primary)] bg-[var(--color-surface-container-high)] ring-2 ring-[var(--color-primary)] scale-[1.01]'
+    : 'border-[var(--color-outline-variant)] bg-[var(--color-surface-container-low)] text-[var(--color-on-surface)]';
 
   return (
     <div
@@ -40,7 +40,7 @@ export function EmailVerificationBanner({
         <svg
           viewBox="0 0 24 24"
           aria-hidden="true"
-          className="size-[20px] shrink-0 text-primary"
+          className="size-[22px] shrink-0 text-[var(--color-primary)]"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -58,7 +58,7 @@ export function EmailVerificationBanner({
 
       <div>
         {resendMutation.isSuccess ? (
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-[var(--color-primary)]">
             Посилання надіслано! Перевірте консоль сервера
           </span>
         ) : (
@@ -66,7 +66,7 @@ export function EmailVerificationBanner({
             type="button"
             disabled={resendMutation.isPending}
             onClick={() => resendMutation.mutate()}
-            className="cursor-pointer rounded-full border border-on-primary-container bg-on-primary-container px-s4 py-s2 text-label-medium font-semibold text-on-primary hover:bg-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-full border border-[var(--color-on-primary-container)] bg-[var(--color-on-primary-container)] px-s4 py-s2 text-label-medium font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-on-primary-container)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resendMutation.isPending ? 'Надіслано...' : 'Надіслати ще раз'}
           </button>
@@ -75,3 +75,4 @@ export function EmailVerificationBanner({
     </div>
   );
 }
+
