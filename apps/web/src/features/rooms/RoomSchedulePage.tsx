@@ -22,7 +22,7 @@ import { BookingBlock } from './BookingBlock';
 import { WeekGridLoading, WeekGridError, DefaultFallbackGrid } from './WeekGridStates';
 import { CreateBookingModal } from '../bookings/CreateBookingModal';
 import { CancelBookingDialog } from '../bookings/CancelBookingDialog';
-import { useCreateBooking, useCancelBooking } from '../bookings/useBookingMutations';
+import { useCreateBooking, useCreateBookingSeries, useCancelBooking } from '../bookings/useBookingMutations';
 import { mapApiErrorToForm } from '../bookings/errorMapping';
 
 export function RoomSchedulePage() {
@@ -70,6 +70,7 @@ export function RoomSchedulePage() {
   const viewerZone = getViewerZone();
 
   const createMutation = useCreateBooking(validRoomId, weekInfo.weekStartISO);
+  const createSeriesMutation = useCreateBookingSeries(validRoomId, weekInfo.weekStartISO);
   const cancelMutation = useCancelBooking(validRoomId, weekInfo.weekStartISO);
 
   // Modal states for Create Booking
@@ -169,6 +170,29 @@ export function RoomSchedulePage() {
         endsAt: values.endsAt,
       });
       setIsCreateOpen(false);
+    } catch (err) {
+      const mapped = mapApiErrorToForm(err);
+      setServerFieldErrors(mapped.fieldErrors);
+      setServerFormError(mapped.formError);
+    }
+  };
+
+  const handleCreateSeriesSubmit = async (values: { title: string; startsAt: string; endsAt: string; occurrenceCount: number }) => {
+    setServerFormError(null);
+    setServerFieldErrors({});
+    try {
+      const result = await createSeriesMutation.mutateAsync({
+        roomId: Number(validRoomId),
+        title: values.title,
+        startsAt: values.startsAt,
+        endsAt: values.endsAt,
+        occurrenceCount: values.occurrenceCount,
+      });
+      if (result.skipped.length > 0) {
+        setServerFormError(`Створено ${result.created.length} з ${result.created.length + result.skipped.length} повторень — решта збігається з наявними бронюваннями.`);
+      } else {
+        setIsCreateOpen(false);
+      }
     } catch (err) {
       const mapped = mapApiErrorToForm(err);
       setServerFieldErrors(mapped.fieldErrors);
@@ -434,7 +458,9 @@ export function RoomSchedulePage() {
         initialEndISO={selectedSlotInfo.initialEndISO}
         viewerZone={viewerZone}
         onSubmit={handleCreateSubmit}
+        onSubmitSeries={handleCreateSeriesSubmit}
         isSubmitting={createMutation.isPending}
+        isSubmittingSeries={createSeriesMutation.isPending}
         serverFormError={serverFormError}
         serverFieldErrors={serverFieldErrors}
         roomId={Number(validRoomId)}
