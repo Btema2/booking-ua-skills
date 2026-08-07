@@ -49,6 +49,10 @@ describe('CancelBookingDialog', () => {
 
     expect(screen.queryByLabelText('це бронювання')).toBeNull();
     expect(screen.queryByLabelText('уся серія')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Скасувати бронювання' }));
+
+    expect(onConfirm).toHaveBeenCalledWith(undefined);
   });
 
   it('shows a this-vs-series choice for a series booking, defaulting to "це бронювання"', () => {
@@ -71,5 +75,26 @@ describe('CancelBookingDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Скасувати бронювання' }));
 
     expect(onConfirm).toHaveBeenCalledWith('series');
+  });
+
+  it('resets scope to "це бронювання" when dialog is reopened with a different series booking', () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const secondSeriesBooking: Booking = {
+      ...SERIES_BOOKING,
+      id: 'booking-3',
+      seriesId: 'series-2',
+    };
+
+    const { rerender } = render(<CancelBookingDialog {...baseProps(SERIES_BOOKING)} onConfirm={onConfirm} />);
+
+    const firstSeriesRadio = screen.getByLabelText('уся серія') as HTMLInputElement;
+    fireEvent.click(firstSeriesRadio);
+    expect(firstSeriesRadio.checked).toBe(true);
+
+    // Simulate opening the dialog with a different booking
+    rerender(<CancelBookingDialog {...baseProps(secondSeriesBooking)} onConfirm={onConfirm} />);
+
+    const resetThisRadio = screen.getByLabelText('це бронювання') as HTMLInputElement;
+    expect(resetThisRadio.checked).toBe(true);
   });
 });
