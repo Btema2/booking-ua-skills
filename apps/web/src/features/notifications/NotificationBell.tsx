@@ -92,13 +92,14 @@ export function NotificationBell() {
           aria-label="Сповіщення"
           className={[
             'absolute z-[var(--z-menu)] top-[calc(100%+10px)] right-0 w-[min(330px,calc(100vw-32px))] p-s2 rounded-[var(--radius-lg,20px)]',
+            'max-h-[min(520px,calc(100vh-100px))] flex flex-col',
             'max-sm:fixed max-sm:top-[70px] max-sm:right-4 max-sm:w-[calc(100vw-32px)] max-sm:max-w-[330px]',
             'bg-[var(--glass-menu)] supports-[backdrop-filter]:backdrop-blur-[var(--blur-menu)]',
             'shadow-[var(--shadow-el-3)] border border-outline-variant',
             '[animation:notif-menu-in_var(--dur-menu)_var(--ease-spring)_both]',
           ].join(' ')}
         >
-          <p className="m-0 mb-s2 px-s2 pt-s2 text-[11px] font-bold tracking-[0.06em] uppercase text-on-surface-variant">
+          <p className="m-0 mb-s2 px-s2 pt-s2 text-[11px] font-bold tracking-[0.06em] uppercase text-on-surface-variant shrink-0">
             Сповіщення
           </p>
 
@@ -110,7 +111,7 @@ export function NotificationBell() {
               </p>
             </div>
           ) : (
-            <ul className="m-0 list-none p-0">
+            <ul className="m-0 list-none p-0 overflow-y-auto max-h-[440px] flex-1 pr-1">
               {notifications.map((n) => {
                 const isSeriesConflict = n.kind === 'series_conflict';
                 const title = isSeriesConflict
