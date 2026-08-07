@@ -52,6 +52,28 @@ export const CreateBookingSchema = z.object({
 
 export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
 
+export const MIN_OCCURRENCE_COUNT = 2;
+export const MAX_OCCURRENCE_COUNT = 52;
+const INVALID_OCCURRENCE_COUNT_MESSAGE = `Кількість повторень має бути від ${MIN_OCCURRENCE_COUNT} до ${MAX_OCCURRENCE_COUNT}`;
+
+export const CreateBookingSeriesSchema = z.object({
+  roomId: RoomIdSchema,
+  title: z
+    .string({ error: BOOKING_REJECTION_MESSAGES.title })
+    .trim()
+    .min(1, { error: BOOKING_REJECTION_MESSAGES.title })
+    .max(100, { error: BOOKING_REJECTION_MESSAGES.title }),
+  startsAt: DateTimeSchema,
+  endsAt: DateTimeSchema,
+  occurrenceCount: z.coerce
+    .number({ error: INVALID_OCCURRENCE_COUNT_MESSAGE })
+    .int({ error: INVALID_OCCURRENCE_COUNT_MESSAGE })
+    .min(MIN_OCCURRENCE_COUNT, { error: INVALID_OCCURRENCE_COUNT_MESSAGE })
+    .max(MAX_OCCURRENCE_COUNT, { error: INVALID_OCCURRENCE_COUNT_MESSAGE }),
+});
+
+export type CreateBookingSeriesInput = z.infer<typeof CreateBookingSeriesSchema>;
+
 export const RoomBookingsQuerySchema = z
   .object({
     from: DateTimeSchema,
@@ -72,6 +94,7 @@ export const BookingSchema = z.object({
   endsAt: z.date(),
   userId: z.uuid(),
   userName: z.string(),
+  seriesId: z.uuid().nullable(),
 });
 
 export type Booking = z.infer<typeof BookingSchema>;

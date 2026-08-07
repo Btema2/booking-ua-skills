@@ -23,12 +23,16 @@ export {
 } from './schemas/auth';
 export {
   CreateBookingSchema,
+  CreateBookingSeriesSchema,
   RoomBookingsQuerySchema,
   BookingSchema,
   RoomIdSchema,
   RoomIdPathSchema,
   MyBookingsQuerySchema,
+  MIN_OCCURRENCE_COUNT,
+  MAX_OCCURRENCE_COUNT,
   type CreateBookingInput,
+  type CreateBookingSeriesInput,
   type RoomBookingsQuery,
   type Booking,
   type MyBookingsQuery,

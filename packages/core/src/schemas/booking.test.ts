@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOOKING_REJECTION_MESSAGES } from '../domain/booking-validation';
-import { BookingSchema, CreateBookingSchema, MyBookingsQuerySchema, RoomBookingsQuerySchema, RoomIdPathSchema } from './booking';
+import { BookingSchema, CreateBookingSchema, CreateBookingSeriesSchema, MAX_OCCURRENCE_COUNT, MIN_OCCURRENCE_COUNT, MyBookingsQuerySchema, RoomBookingsQuerySchema, RoomIdPathSchema } from './booking';
 
 function messagesFor(result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) {
   return Object.fromEntries((result.error?.issues ?? []).map((issue) => [String(issue.path[0]), issue.message]));
@@ -247,6 +247,22 @@ describe('BookingSchema', () => {
       endsAt: new Date('2026-01-07T08:00:00.000Z'),
       userId: '1a2b3c4d-5e6f-4789-8a9b-0c1d2e3f4a5b',
       userName: 'Іван Петренко',
+      seriesId: null,
+    };
+
+    expect(BookingSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('parses a booking that belongs to a series', () => {
+    const payload = {
+      id: '3f7b1c2e-4b2a-4c1a-9e2a-8a2b1c3d4e5f',
+      roomId: 1,
+      title: 'Нарада',
+      startsAt: new Date('2026-01-07T07:00:00.000Z'),
+      endsAt: new Date('2026-01-07T08:00:00.000Z'),
+      userId: '1a2b3c4d-5e6f-4789-8a9b-0c1d2e3f4a5b',
+      userName: 'Іван Петренко',
+      seriesId: '4a5b6c7d-8e9f-4a1b-9c2d-3e4f5a6b7c8d',
     };
 
     expect(BookingSchema.parse(payload)).toEqual(payload);
@@ -262,8 +278,84 @@ describe('BookingSchema', () => {
         endsAt: new Date(),
         userId: '1a2b3c4d-5e6f-4789-8a9b-0c1d2e3f4a5b',
         userName: 'Іван',
+        seriesId: null,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('CreateBookingSeriesSchema', () => {
+  it('parses a valid series payload', () => {
+    const parsed = CreateBookingSeriesSchema.parse({
+      roomId: 1,
+      title: 'Щотижневий синк',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: 8,
+    });
+
+    expect(parsed.occurrenceCount).toBe(8);
+    expect(parsed.startsAt).toBeInstanceOf(Date);
+  });
+
+  it('rejects an occurrence count of 1 — a series needs at least 2 occurrences', () => {
+    const result = CreateBookingSeriesSchema.safeParse({
+      roomId: 1,
+      title: 'Синк',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: 1,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it(`accepts the minimum occurrence count (${MIN_OCCURRENCE_COUNT})`, () => {
+    const result = CreateBookingSeriesSchema.safeParse({
+      roomId: 1,
+      title: 'Синк',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: MIN_OCCURRENCE_COUNT,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it(`accepts the maximum occurrence count (${MAX_OCCURRENCE_COUNT})`, () => {
+    const result = CreateBookingSeriesSchema.safeParse({
+      roomId: 1,
+      title: 'Синк',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: MAX_OCCURRENCE_COUNT,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it(`rejects an occurrence count over ${MAX_OCCURRENCE_COUNT}`, () => {
+    const result = CreateBookingSeriesSchema.safeParse({
+      roomId: 1,
+      title: 'Синк',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: MAX_OCCURRENCE_COUNT + 1,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('reuses the shared title rule (empty title rejected)', () => {
+    const result = CreateBookingSeriesSchema.safeParse({
+      roomId: 1,
+      title: '',
+      startsAt: '2026-01-06T07:00:00.000Z',
+      endsAt: '2026-01-06T08:00:00.000Z',
+      occurrenceCount: 8,
+    });
+
+    expect(result.success).toBe(false);
   });
 });
 
