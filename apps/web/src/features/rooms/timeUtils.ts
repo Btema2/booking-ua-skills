@@ -114,7 +114,7 @@ export function getBookingGridRow(
       : DateTime.fromJSDate(endsAtISO, { zone: 'utc' }).setZone('Europe/Kyiv');
 
   const dayIndex = startDt.weekday - 1;
-  const startSlotIndex = (startDt.hour - 9) * 2 + (startDt.minute >= 30 ? 1 : 0);
+  const startSlotIndex = (startDt.hour - OFFICE_OPEN_HOUR) * 2 + (startDt.minute >= 30 ? 1 : 0);
   const span = Math.round(endDt.diff(startDt, 'minutes').minutes / 30);
   const startRow = startSlotIndex + 1;
 
