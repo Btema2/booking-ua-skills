@@ -74,7 +74,9 @@ Full detail in `docs/SPEC.md`; these easiest to violate by habit:
   handler answer JSON 404.
 - `apps/web` — Vite + React SPA. Builds to static assets only; ships no
   runtime Node dependencies.
-- `packages/core` — Shared Zod schemas (rooms + auth). Consumed by both apps
+- `packages/core` — Shared Zod schemas (auth, rooms, bookings, recurring
+  series), office-hours/DST math and week-grid slot generation on Luxon.
+  Consumed by both apps
   via `@booking/core`. `apps/api` import built CJS (`dist/`); `apps/web`
   alias to TS **source** (`vite.config.ts` + `tsconfig.json` `paths`) — skip
   CJS interop, kill core-must-build-first ordering in dev. Same schema feed
@@ -139,8 +141,8 @@ switch DST different date than Kyiv does. Never write `+2` or `+3`
 literally anywhere. Always compute offset from specific instant in
 question (e.g. via `Intl.DateTimeFormat` with `timeZone: 'Europe/Kyiv'`, or
 equivalent tz-aware library call) — never from "today" or cached value.
-Skeleton has no timestamp columns yet (rooms only); rule
-forward-looking for whoever adds bookings.
+Applies to every `timestamptz` column now in the schema: `bookings.starts_at`/
+`ends_at`, `users.email_verified_at`, and every `created_at`/`canceled_at`.
 
 ## Language split
 

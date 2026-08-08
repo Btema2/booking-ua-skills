@@ -111,7 +111,7 @@ a single striped block, not 20 tiles.
 | App bar gap | `28px`; `12px` ≤760px; `8px` ≤420px | `--appbar-gap*` |
 | Nav tab | pill, padding `8px 16px`, `14px`/600; active fill `--color-surface-container-highest` | `--nav-tab-pad` |
 | Nav tab ≤760px | padding `8px 10px`, `13px` | `--nav-tab-pad-mobile` |
-| Icon button (bell, week arrows) | `40px` / `42px` circles, `1px` outline-variant, `--color-surface-container-lowest` | `--nav-icon-btn` |
+| Icon button (bell, week arrows) | `40px` circles, `1px` outline-variant, `--color-surface-container-lowest` | `--nav-icon-btn` |
 | Avatar / logout pill | `30px` avatar, pill padding `5px 14px 5px 5px` | `--nav-avatar` |
 | Timezone chip | pill `6px 12px`, `12px`/600; hidden ≤760px | — |
 | Brand text | hidden ≤420px | — |
@@ -138,11 +138,10 @@ at 1440px, 3 at ~1100px, 2 at ~760px, 1 below ~620px.
 | Card padding / inner gap | `22px 24px` / `14px` | `--room-card-pad` / `--room-card-gap` |
 | Card hover | `--color-surface-container`, `translateY(-2px)`, `--shadow-el-2`, `.18s var(--ease-spring)` | `--dur-lift` |
 | Room name | Rubik `28px`, line-height `1.1` | |
-| **Amenities line** | **yes** — `r.note`, `13px` `--color-on-surface-variant`, directly under the name (e.g. «Проєктор, маркерна дошка») | `--text-body-small` |
+| **Amenities line** | **yes** — `room.amenities`, `13px` `--color-on-surface-variant`, directly under the name (e.g. «Проєктор, маркерна дошка») | `--text-body-small` |
 | Capacity badge | `44px` circle, primary-container / on-primary-container, `15px`/700, **number only** | `--room-cap-badge` |
 | Floor tag | `«2 поверх»`, tertiary-container / on-tertiary-container, `12px`, padding `4px 11px` | `--room-tag-pad` |
-| Availability tag | `«Вільно сьогодні: N год»` or `«Сьогодні зайнято»`; ≤6 free half-hours flips it to primary-container, otherwise secondary-container | |
-| Capacity filter | **pill chips**, options `Будь-яка / від 4 / від 6 / від 8 / від 12 / від 20`, padding `8px 15px`, `13.5px`/600, gap `6px`; selected = `--color-primary` fill + on-primary ink; unselected = surface-container-lowest + `1px` outline-variant | `--cap-chip-pad` / `--cap-chip-gap` |
+| Capacity filter | **pill chips**, `Будь-яка` plus one `від N` chip per distinct room capacity above the smallest (computed from the live room set, not a fixed ladder — see `capacityThresholds.ts`), padding `8px 15px`, `13.5px`/600, gap `6px`; selected = `--color-primary` fill + on-primary ink; unselected = surface-container-lowest + `1px` outline-variant | `--cap-chip-pad` / `--cap-chip-gap` |
 
 ---
 
@@ -205,7 +204,7 @@ input.
 | Week schedule | flat 5-column tint block + «Цього тижня все вільно» / «Жодного бронювання — оберіть будь-який слот» | caption «Завантажуємо розклад…» over a shimmering block skeleton that keeps the grid shape | error-container banner «Розклад може бути застарілим» + last-update time; grid drops to `opacity:.45; filter:grayscale(.35)`; booking disabled; «Оновити зараз» |
 | Create booking | dashed-outline empty fields (`1px dashed` outline-variant, `--color-outline` placeholder ink) | fields locked at `opacity:.55` on surface-container-high, submit disabled at `.72` with a `15px` spinner (`--dur-spin`) and «Бронюємо…» | banner «Бронювання не збережено» — **typed values are still in the fields**; «Повторити» + «Закрити» |
 | My bookings | secondary-container calendar circle, «Майбутніх бронювань немає», primary pill «Обрати кімнату» | two shimmering row skeletons, `40px` leading square + two bars | «Не вдалося оновити список», shows the cached copy, cancel disabled offline |
-| Auth / notifications | bell circle + «Сповіщень немає» + the reminder-lead-time sentence | two `44px` pill skeletons + disabled «Входимо…» button | banner «Сервер недоступний»; email kept, password field re-outlined `2px` `--color-error` |
+| Auth / notifications | bell circle + «Сповіщень немає» + the reminder-lead-time sentence | two `44px` pill skeletons + disabled «Входимо…» button | banner «Не вдалося виконати запит. Спробуйте ще раз.»; email kept, password field re-outlined `2px` `--color-error` |
 
 Skeleton shimmer: `--pattern-skeleton`, `background-size: 320px 100%`,
 `1.35s linear infinite`, sweeping `-320px → 320px`. Everything collapses to
