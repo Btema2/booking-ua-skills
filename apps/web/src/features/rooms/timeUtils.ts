@@ -193,6 +193,16 @@ function formatOffsetHuman(totalMinutes: number): string {
   return mins === 0 ? `${sign}${hours} год` : `${sign}${hours} год${mins} хв`;
 }
 
+const LEGACY_KYIV_TZ_ALIASES: Record<string, string> = {
+  'Europe/Kiev': 'Europe/Kyiv',
+  'Europe/Uzhgorod': 'Europe/Kyiv',
+  'Europe/Zaporozhye': 'Europe/Kyiv',
+};
+
+function toDisplayTimeZone(zone: string): string {
+  return LEGACY_KYIV_TZ_ALIASES[zone] ?? zone;
+}
+
 export function formatTzBannerText(viewerZone: string, instant: DateTime): string {
   const kyivOffsetMinutes = instant.setZone('Europe/Kyiv').offset;
   const viewerOffsetMinutes = instant.setZone(viewerZone).offset;
@@ -205,8 +215,8 @@ export function formatTzBannerText(viewerZone: string, instant: DateTime): strin
   }
 
   if (diffMinutes === 0) {
-    return `Час показано у вашому поясі — ${viewerZone}`;
+    return `Час показано у вашому поясі — ${toDisplayTimeZone(viewerZone)}`;
   }
 
-  return `Час показано у вашому поясі — ${viewerZone}, це ${formatOffsetHuman(diffMinutes)} до Києва`;
+  return `Час показано у вашому поясі — ${toDisplayTimeZone(viewerZone)}, це ${formatOffsetHuman(diffMinutes)} до Києва`;
 }

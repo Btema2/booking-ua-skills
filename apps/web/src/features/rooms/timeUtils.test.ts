@@ -156,6 +156,38 @@ describe('timeUtils', () => {
       expect(helsinkiBanner).toBe('Час показано у вашому поясі — Europe/Helsinki');
       expect(helsinkiBanner).not.toContain('Київ');
     });
+
+    it('displays the canonical Europe/Kyiv name for the legacy Europe/Kiev alias', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const banner = formatTzBannerText('Europe/Kiev', instant);
+      expect(banner).toContain('Europe/Kyiv');
+      expect(banner).not.toContain('Europe/Kiev');
+    });
+
+    it('displays the canonical Europe/Kyiv name for the legacy Europe/Uzhgorod alias', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const banner = formatTzBannerText('Europe/Uzhgorod', instant);
+      expect(banner).toContain('Europe/Kyiv');
+      expect(banner).not.toContain('Europe/Uzhgorod');
+    });
+
+    it('displays the canonical Europe/Kyiv name for the legacy Europe/Zaporozhye alias', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const banner = formatTzBannerText('Europe/Zaporozhye', instant);
+      expect(banner).toContain('Europe/Kyiv');
+      expect(banner).not.toContain('Europe/Zaporozhye');
+    });
+
+    it('leaves an unrelated zone name unchanged (does not accidentally map non-alias zones)', () => {
+      const instant = DateTime.fromISO('2026-08-05T12:00:00Z', { zone: 'utc' });
+
+      const nyBanner = formatTzBannerText('America/New_York', instant);
+      expect(nyBanner).toContain('America/New_York');
+      expect(nyBanner).not.toContain('Europe/Kyiv');
+    });
   });
 
   describe('DST transition week per-instant labels', () => {
