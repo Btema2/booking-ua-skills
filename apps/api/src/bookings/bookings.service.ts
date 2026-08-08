@@ -40,8 +40,8 @@ export class BookingsService {
       throw emailVerificationRequired();
     }
 
-    // `new Date()` is read here, and only here — packages/core stays pure and
-    // testable, taking `now` as a parameter instead.
+    // packages/core never calls `new Date()` itself — all instants are
+    // passed in as parameters, keeping it pure and testable.
     const rejection = validateBookingTimes(input, new Date());
     if (rejection) {
       throw bookingTimeRejection(rejection);
