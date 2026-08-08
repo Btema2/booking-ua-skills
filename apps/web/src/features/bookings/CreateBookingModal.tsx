@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DateTime } from 'luxon';
-import { CreateBookingSchema, overlaps, BOOKING_REJECTION_MESSAGES, OFFICE_OPEN_HOUR, type Booking } from '@booking/core';
+import { CreateBookingSchema, overlaps, BOOKING_REJECTION_MESSAGES, OFFICE_OPEN_HOUR, MIN_OCCURRENCE_COUNT, MAX_OCCURRENCE_COUNT, type Booking } from '@booking/core';
 
 export interface CreateBookingModalProps {
   isOpen: boolean;
@@ -357,8 +357,8 @@ export function CreateBookingModal({
                   <input
                     id="occurrence-count-input"
                     type="number"
-                    min={2}
-                    max={52}
+                    min={MIN_OCCURRENCE_COUNT}
+                    max={MAX_OCCURRENCE_COUNT}
                     value={occurrenceCount}
                     onChange={(e) => setOccurrenceCount(Number(e.target.value))}
                     disabled={isSubmitting || isSubmittingSeries}
