@@ -211,4 +211,4 @@ Every timestamp (`starts_at`, `ends_at`, `created_at`, `canceled_at`, `email_ver
 
 ## 11. AI Assistance
 
-This project was built with the assistance of Claude (Anthropic), used throughout for implementation, review, and documentation. Commits authored with its help carry a `Co-Authored-By: Claude <noreply@anthropic.com>` trailer in the git history.
+This project was built with the assistance of Claude, Claude Code, Claude Design (Anthropic) and Antigravity 2.0 & CLI (Google), using models: Claude haiku 4.5, Claude sonnet 5, Claude Sonnet 4.6, Claude Opus 5, Google Gemini 3.6-flash, DeepSeekAI DeepSeek-V4, Xiaomi MiMo-V2.5 — for code implementation, review, and documentation.

@@ -211,4 +211,4 @@ npm run test:e2e -w apps/api
 
 ## 11. Використання ШІ
 
-Цей проєкт створювався за допомогою Claude (Anthropic) — для реалізації коду, рев'ю та документації. Коміти, зроблені з його допомогою, мають у git-історії трейлер `Co-Authored-By: Claude <noreply@anthropic.com>`.
+Цей проєкт створювався за допомогою Claude, Claude Code, Claude Design (Anthropic) і Antigravity 2.0 та CLI (Google), моделі: Claude haiku 4.5, Claude sonnet 5, Claude Sonnet 4.6, Claude Opus 5, Google Gemini 3.6-flash, DeepSeekAI DeepSeek-V4, Xiaomi MiMo-V2.5 - для реалізації коду, рев'ю та документації.
