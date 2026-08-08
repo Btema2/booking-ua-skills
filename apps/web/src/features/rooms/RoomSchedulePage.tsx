@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { DateTime } from 'luxon';
-import type { Booking } from '@booking/core';
+import { OFFICE_OPEN_HOUR, type Booking } from '@booking/core';
 import { ApiError } from '../../lib/api';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { useRoomDetails, useRoomBookings } from './useRoomBookings';
@@ -146,7 +146,7 @@ export function RoomSchedulePage() {
 
     const dayKyiv = daysKyiv[dayIndex];
     const slotStartKyiv = dayKyiv
-      .set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+      .set({ hour: OFFICE_OPEN_HOUR, minute: 0, second: 0, millisecond: 0 })
       .plus({ minutes: rowIndex * 30 });
     const initialStartISO = slotStartKyiv.toUTC().toISO()!;
     const initialEndISO = slotStartKyiv.plus({ minutes: 30 }).toUTC().toISO()!;
