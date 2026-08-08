@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { OFFICE_OPEN_HOUR } from '@booking/core';
 
 export interface KyivWeek {
   mondayKyiv: DateTime;
@@ -92,7 +93,7 @@ export function formatInstantTime(instantISO: string, viewerZone: string): strin
 export function getHourLabelsForGutter(dayKyiv: DateTime, viewerZone: string): string[] {
   return Array.from({ length: 10 }, (_, h) =>
     dayKyiv
-      .set({ hour: 9 + h, minute: 0, second: 0, millisecond: 0 })
+      .set({ hour: OFFICE_OPEN_HOUR + h, minute: 0, second: 0, millisecond: 0 })
       .toUTC()
       .setZone(viewerZone)
       .toFormat('HH:mm'),
