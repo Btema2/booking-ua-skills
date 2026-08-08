@@ -150,7 +150,7 @@ export function BookingBlock({
 
   const titleClampClass =
     span === 1
-      ? 'whitespace-nowrap overflow-hidden text-ellipsis'
+      ? 'shrink-0 whitespace-nowrap overflow-hidden text-ellipsis'
       : span <= 3
         ? 'line-clamp-2'
         : 'line-clamp-4';
