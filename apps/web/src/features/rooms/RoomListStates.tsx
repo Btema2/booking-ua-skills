@@ -60,10 +60,9 @@ function SkeletonCard({ delay }: { readonly delay: string }) {
         <SkeletonBar className="size-[var(--room-cap-badge)] shrink-0 rounded-full" delay={delay} />
       </div>
 
-      {/* Footer: Floor tag pill + Availability tag pill */}
+      {/* Footer: Floor tag pill */}
       <div className="flex flex-wrap items-center gap-s2 pt-s1">
         <SkeletonBar className="h-[24px] w-[64px] rounded-full" delay={delay} />
-        <SkeletonBar className="h-[24px] w-[130px] rounded-full" delay={delay} />
       </div>
     </li>
   );

@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import React from 'react';
+import type { ReactNode } from 'react';
 import {
   getDayColumnStatus,
   getPastRowsCount,
@@ -19,7 +19,7 @@ export interface MobileDayPagerProps {
     pastRowsCount: number,
     focusedCoords: { dayIndex: number; rowIndex: number },
     onCellFocus: (dayIndex: number, rowIndex: number) => void,
-  ) => React.ReactNode;
+  ) => ReactNode;
 }
 
 export function MobileDayPager({

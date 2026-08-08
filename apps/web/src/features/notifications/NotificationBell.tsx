@@ -67,7 +67,7 @@ export function NotificationBell() {
         aria-expanded={isOpen}
         aria-controls="notification-menu"
         className={[
-          'grid size-[40px] place-items-center rounded-full border border-outline-variant',
+          'grid size-[var(--nav-icon-btn)] place-items-center rounded-full border border-outline-variant',
           'bg-surface-container-lowest transition-colors duration-[var(--dur-chip)]',
           'hover:bg-surface-container-high',
           FOCUS_RING,

@@ -334,7 +334,7 @@ export function RoomSchedulePage() {
                   return next;
                 });
               }}
-              className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+              className="size-[var(--nav-icon-btn)] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               ‹
             </button>
@@ -363,7 +363,7 @@ export function RoomSchedulePage() {
                   return next;
                 });
               }}
-              className="size-[40px] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
+              className="size-[var(--nav-icon-btn)] rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
             >
               ›
             </button>

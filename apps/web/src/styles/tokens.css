@@ -286,9 +286,6 @@
   --nav-tab-pad-mobile: 8px 10px;
   --nav-icon-btn: 40px;
   --nav-avatar: 30px;
-  --bottom-bar-pad: 12px 16px 16px; /* mobile candidate A */
-  --bottom-bar-item-w: 60px;
-  --bottom-bar-cta-h: 48px;
 
   /* ── Page layout ──────────────────────────────────────────────────────── */
   --page-max: 1440px;
