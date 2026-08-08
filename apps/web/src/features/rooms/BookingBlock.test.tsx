@@ -95,6 +95,7 @@ describe('BookingBlock', () => {
     expect(titleEl.className).toContain('whitespace-nowrap');
     expect(titleEl.className).toContain('overflow-hidden');
     expect(titleEl.className).toContain('text-ellipsis');
+    expect(titleEl.className).toContain('shrink-0');
     expect(titleEl.className).toContain('text-[12px]');
 
     const metaEl = screen.getByText('Тарас · 13:00–14:00');
