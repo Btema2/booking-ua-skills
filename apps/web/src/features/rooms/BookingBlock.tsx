@@ -149,7 +149,11 @@ export function BookingBlock({
       : 'text-[12px]';
 
   const titleClampClass =
-    span === 1 ? 'line-clamp-1' : span <= 3 ? 'line-clamp-2' : 'line-clamp-4';
+    span === 1
+      ? 'whitespace-nowrap overflow-hidden text-ellipsis'
+      : span <= 3
+        ? 'line-clamp-2'
+        : 'line-clamp-4';
 
   const dotSizeClass = isMobile ? 'size-[8px]' : 'w-[7px] h-[7px]';
   const glyphSize = isMobile ? 11 : 10;
