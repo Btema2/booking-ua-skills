@@ -11,3 +11,5 @@ coverage/
 .idea/
 .gstack/
 .superpowers/
+docker-compose.override.yml
+.claude/

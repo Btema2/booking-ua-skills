@@ -3,9 +3,11 @@ services:
     image: postgres:18
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      # `:-` fallbacks match .env.example's defaults, so a clean clone boots
+      # with zero manual steps even before anyone runs `cp .env.example .env`.
+      POSTGRES_USER: ${POSTGRES_USER:-booking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-booking}
+      POSTGRES_DB: ${POSTGRES_DB:-booking}
     ports:
       # Host side 5433, not 5432: avoids clashing with a local Postgres a judge
       # machine may already have running on the standard port. Container-internal
@@ -27,15 +29,16 @@ services:
       db:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
       # `:-false` so an older .env without this key still boots over plain http.
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-booking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-booking}
+      POSTGRES_DB: ${POSTGRES_DB:-booking}
+      NOTIFY_BEFORE_MINUTES: ${NOTIFY_BEFORE_MINUTES:-10}
     ports:
       - "3000:3000"
 

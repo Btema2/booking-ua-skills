@@ -1,8 +1,0 @@
-services:
-  db:
-    ports:
-      - "5434:5432"
-
-  api:
-    ports:
-      - "3001:3000"
