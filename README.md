@@ -4,9 +4,9 @@ A meeting-room booking app: npm workspaces monorepo, one Docker image,
 Postgres alongside it. The cold-start path (build, migrate, seed, serve) is
 proven from a fresh clone, and on top of it: authentication (register, login,
 logout, session restore), a rooms API, and a bookings API with a
-database-enforced no-overlap guarantee. **There is no booking UI yet** — the
-week grid and the create/cancel screens arrive in a later phase; everything
-below is exercised via the API and the `scripts/prove-*` scripts.
+database-enforced no-overlap guarantee, plus a full UI — a weekly room grid
+(with a single-day pager on mobile), booking creation/cancellation, «Мої
+бронювання», and in-app notifications.
 
 ## Stack
 
@@ -32,9 +32,9 @@ docker compose up --build
 - App: http://localhost:3000
 - Health check: http://localhost:3000/api/health
 
-Migrations and the room seed run automatically at container start. Safe to
-run `docker compose down && docker compose up` repeatedly — the seed is
-idempotent.
+Migrations and the seed data (rooms, test users, demo bookings) run
+automatically at container start. Safe to run `docker compose down &&
+docker compose up` repeatedly — the seed is idempotent.
 
 ## Local development (without Docker)
 
@@ -70,12 +70,16 @@ Never run `drizzle-kit push` — see `CLAUDE.md` for why.
 
 ## Seed data
 
-Six rooms, inserted idempotently (`onConflictDoUpdate` on the unique `name`
-column). Upsert rather than insert-or-ignore: both are idempotent, but
-ignoring the conflict would leave an existing database on whatever values it
-was first seeded with, so a later change to the table below would only ever
-reach a fresh database. Updating on conflict makes every run converge on the
-declared state.
+Rooms, two test users and a handful of demo bookings, all inserted
+idempotently (`onConflictDoUpdate`, on the unique `name` column for rooms and
+on a fixed `id` for users/bookings). Upsert rather than insert-or-ignore: both
+are idempotent, but ignoring the conflict would leave an existing database on
+whatever values it was first seeded with, so a later change to the seed would
+only ever reach a fresh database. Updating on conflict makes every run
+converge on the declared state — `docker compose down && docker compose up`
+reseeds the same rows in place rather than duplicating them.
+
+### Rooms
 
 | Room | Floor | Capacity |
 |---|---|---|
@@ -85,6 +89,28 @@ declared state.
 | Верба | 3 | 6 |
 | Сосна | 4 | 16 |
 | Клен | 4 | 4 |
+
+### Test users
+
+Both pre-verified, so booking works immediately without following a
+verification link.
+
+| Email | Password |
+|---|---|
+| `anna@example.com` | `password123` |
+| `bogdan@example.com` | `password123` |
+
+### Demo bookings
+
+Seven bookings, computed relative to whenever the seed actually runs (never
+hardcoded dates, so this stays accurate however far in the future it's read):
+five spread across the current Kyiv week — always still upcoming, even if
+booted late in the week, by picking from office slots strictly after "now"
+rather than fixed weekdays — split across five different rooms and both
+users, plus two already in the past (anchored to the week before). Every user
+therefore has at least one upcoming and one past booking, so «Мої
+бронювання» has both tabs populated, and own-vs-other styling is visible in
+the week grid without logging in as both users.
 
 ## Environment variables
 
