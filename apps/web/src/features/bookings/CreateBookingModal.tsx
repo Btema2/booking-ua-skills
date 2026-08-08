@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DateTime } from 'luxon';
-import { CreateBookingSchema, overlaps, BOOKING_REJECTION_MESSAGES, type Booking } from '@booking/core';
+import { CreateBookingSchema, overlaps, BOOKING_REJECTION_MESSAGES, OFFICE_OPEN_HOUR, type Booking } from '@booking/core';
 
 export interface CreateBookingModalProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ function getTimeOptions(initialStartISO: string, viewerZone: string) {
   const allSlots: Array<{ iso: string; label: string }> = [];
   for (let i = 0; i <= 20; i++) {
     const slotDt = dayStartKyiv
-      .set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+      .set({ hour: OFFICE_OPEN_HOUR, minute: 0, second: 0, millisecond: 0 })
       .plus({ minutes: i * 30 });
     const iso = slotDt.toUTC().toISO()!;
     const label = slotDt.setZone(viewerZone).toFormat('HH:mm');
