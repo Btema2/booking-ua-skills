@@ -5,12 +5,12 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
 import { runMigrations } from './db/migrate';
-import { seedRooms } from './db/seed';
+import { seedDemoData } from './db/seed';
 
 async function bootstrap() {
   const env = loadEnv();
   await runMigrations();
-  await seedRooms();
+  await seedDemoData();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // AuthGuard reads the session cookie off request.cookies, which cookie-parser fills.
