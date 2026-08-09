@@ -25,6 +25,14 @@ const BOOKING_COLUMNS = {
   seriesId: bookings.seriesId,
 } as const;
 
+// Local to this file, not added to driver-errors.ts, to keep this fix scoped to
+// this one file. Raised when two concurrent transactions each hold a lock the
+// other needs; Postgres kills one side to break the cycle. Distinct from 23P01
+// (EXCLUSION_VIOLATION), which is what the *losing* concurrent insert normally
+// gets once the winner has already committed — 40P01 is the rarer case where
+// both inserts are still in-flight and genuinely deadlock.
+const DEADLOCK_DETECTED = '40P01';
+
 @Injectable()
 export class DrizzleBookingsRepository extends BookingsRepository {
   // Resolved per call so building the module never opens a connection pool.
@@ -38,8 +46,29 @@ export class DrizzleBookingsRepository extends BookingsRepository {
       throw new SlotTakenError();
     }
 
+    let created: Omit<BookingRow, 'userName'>;
     try {
-      const [created] = await runQuery('createBooking', () =>
+      created = await this.insertBookingRow(input);
+    } catch (error) {
+      if (error instanceof QueryFailedError && error.code === DEADLOCK_DETECTED) {
+        // Losing side of a genuine deadlock between two concurrent inserts: retry
+        // the same insert exactly once. Whatever comes back is final — including a
+        // second deadlock, which `insertBookingRow` lets propagate unmapped (a
+        // redacted QueryFailedError, safe to surface as a plain 500; no further
+        // retry) rather than looping.
+        created = await this.insertBookingRow(input);
+      } else {
+        throw error;
+      }
+    }
+    // No join here: the creator's name is already known from the session,
+    // so a second query just to re-read it back would be a pure N+1.
+    return { ...created, userName: input.userName };
+  }
+
+  private async insertBookingRow(input: NewBooking): Promise<Omit<BookingRow, 'userName'>> {
+    try {
+      const [row] = await runQuery('createBooking', () =>
         this.db
           .insert(bookings)
           .values({
@@ -52,9 +81,7 @@ export class DrizzleBookingsRepository extends BookingsRepository {
           })
           .returning(BOOKING_COLUMNS),
       );
-      // No join here: the creator's name is already known from the session,
-      // so a second query just to re-read it back would be a pure N+1.
-      return { ...created, userName: input.userName };
+      return row;
     } catch (error) {
       if (error instanceof QueryFailedError && error.code === EXCLUSION_VIOLATION) {
         throw new SlotTakenError();

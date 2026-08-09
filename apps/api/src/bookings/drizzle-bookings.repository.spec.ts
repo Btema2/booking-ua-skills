@@ -48,6 +48,34 @@ function insertRejectingWith(cause: Error): void {
   });
 }
 
+/** DrizzleQueryError-wrapped rejection carrying the given SQLSTATE on `.cause`. */
+function queryErrorFor(code: string): DrizzleQueryError {
+  const cause = Object.assign(new Error(`simulated driver error ${code}`), { code });
+  return new DrizzleQueryError(
+    'insert into "bookings" ("room_id", "user_id", "title", "starts_at", "ends_at") values ($1, $2, $3, $4, $5)',
+    [NEW_BOOKING.roomId, NEW_BOOKING.userId, NEW_BOOKING.title, NEW_BOOKING.startsAt, NEW_BOOKING.endsAt],
+    cause,
+  );
+}
+
+/**
+ * Same shape as `insertRejectingWith`, but `returning` can be scripted call-by-call
+ * via `mockImplementationOnce`/`mockRejectedValueOnce` so the 40P01-retry tests can
+ * make the first insert attempt fail differently from the second. Returns the
+ * `returning` mock so tests can assert call count and per-call behaviour.
+ */
+function insertWithScriptedReturning(): jest.Mock {
+  const returning = jest.fn();
+  const orderBy = jest.fn(() => Promise.resolve([]));
+  getConnection.mockReturnValue({
+    db: {
+      insert: () => ({ values: () => ({ returning }) }),
+      select: () => ({ from: () => ({ innerJoin: () => ({ where: () => ({ orderBy }) }) }) }),
+    },
+  });
+  return returning;
+}
+
 describe('DrizzleBookingsRepository.createBooking', () => {
   afterEach(() => {
     getConnection.mockReset();
@@ -102,6 +130,72 @@ describe('DrizzleBookingsRepository.createBooking', () => {
     expect(error).not.toBeInstanceOf(SlotTakenError);
     expect(error).not.toBeInstanceOf(RoomNotFoundError);
     expect(error).toMatchObject({ operation: 'createBooking', code: '23502' });
+  });
+
+  // 40P01 = deadlock_detected: the rarer case where two concurrent inserts are
+  // both still in-flight and Postgres kills one to break the cycle, distinct
+  // from 23P01 which is what the loser normally gets once the winner has
+  // already committed. `createBooking` retries exactly once on 40P01; whatever
+  // the retry returns is final.
+  it('retries once after a 40P01 deadlock and resolves with the row when the retry succeeds', async () => {
+    const row = {
+      id: 'booking-1',
+      roomId: NEW_BOOKING.roomId,
+      title: NEW_BOOKING.title,
+      startsAt: NEW_BOOKING.startsAt,
+      endsAt: NEW_BOOKING.endsAt,
+      userId: NEW_BOOKING.userId,
+      seriesId: null,
+    };
+    const returning = insertWithScriptedReturning();
+    returning.mockRejectedValueOnce(queryErrorFor('40P01')).mockResolvedValueOnce([row]);
+
+    const result = await new DrizzleBookingsRepository().createBooking(NEW_BOOKING);
+
+    expect(result).toEqual({ ...row, userName: NEW_BOOKING.userName });
+    expect(returning).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries once after a 40P01 deadlock and rejects with SlotTakenError when the retry hits the exclusion violation', async () => {
+    const returning = insertWithScriptedReturning();
+    returning.mockRejectedValueOnce(queryErrorFor('40P01')).mockRejectedValueOnce(queryErrorFor(EXCLUSION_VIOLATION));
+
+    await expect(new DrizzleBookingsRepository().createBooking(NEW_BOOKING)).rejects.toBeInstanceOf(SlotTakenError);
+    expect(returning).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries once after a 40P01 deadlock and rejects with RoomNotFoundError when the retry hits the FK violation', async () => {
+    const returning = insertWithScriptedReturning();
+    returning
+      .mockRejectedValueOnce(queryErrorFor('40P01'))
+      .mockRejectedValueOnce(queryErrorFor(FOREIGN_KEY_VIOLATION));
+
+    const error: Error = await new DrizzleBookingsRepository()
+      .createBooking(NEW_BOOKING)
+      .then(() => {
+        throw new Error('createBooking was expected to reject');
+      })
+      .catch((caught: unknown) => caught as Error);
+
+    expect(error).toBeInstanceOf(RoomNotFoundError);
+    expect(returning).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a second time when the retry itself deadlocks again, and lets the raw QueryFailedError propagate', async () => {
+    const returning = insertWithScriptedReturning();
+    returning.mockRejectedValueOnce(queryErrorFor('40P01')).mockRejectedValueOnce(queryErrorFor('40P01'));
+
+    const error: Error = await new DrizzleBookingsRepository()
+      .createBooking(NEW_BOOKING)
+      .then(() => {
+        throw new Error('createBooking was expected to reject');
+      })
+      .catch((caught: unknown) => caught as Error);
+
+    expect(error).not.toBeInstanceOf(SlotTakenError);
+    expect(error).not.toBeInstanceOf(RoomNotFoundError);
+    expect(error).toMatchObject({ operation: 'createBooking', code: '40P01' });
+    expect(returning).toHaveBeenCalledTimes(2);
   });
 });
 
