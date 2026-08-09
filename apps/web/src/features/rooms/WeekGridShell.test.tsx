@@ -185,6 +185,13 @@ describe('WeekGridShell', () => {
     });
 
     it('leaves the grid root out of the tab order when a normal focusable slot exists', () => {
+      // Frozen clock mid-week (Wed 5 Aug 2026) so this assertion holds via
+      // the real getPastRowsCount check on the still-future Thu-Sun days,
+      // not by accident of sampleDays' hardcoded week colliding with
+      // whatever day this suite happens to run on.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-05T12:00:00Z'));
+
       render(
         <WeekGridShell
           daysKyiv={sampleDays}
@@ -196,6 +203,7 @@ describe('WeekGridShell', () => {
 
       const grid = screen.getByRole('grid');
       expect(grid.getAttribute('tabindex')).toBe('-1');
+      vi.useRealTimers();
     });
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Room } from '@booking/core';
 import { EmailVerificationBanner } from '../auth/EmailVerificationBanner';
 import { CapacityFilter, useCapacityFilter } from './CapacityFilter';
@@ -28,8 +28,15 @@ export function RoomsPage() {
 
   // Whether the reader has accepted a stale list is a UI decision, not server
   // state, so it lives here — and it resets whenever the filter moves on.
+  // Adjusting state in response to a prop/derived-value change belongs in
+  // the render body, not an effect
+  // (react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes).
   const [isShowingCachedCopy, setShowingCachedCopy] = useState(false);
-  useEffect(() => setShowingCachedCopy(false), [minCapacity]);
+  const [prevMinCapacity, setPrevMinCapacity] = useState(minCapacity);
+  if (minCapacity !== prevMinCapacity) {
+    setPrevMinCapacity(minCapacity);
+    setShowingCachedCopy(false);
+  }
 
   const hasFilter = minCapacity !== undefined;
   // Every room there is, regardless of the active filter — see useRoomCatalogue.

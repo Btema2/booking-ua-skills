@@ -57,9 +57,15 @@ export function WeekGridShell({
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
+  // Reset focusedCoords when the displayed week changes. Adjusting state in
+  // response to a prop change belongs in the render body, not an effect
+  // (react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes) —
+  // React applies this update before committing, so there's no extra paint.
+  const [prevWeekStartISO, setPrevWeekStartISO] = useState(weekStartISO);
+  if (weekStartISO !== prevWeekStartISO) {
+    setPrevWeekStartISO(weekStartISO);
     setFocusedCoords(getInitialFocusedCoords(daysKyiv, now));
-  }, [weekStartISO]);
+  }
 
   // Latest focusedCoords, readable from the now-driven effect below without
   // putting focusedCoords itself in that effect's dependency array (which

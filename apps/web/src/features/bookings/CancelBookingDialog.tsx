@@ -1,5 +1,5 @@
 import type { Booking } from '@booking/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DateTime } from 'luxon';
 import { FormError } from '../../components/FormError';
 
@@ -26,9 +26,14 @@ export function CancelBookingDialog({
 }: CancelBookingDialogProps) {
   const [scope, setScope] = useState<'this' | 'series'>('this');
 
-  useEffect(() => {
+  // Reset scope when the dialog opens for a different booking. Adjusting
+  // state in response to a prop change belongs in the render body, not an
+  // effect (react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes).
+  const [prevBookingId, setPrevBookingId] = useState(booking?.id);
+  if (booking?.id !== prevBookingId) {
+    setPrevBookingId(booking?.id);
     setScope('this');
-  }, [booking?.id]);
+  }
 
   if (!isOpen || !booking) {
     return null;
