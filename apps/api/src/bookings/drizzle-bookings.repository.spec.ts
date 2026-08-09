@@ -114,11 +114,10 @@ describe('DrizzleBookingsRepository.createBooking', () => {
 
   it('does not mistake an unrelated SQLSTATE for either domain error', async () => {
     // 23502 = not_null_violation — plausible on this insert, but neither of
-    // the two SQLSTATEs this repository specifically translates.
-    const cause = Object.assign(new Error('null value in column violates not-null constraint'), {
-      code: '23502',
-    });
-    insertRejectingWith(cause);
+    // the two SQLSTATEs this repository specifically translates, and not the
+    // 40P01 deadlock code that triggers a retry.
+    const returning = insertWithScriptedReturning();
+    returning.mockRejectedValueOnce(queryErrorFor('23502'));
 
     const error: Error = await new DrizzleBookingsRepository()
       .createBooking(NEW_BOOKING)
@@ -130,6 +129,7 @@ describe('DrizzleBookingsRepository.createBooking', () => {
     expect(error).not.toBeInstanceOf(SlotTakenError);
     expect(error).not.toBeInstanceOf(RoomNotFoundError);
     expect(error).toMatchObject({ operation: 'createBooking', code: '23502' });
+    expect(returning).toHaveBeenCalledTimes(1);
   });
 
   // 40P01 = deadlock_detected: the rarer case where two concurrent inserts are
