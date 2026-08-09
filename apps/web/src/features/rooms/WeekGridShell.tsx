@@ -90,11 +90,33 @@ export function WeekGridShell({
     }
   }, [now]);
 
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [hasChildFocusStop, setHasChildFocusStop] = useState(false);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const childStop = gridRef.current.querySelector(
+        '[role="gridcell"][tabindex="0"], [data-grid-cell][tabindex="0"], [tabindex="0"]',
+      );
+      const hasStop = !!childStop;
+      if (hasStop !== hasChildFocusStop) {
+        setHasChildFocusStop(hasStop);
+      }
+    }
+  });
+
   // A week entirely in the past has no free slot left to land tabIndex=0 on
   // (RoomSchedulePage never renders a free-slot cell for a past row). Fall
   // back to making the grid root itself the single tab stop so keyboard
-  // users still have somewhere to land.
-  const hasFocusableCell = daysKyiv.some((day) => getPastRowsCount(day, now) < 20);
+  // users still have somewhere to land, UNLESS a focusable cell child exists.
+  const currentMonday = now.startOf('week');
+  const weekMonday = daysKyiv[0] ? daysKyiv[0].startOf('week') : currentMonday;
+  const isPastWeek = weekMonday < currentMonday;
+  const hasFocusableCell = isPastWeek
+    ? false
+    : !isCurrentWeek || daysKyiv.some((day) => getPastRowsCount(day, now) < 20);
+
+  const gridTabIndex = hasFocusableCell || hasChildFocusStop ? -1 : 0;
 
   // The grid has one shared 76px gutter column (DESIGN-NOTES.md §1), not one
   // per day. getHourLabelsForGutter is per-day for DST correctness (a
@@ -185,9 +207,10 @@ export function WeekGridShell({
 
   return (
     <div
+      ref={gridRef}
       role="grid"
       aria-label="Розклад переговорної"
-      tabIndex={hasFocusableCell ? -1 : 0}
+      tabIndex={gridTabIndex}
       onKeyDown={handleKeyDown}
       className="overflow-clip rounded-[var(--radius-lg)] border border-outline-variant bg-surface-container-lowest focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary-container"
     >
