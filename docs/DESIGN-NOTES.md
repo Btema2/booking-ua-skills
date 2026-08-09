@@ -1,7 +1,7 @@
 # Design notes — measured from the handoff prototype
 
 Extracted once, in Phase 2, from `reference/design-handoff/Room Booking.dc.html`
-(its Redlines · 03, Responsive · 01, States · 02 and Tokens · 04 sections).
+(its Redlines · 03, Responsive · 01, States · 02 and Tokens · 04 sections; note that `reference/` contains external specification files used during development that are gitignored and not included in the submitted repository).
 **Build from this file and `apps/web/src/styles/tokens.css`.** Reopen the
 handoff only if something is genuinely missing from both.
 

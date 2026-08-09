@@ -227,7 +227,7 @@ so the frontend can render messages under the right field.
 | GET | /api/auth/me | Always 200: `{ "user": PublicUser \| null }`. Not a protected route — anonymous is a valid answer, not an error. |
 | POST | /api/auth/verify/:token | Marks email verified. |
 | GET | /api/rooms | List. Optional `?minCapacity=`. |
-| GET | /api/rooms/:id | Single room. |
+| GET | /api/rooms/:id | (Deferred — single-room fetch was decided against; room details are retrieved via GET /api/rooms) |
 | GET | /api/rooms/:id/bookings?from=&to= | ISO instants. Returns bookings with author name. |
 | POST | /api/bookings | Create. See rules below. |
 | DELETE | /api/bookings/:id | Cancel own only. `?scope=series` cancels the series. |
@@ -287,7 +287,7 @@ TanStack Query, react-hook-form + Zod resolver.
 ### Design: the handoff is the source of truth
 
 The finished design lives in
-`reference/design-handoff/`. The build must match
+`reference/design-handoff/` (an external handoff directory used during development that is gitignored and not included in the submitted repository). The build must match
 it 1:1. Do not invent visual decisions and do not treat any description in
 this document as authoritative over the handoff.
 
@@ -300,7 +300,7 @@ Files that matter:
 Ignore `Deck.dc.html`, `deck-stage.js`, `_template/` and `uploads/`. Those are
 presentation scaffolding, not product.
 
-The task brief itself is at `reference/task-spec.md`. `reference/` is
+The task brief itself is at `reference/task-spec.md` (an external specification file used during development that is gitignored and not included in the submitted repository). `reference/` is
 gitignored working material — never commit anything from it, and never write
 into it.
 
@@ -366,7 +366,7 @@ because the database forbids them.
   is driven by data. Match the appearance, not the markup.
 
 **Accessibility** (not covered by the handoff, add it): `role="grid"`,
-`role="row"`, `role="columnheader"`, `role="rowheader"`, `role="gridcell"`.
+`role="row"`, `role="columnheader"`, `role="gridcell"` (time gutter uses `aria-hidden="true"`).
 Roving tabindex — exactly one cell has `tabindex="0"`, arrows move focus,
 Enter/Space selects.
 
@@ -439,7 +439,7 @@ navigates to that room's week.
 boundary.
 
 **Phase 7 — Mobile**
-Single-day pager, bottom bar, all screens at 390px.
+Single-day pager, all screens at 390px (bottom bar superseded by top app bar navigation; see docs/DESIGN-NOTES.md §6).
 *Accept:* screenshots at 390px against Candidate A in the handoff. No
 horizontal scroll anywhere.
 
