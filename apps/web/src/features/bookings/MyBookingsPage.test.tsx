@@ -298,6 +298,38 @@ describe('MyBookingsPage', () => {
     });
   });
 
+  it(
+    '7. Does not retry a failed GET /api/bookings/mine (retry: false, no silent backoff before the error banner)',
+    async () => {
+      const { fetchMock } = renderApp('/my-bookings', {
+        'GET /api/auth/me': activeSession,
+        'GET /api/bookings/mine?status=upcoming&page=1': () =>
+          Promise.reject(new Error('network down')) as any,
+      });
+
+      // Generous timeout: if retry: false regresses, React Query's client-side
+      // default (retry: 3) delays the error banner until all 3 backoffs
+      // (1s+2s+4s ≈ 7s) exhaust — the App's own QueryClient (createQueryClient())
+      // has no defaultOptions, so nothing but the query's own option can prevent
+      // it. The timeout must outlast that so the failure surfaces as a wrong
+      // call count below, not a coincidental findByText timeout that would pass
+      // without ever exercising the assertion this test exists for.
+      expect(await screen.findByText('Не вдалося оновити список', {}, { timeout: 9000 })).toBeTruthy();
+
+      // React Query's client-side default (retry: 3) would fire its first
+      // retry ~1000ms after the initial failure (retryDelay(0) = 1000ms).
+      // Wait past that window to prove no retry happens with retry: false
+      // in place.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const bookingsCalls = fetchMock.mock.calls.filter(
+        ([input]) => String(input) === '/api/bookings/mine?status=upcoming&page=1',
+      );
+      expect(bookingsCalls).toHaveLength(1);
+    },
+    15000,
+  );
+
   it('renders MyBookingsSkeleton status region with row card placeholders', () => {
     render(<MyBookingsSkeleton />);
     expect(screen.getByRole('status')).toBeTruthy();
