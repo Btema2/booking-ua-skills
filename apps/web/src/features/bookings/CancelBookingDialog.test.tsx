@@ -97,4 +97,15 @@ describe('CancelBookingDialog', () => {
     const resetThisRadio = screen.getByLabelText('це бронювання') as HTMLInputElement;
     expect(resetThisRadio.checked).toBe(true);
   });
+
+  it('applies break-words class to long meeting titles so continuous strings break mid-word', () => {
+    const longTitleBooking: Booking = {
+      ...SINGLE_BOOKING,
+      title: 'A'.repeat(100),
+    };
+    render(<CancelBookingDialog {...baseProps(longTitleBooking)} onConfirm={vi.fn()} />);
+    const titleElement = screen.getByText('A'.repeat(100));
+    expect(titleElement.className).toContain('break-words');
+  });
 });
+

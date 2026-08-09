@@ -107,7 +107,7 @@ export function NotificationToast() {
         <p className={`m-0 mb-[2px] text-[14.5px] font-semibold leading-[1.35] ${isConflict ? 'text-on-error-container' : 'text-on-surface'}`}>
           {toast.title}
         </p>
-        <p className={`m-0 text-body-small ${isConflict ? 'text-on-error-container/85' : 'text-on-surface-variant'}`}>
+        <p className={`m-0 text-body-small break-words ${isConflict ? 'text-on-error-container/85' : 'text-on-surface-variant'}`}>
           {toast.body}
         </p>
       </div>

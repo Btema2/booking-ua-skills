@@ -270,7 +270,7 @@ export function MyBookingsPage() {
                       {row.roomName} · {row.roomFloor} поверх
                     </span>
                   </div>
-                  <h3 className="text-title-medium font-bold text-on-surface truncate max-[760px]:whitespace-normal max-[760px]:overflow-visible max-[760px]:text-clip max-[760px]:wrap-anywhere">
+                  <h3 className="text-title-medium font-bold text-on-surface truncate max-[760px]:whitespace-normal max-[760px]:overflow-visible max-[760px]:text-clip max-[760px]:break-words">
                     {row.title}
                   </h3>
                 </div>

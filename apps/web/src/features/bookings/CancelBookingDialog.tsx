@@ -70,7 +70,7 @@ export function CancelBookingDialog({
         <div className="flex flex-col gap-s2 p-s3 rounded-[var(--radius-md,16px)] bg-surface-container-low border border-outline-variant text-body-medium">
           <div>
             <span className="font-semibold text-on-surface-variant">Назва: </span>
-            <span className="font-bold text-on-surface">{booking.title}</span>
+            <span className="font-bold text-on-surface break-words">{booking.title}</span>
           </div>
           <div>
             <span className="font-semibold text-on-surface-variant">Кімната: </span>

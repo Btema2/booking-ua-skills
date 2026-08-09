@@ -151,7 +151,7 @@ export function NotificationBell() {
                       <p className="m-0 mb-[2px] text-body-medium font-semibold text-on-surface">
                         {title}
                       </p>
-                      <p className="m-0 text-body-small text-on-surface-variant">{body}</p>
+                      <p className="m-0 text-body-small text-on-surface-variant break-words">{body}</p>
                     </div>
                   </li>
                 );
