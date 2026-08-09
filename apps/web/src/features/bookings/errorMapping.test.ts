@@ -96,4 +96,24 @@ describe('mapApiErrorToForm', () => {
       formError: 'Бронювання не збережено',
     });
   });
+
+  it('maps unmapped field error (roomId) from errors object to formError', () => {
+    const apiErr = new ApiError(400, 'Bad Request', {
+      roomId: ['Обраної кімнати не існує'],
+    });
+    const result = mapApiErrorToForm(apiErr);
+    expect(result).toEqual({
+      fieldErrors: {},
+      formError: 'Обраної кімнати не існує',
+    });
+  });
+
+  it('maps 403 status with message to formError when no field errors present', () => {
+    const apiErr = new ApiError(403, 'Для створення бронювання необхідно підтвердити пошту');
+    const result = mapApiErrorToForm(apiErr);
+    expect(result).toEqual({
+      fieldErrors: {},
+      formError: 'Для створення бронювання необхідно підтвердити пошту',
+    });
+  });
 });

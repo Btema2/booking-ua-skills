@@ -30,9 +30,11 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
 
   let status: number | undefined;
   let errorsObj: Record<string, unknown> | null = null;
+  let message: string | undefined;
 
   if (err instanceof ApiError) {
     status = err.status;
+    message = err.message;
     if (err.fieldErrors) {
       errorsObj = err.fieldErrors as Record<string, unknown>;
     }
@@ -43,7 +45,9 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
     } else if (typeof obj.statusCode === 'number') {
       status = obj.statusCode;
     }
-
+    if (typeof obj.message === 'string') {
+      message = obj.message;
+    }
     if (typeof obj.fieldErrors === 'object' && obj.fieldErrors !== null) {
       errorsObj = obj.fieldErrors as Record<string, unknown>;
     } else if (typeof obj.errors === 'object' && obj.errors !== null) {
@@ -58,6 +62,7 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
     };
   }
 
+  let unmappedFieldMessage: string | undefined;
   if (errorsObj) {
     if ('title' in errorsObj) {
       const msg = extractStringMessage(errorsObj.title);
@@ -72,10 +77,29 @@ export function mapApiErrorToForm(err: unknown): FormErrorMappingResult {
         fieldErrors.time = msg;
       }
     }
+
+    for (const [field, value] of Object.entries(errorsObj)) {
+      if (field === 'title' || field === 'startsAt') continue;
+      const msg = extractStringMessage(value);
+      if (msg) {
+        unmappedFieldMessage = msg;
+        break;
+      }
+    }
   }
 
   const hasFieldErrors = fieldErrors.title !== undefined || fieldErrors.time !== undefined;
-  const formError = hasFieldErrors ? null : 'Бронювання не збережено';
+
+  let formError: string | null = null;
+  if (!hasFieldErrors) {
+    if (unmappedFieldMessage) {
+      formError = unmappedFieldMessage;
+    } else if (status === 403 && message) {
+      formError = message;
+    } else {
+      formError = 'Бронювання не збережено';
+    }
+  }
 
   return {
     fieldErrors,
