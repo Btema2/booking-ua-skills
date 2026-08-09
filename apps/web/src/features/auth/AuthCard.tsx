@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { CalendarLogo } from '../../components/CalendarLogo';
 
 type AuthCardProps = {
   title: string;
@@ -44,12 +45,7 @@ export function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
           {/* Left Column: Branding & Info */}
           <div className="flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              <div
-                className="flex size-[var(--auth-mark-size)] items-center justify-center rounded-full shadow-[var(--auth-mark-shadow)] text-[var(--auth-mark-ink)] font-heading font-extrabold text-2xl tracking-wide"
-                style={{ background: 'var(--auth-mark-face)' }}
-              >
-                П
-              </div>
+              <CalendarLogo className="size-[var(--auth-mark-size)] rounded-full shadow-[var(--auth-mark-shadow)] shrink-0" />
 
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#a85f2e]">

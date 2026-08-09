@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router';
+import { CalendarLogo } from './CalendarLogo';
 import { useLogoutMutation } from '../features/auth/useAuthMutations';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { getViewerZone, toDisplayTimeZone } from '../features/rooms/timeUtils';
@@ -76,9 +77,10 @@ export function NavBar({ userName }: { userName: string }) {
         */}
         <Link
           to="/"
-          className={`shrink-0 rounded-full font-heading text-title-large text-on-surface max-desktop:hidden ${FOCUS_RING}`}
+          className={`inline-flex items-center gap-2 shrink-0 rounded-full font-heading text-title-large text-on-surface max-desktop:hidden ${FOCUS_RING}`}
         >
-          Переговорні
+          <CalendarLogo className="size-7 rounded-md shrink-0" />
+          <span>Переговорні</span>
         </Link>
 
         {/*
