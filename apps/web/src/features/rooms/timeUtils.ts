@@ -199,7 +199,7 @@ const LEGACY_KYIV_TZ_ALIASES: Record<string, string> = {
   'Europe/Zaporozhye': 'Europe/Kyiv',
 };
 
-function toDisplayTimeZone(zone: string): string {
+export function toDisplayTimeZone(zone: string): string {
   return LEGACY_KYIV_TZ_ALIASES[zone] ?? zone;
 }
 

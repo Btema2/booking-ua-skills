@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router';
 import { useLogoutMutation } from '../features/auth/useAuthMutations';
 import { NotificationBell } from '../features/notifications/NotificationBell';
-import { getViewerZone } from '../features/rooms/timeUtils';
+import { getViewerZone, toDisplayTimeZone } from '../features/rooms/timeUtils';
 
 /**
  * The handoff draws no focus state for product screens (DESIGN-NOTES §7/§8), so
@@ -104,7 +104,7 @@ export function NavBar({ userName }: { userName: string }) {
           {/* Timezone chip pill — DESIGN-NOTES §4: pill 6px 12px, 12px/600, surface-container-lowest fill, 1px border, hidden <=760px */}
           <span className="hidden min-[761px]:inline-flex shrink-0 items-center gap-[7px] rounded-full border border-outline-variant bg-surface-container-lowest px-[12px] py-[6px] text-[12px] font-semibold text-on-surface-variant">
             <span className="size-[6px] shrink-0 rounded-full bg-secondary" />
-            <span>{getViewerZone()}</span>
+            <span>{toDisplayTimeZone(getViewerZone())}</span>
           </span>
           <NotificationBell />
           {/* Avatar + name pill — DESIGN-NOTES §4: 30px avatar, pill pad 5px 14px 5px 5px, surface-container-lowest fill, 1px border */}
