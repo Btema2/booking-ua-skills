@@ -19,7 +19,6 @@ import {
   RoomNotFoundError,
   SlotTakenError,
   type BookingRow,
-  type NewBooking,
   type PaginatedMyBookings,
 } from './bookings.repository';
 

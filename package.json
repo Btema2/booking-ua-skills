@@ -16,9 +16,16 @@
     "pretest": "npm run build -w packages/core",
     "test": "npm test --workspaces --if-present",
     "test:integration": "npm run test:integration -w apps/api",
-    "db:generate": "npm run db:generate -w apps/api"
+    "db:generate": "npm run db:generate -w apps/api",
+    "lint": "eslint apps packages",
+    "format:check": "prettier --check apps packages"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.66.0"
   }
 }

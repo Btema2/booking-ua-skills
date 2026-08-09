@@ -176,7 +176,7 @@ describe('BookingBlock', () => {
   });
 
   it('renders correctly when isMobile is true', () => {
-    const { container } = render(
+    render(
       <BookingBlock
         booking={mockBooking}
         currentUserId={mockBooking.userId}

@@ -9,7 +9,6 @@ import {
   NewUser,
   SessionRow,
   UserWithPasswordRow,
-  VerificationTokenRow,
 } from './auth.repository';
 
 

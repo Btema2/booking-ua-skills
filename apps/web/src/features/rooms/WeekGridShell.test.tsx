@@ -74,7 +74,7 @@ describe('WeekGridShell', () => {
   });
 
   it('invokes renderDayColumn for each day in daysKyiv', () => {
-    const renderDayColumnMock = vi.fn((dayIndex: number, day: DateTime) => (
+    const renderDayColumnMock = vi.fn((dayIndex: number, _day: DateTime) => (
       <div data-testid={`day-content-${dayIndex}`}>Content {dayIndex}</div>
     ));
 
@@ -407,7 +407,7 @@ describe('WeekGridShell', () => {
         DateTime.fromISO('2026-09-14T00:00:00', { zone: 'Europe/Kyiv' }).plus({ days: i }),
       );
 
-      const { container } = render(
+      render(
         <WeekGridShell
           daysKyiv={futureDays}
           weekStartISO={sampleWeekStartISO}

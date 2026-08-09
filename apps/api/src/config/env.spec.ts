@@ -36,7 +36,7 @@ describe('loadEnv', () => {
   });
 
   it('defaults COOKIE_SECURE to false when omitted, so plain-http local runs can log in', () => {
-    const { COOKIE_SECURE, ...rest } = validSource;
+    const { COOKIE_SECURE: _COOKIE_SECURE, ...rest } = validSource;
     expect(loadEnv(rest).COOKIE_SECURE).toBe(false);
   });
 
@@ -55,12 +55,12 @@ describe('loadEnv', () => {
   });
 
   it('defaults POSTGRES_PASSWORD to booking when absent', () => {
-    const { POSTGRES_PASSWORD, ...rest } = validSource;
+    const { POSTGRES_PASSWORD: _POSTGRES_PASSWORD, ...rest } = validSource;
     expect(loadEnv(rest).POSTGRES_PASSWORD).toBe('booking');
   });
 
   it('defaults PORT to 3000 and NODE_ENV to development when omitted', () => {
-    const { PORT, NODE_ENV, ...rest } = validSource;
+    const { PORT: _PORT, NODE_ENV: _NODE_ENV, ...rest } = validSource;
     const env = loadEnv(rest);
     expect(env.PORT).toBe(3000);
     expect(env.NODE_ENV).toBe('development');

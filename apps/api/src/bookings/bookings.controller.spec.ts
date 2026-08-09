@@ -75,7 +75,7 @@ class RecordingBookingsRepository extends BookingsRepository {
       seriesId: input.seriesId ?? null,
     };
     this.byId.set(row.id, row);
-    const { roomName, roomFloor, canceledAt, ...bookingRow } = row;
+    const { roomName: _roomName, roomFloor: _roomFloor, canceledAt: _canceledAt, ...bookingRow } = row;
     return bookingRow;
   }
 
@@ -115,7 +115,7 @@ class RecordingBookingsRepository extends BookingsRepository {
     const offset = (page - 1) * limit;
     const paginated = filtered.slice(offset, offset + limit);
 
-    const bookings = paginated.map(({ canceledAt, ...rest }) => rest);
+    const bookings = paginated.map(({ canceledAt: _canceledAt, ...rest }) => rest);
 
     return {
       bookings,
@@ -129,7 +129,7 @@ class RecordingBookingsRepository extends BookingsRepository {
   async listRoomBookings(roomId: number, from: Date, to: Date): Promise<BookingRow[]> {
     return Array.from(this.byId.values())
       .filter((b) => b.roomId === roomId && b.canceledAt === null && b.startsAt < to && b.endsAt > from)
-      .map(({ roomName, roomFloor, canceledAt, ...bookingRow }) => bookingRow);
+      .map(({ roomName: _roomName, roomFloor: _roomFloor, canceledAt: _canceledAt, ...bookingRow }) => bookingRow);
   }
 
   async findOverlappingBookings(roomId: number, occurrences: { startsAt: Date; endsAt: Date }[]): Promise<BookingRow[]> {
@@ -137,7 +137,7 @@ class RecordingBookingsRepository extends BookingsRepository {
     const conflicts: BookingRow[] = [];
     for (const b of live) {
       if (occurrences.some((occ) => b.startsAt < occ.endsAt && b.endsAt > occ.startsAt)) {
-        const { roomName, roomFloor, canceledAt, ...bookingRow } = b;
+        const { roomName: _roomName, roomFloor: _roomFloor, canceledAt: _canceledAt, ...bookingRow } = b;
         conflicts.push(bookingRow);
       }
     }

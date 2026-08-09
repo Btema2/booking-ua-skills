@@ -118,8 +118,6 @@ describe('Phase 7 Mobile Tests', () => {
   it('2. Selecting a day updates the URL and survives a remount', () => {
     setViewportWidth(390);
 
-    let testLocation: Location | undefined;
-
     const { unmount } = render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/rooms/1?week=2026-W32']}>

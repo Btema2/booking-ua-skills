@@ -9,7 +9,6 @@ import {
   SlotTakenError,
   type BookingOwnershipAndSeries,
   type BookingRow,
-  type MyBookingRow,
   type NewBooking,
   type OwnedBookingRow,
   type PaginatedMyBookings,
