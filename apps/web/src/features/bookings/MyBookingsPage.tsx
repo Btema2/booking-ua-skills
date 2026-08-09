@@ -100,9 +100,12 @@ export function MyBookingsPage() {
   const viewerZone = getViewerZone();
   const queryKey = ['my-bookings', tab, page];
 
+  // `retry: false` because the error state offers an explicit «Повторити»; three
+  // silent retries would only delay it by several seconds.
   const { data, isPending, isError, refetch } = useQuery<PaginatedMyBookings>({
     queryKey,
     queryFn: () => apiRequest<PaginatedMyBookings>(`/bookings/mine?status=${tab}&page=${page}`),
+    retry: false,
   });
 
   const cancelMutation = useMutation({

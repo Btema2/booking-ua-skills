@@ -14,6 +14,10 @@ export async function fetchRoomBookings(
   );
 }
 
+/**
+ * `retry: false` because the error state offers an explicit «Оновити зараз»; three
+ * silent retries would only delay it by several seconds.
+ */
 export function useRoomBookings(roomId: string, weekInfo?: KyivWeek) {
   const currentWeek = weekInfo ?? getCurrentKyivWeek();
   const { fromISO, toISO, weekStartISO } = currentWeek;
@@ -21,6 +25,7 @@ export function useRoomBookings(roomId: string, weekInfo?: KyivWeek) {
     queryKey: ['room', roomId, 'bookings', weekStartISO],
     queryFn: () => fetchRoomBookings(roomId, fromISO, toISO),
     enabled: Boolean(roomId),
+    retry: false,
   });
 }
 
